@@ -1,0 +1,8 @@
+# Reporting Routes
+# This file defines reporting routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /                           reporting.controllers.Application.index
+
+GET     /assets/*file               reporting.controllers.Assets.at(path="/public/reporting", file)

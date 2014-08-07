@@ -1,0 +1,8 @@
+# Billing Routes
+# This file defines billing routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /                           billing.controllers.Application.index
+
+GET     /assets/*file               billing.controllers.Assets.at(path="/public/billing", file)
