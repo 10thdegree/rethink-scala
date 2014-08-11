@@ -1,0 +1,40 @@
+<tabset>
+    <tab heading="Accounts">
+        <div>
+            <div class="row panel-body">
+                <div class="col-lg-4">
+                    <input class="form-control" ng-model="form.searchAccount" placeholder="Search..."/>
+                </div>
+                <!--<span class="badge">{{visibleAccounts}}</span>-->
+                <button style="float:right;" class="btn btn-default" ng-click="addAccount()">Add Account</button>
+            </div>
+            <!-- Table -->
+            <table class="table table-hover">
+                <!--<tr>-->
+                    <!--<th>Label</th>-->
+                    <!--<th style="width: 125px;">Permissions</th>-->
+                    <!--<th style="width: 175px;">Actions</th>-->
+                    <!--<th style="width: 10px;">ID</th>-->
+                <!--</tr>-->
+                <tr ng-repeat="account in filterAccounts">
+                    <td><span ng-click="renameAccount(account)" class="glyphicon glyphicon-pencil glyphicon-click"/> {{account.label}}</td>
+                    <td style="width: 125px;"> <a ng-click="usersAccount(account)">Users</a></td>
+                    <td style="width: 125px;"> <a ng-click="permissionsAccount(account)">Permissions</a></td>
+                    <td style="width: 10px;">
+                        <a ng-click="showId = !showId">
+                            <div ng-class="{ 'hidden': showId }">id</div>
+                            <div ng-class="{ 'hidden': !showId }"><nobr>{{account.id}}</nobr></div>
+                        </a>
+                    </td>
+                    <td style="width: 10px;">
+                        <span ng-click="deleteAccount(account)" class="glyphicon glyphicon-remove-sign glyphicon-click"/>
+                    </td>
+                </tr>
+                <tr>
+                   <td ng-class="{'hidden': visibleAccounts != 0 }">No Accounts Found.</td>
+                </tr>
+            </table>
+            <pagination ng-class="{ 'hidden': visibleAccounts <= 10 }" items-per-page="numPerPage" boundary-links="true" total-items="visibleAccounts" page="currentPage" class="pagination-sm" previous-text="&lsaquo;" next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
+        </div>
+    </tab>
+</tabset>

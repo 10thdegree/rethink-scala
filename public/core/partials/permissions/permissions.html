@@ -1,0 +1,36 @@
+<tabset>
+    <tab heading="Core">
+        <div>
+            <div class="row panel-body">
+                Read-only core permissions.
+            </div>
+            <!-- Table -->
+            <table class="table table-hover">
+                <!--<tr>-->
+                    <!--<th>Name</th>-->
+                    <!--<th>Email</th>-->
+                    <!--<th style="width: 125px;">Permissions</th>-->
+                    <!--<th style="width: 10px;">ID</th>-->
+                <!--</tr>-->
+                <tr ng-repeat="permission in filterPermissions">
+                    <td>{{permission.label}}</td>
+                    <td style="width: 10px;">
+                        <a ng-click="showId = !showId">
+                            <div ng-class="{ 'hidden': showId }">id</div>
+                            <div ng-class="{ 'hidden': !showId }"><nobr>{{permission.id}}</nobr></div>
+                        </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td ng-class="{'hidden': visibleUsers != 0 }">No Permissions Found.</td>
+                </tr>
+            </table>
+            <pagination ng-class="{ 'hidden': visiblePermissions <= 10 }" items-per-page="numPerPage" boundary-links="true" total-items="visiblePermissions" page="currentPage" class="pagination-sm" previous-text="&lsaquo;" next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
+        </div>
+    </tab>
+    <tab heading="Custom">
+        <div class="row panel-body">
+           These will be writeable permissions.
+        </div>
+    </tab>
+</tabset>

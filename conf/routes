@@ -3,14 +3,72 @@
 # ~~~~
 
 # Home page
-GET     /                           core.controllers.Application.index
+GET           /                                       @core.controllers.CoreApplication.index
+
+# Management
+GET           /manage                                 @core.controllers.CoreApplication.userManagement
+
+# Login page
+GET           /login                                  @core.controllers.CustomLoginPage.login
+GET           /logout                                 @securesocial.controllers.LoginPage.logout
+
+# Registration routes
+GET           /invite                                 @core.controllers.CustomRegistration.startSignUp
+GET           /signup/:mailToken                      @core.controllers.CustomRegistration.signUp(mailToken)
+POST          /invite                                 @core.controllers.CustomRegistration.handleStartSignUp
+POST          /signup/:mailToken                      @securesocial.controllers.Registration.handleSignUp(mailToken)
+
+# Reset password
+GET           /reset                                  @securesocial.controllers.PasswordReset.startResetPassword
+POST          /reset                                  @securesocial.controllers.PasswordReset.handleStartResetPassword
+GET           /reset/:mailToken                       @securesocial.controllers.PasswordReset.resetPassword(mailToken)
+POST          /reset/:mailToken                       @securesocial.controllers.PasswordReset.handleResetPassword(mailToken)
+
+# Change Password
+GET           /password                               @securesocial.controllers.PasswordChange.page
+POST          /password                               @securesocial.controllers.PasswordChange.handlePasswordChange
+
+# Permissions
+GET           /permission                             @core.controllers.PermissionsController.getPermissions
+GET           /permission/writeable                   @core.controllers.PermissionsController.getWriteablePermissions
+GET           /permission/readonly                    @core.controllers.PermissionsController.getReadOnlyPermissions
+POST          /permission                             @core.controllers.PermissionsController.addPermission
+POST          /permission/rename/:permissionId        @core.controllers.PermissionsController.renamePermission(permissionId: String)
+DELETE        /permission/:permissionId               @core.controllers.PermissionsController.deletePermission(permissionId: String)
+
+POST          /user/permissions/:userId               @core.controllers.PermissionsController.addUserPermission(userId: String)
+DELETE        /user/permissions/:userId               @core.controllers.PermissionsController.deleteUserPermission(userId: String)
+
+POST          /account/permissions/:accountId         @core.controllers.PermissionsController.addAccountPermission(accountId: String)
+DELETE        /account/permissions/:accountId         @core.controllers.PermissionsController.deleteAccountPermission(accountId: String)
+
+#Accounts
+GET           /account                                @core.controllers.AccountController.getAccounts
+GET           /account/users/:accountId               @core.controllers.AccountController.getAccountUsers(accountId: String)
+GET           /account/:accountId                     @core.controllers.AccountController.getAccount(accountId: String)
+POST          /account                                @core.controllers.AccountController.addAccount
+POST          /account/rename/:accountId              @core.controllers.AccountController.renameAccount(accountId: String)
+POST          /account/users/:accountId               @core.controllers.AccountController.addAccountUsers(accountId: String)
+DELETE        /account/users/:accountId               @core.controllers.AccountController.deleteAccountUsers(accountId: String)
+DELETE        /account/:accountId                     @core.controllers.AccountController.deleteAccount(accountId: String)
+
+#Users
+GET           /user                                   @core.controllers.UserController.getUsers
+GET           /user/invited                           @core.controllers.UserController.getInvitedUsers
+DELETE        /user/invited/:inviteId                 @core.controllers.UserController.deleteInvite(inviteId: String)
+DELETE        /user/:userId                           @core.controllers.UserController.deleteUser(userId: String)
+
+# Authentication entry points for all providers
+POST          /authenticate                           @core.controllers.CustomProviderController.authenticateByPost(provider = "userpass", redirectTo: Option[String])
 
 #Reporting
-->  /reporting reporting.Routes
+->            /reporting                              reporting.Routes
 
 #Billing
-->  /billing billing.Routes
+->            /billing                                billing.Routes
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.at(path="/public/core", file)
+GET           /assets/*file                           controllers.Assets.at(path="/public/core", file)
+GET           /webjars/*file                          controllers.WebJarAssets.at(file)
+
 

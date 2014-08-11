@@ -1,0 +1,84 @@
+<tabset>
+    <tab heading="Active Users">
+        <div>
+            <div class="row panel-body">
+                <div class="col-lg-4">
+                    <input class="form-control" ng-model="form.searchUser" placeholder="Search..."/>
+                </div>
+                <!--<span class="badge">{{visibleUsers}}</span>-->
+                <button style="float:right;" class="btn btn-default" ng-click="inviteUser()">Invite User</button>
+            </div>
+            <!-- Table -->
+            <table class="table table-hover">
+                <!--<tr>-->
+                    <!--<th>Name</th>-->
+                    <!--<th>Email</th>-->
+                    <!--<th style="width: 125px;">Permissions</th>-->
+                    <!--<th style="width: 10px;">ID</th>-->
+                <!--</tr>-->
+                <tr ng-repeat="user in filterUsers">
+                    <td>{{user.main.fullName}}</td>
+                    <td>{{user.main.email}}</td>
+                    <td style="width: 125px;"> <a ng-click="permissionsUser(user)">Permissions</a></td>
+                    <td style="width: 10px;">
+                        <a ng-click="showId = !showId">
+                            <div ng-class="{ 'hidden': showId }">id</div>
+                            <div ng-class="{ 'hidden': !showId }"><nobr>{{user.id}}</nobr></div>
+                        </a>
+                    </td>
+                    <td style="width: 10px;">
+                        <span ng-click="deleteUser(user)" class="glyphicon glyphicon-remove-sign glyphicon-click"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td ng-class="{'hidden': visibleUsers != 0 }">No Users Found.</td>
+                </tr>
+            </table>
+            <pagination ng-class="{ 'hidden': visibleUsers <= 10 }" items-per-page="numPerPage" boundary-links="true" total-items="visibleUsers" page="currentPage" class="pagination-sm" previous-text="&lsaquo;" next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
+        </div>
+    </tab>
+    <tab>
+        <tab-heading>
+            Pending <span class="badge">{{numInvitedUsers}}</span>
+        </tab-heading>
+        <div>
+            <div class="row panel-body">
+                <div class="col-lg-6">
+                    <div class="input-group">
+                        <input ng-enter="invite()" class="form-control" type="text" ng-model="form.email" placeholder="Enter email to invite here."/>
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" type="button" ng-click="invite()">Invite</button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12">
+                    The following is a list of pending invites.
+                </div>
+            </div>
+        </div>
+        <table class="table">
+            <!--<tr>-->
+                <!--<th>Email</th>-->
+                <!--<th style="width: 100px;">Actions</th>-->
+                <!--<th style="width: 10px;">Token</th>-->
+            <!--</tr>-->
+            <tr ng-repeat="invite in invitedUsers">
+                <td>{{invite.email}}</td>
+                <td style="width: 10px;">
+                    <a ng-click="showId = !showId">
+                        <div ng-class="{ 'hidden': showId }">token</div>
+                        <div ng-class="{ 'hidden': !showId }"><nobr>{{invite.id}}</nobr></div>
+                    </a>
+                </td>
+                <td style="width: 10px;">
+                    <span ng-click="deleteInvite(invite)" class="glyphicon glyphicon-remove-sign glyphicon-click"/>
+                </td>
+            </tr>
+            <tr>
+                <td ng-class="{'hidden': numInvitedUsers != 0 }">No pending invites.</td>
+            </tr>
+        </table>
+    </tab>
+</tabset>

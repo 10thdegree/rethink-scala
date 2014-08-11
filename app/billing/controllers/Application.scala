@@ -1,10 +1,11 @@
 package billing.controllers
 
-import play.api.mvc._
+import core.models.User
+import securesocial.core.RuntimeEnvironment
 
-object Application extends Controller {
+class Application(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
 
-  def index = Action {
+  def index = SecuredAction {
     Ok(billing.views.html.index("billing"))
   }
 

@@ -1,0 +1,43 @@
+<script type="text/ng-template" id="customTemplate.html">
+    <a>
+        <span bind-html-unsafe="match.label | typeaheadHighlight:query"></span><i> ({{match.model.main.email}})</i>
+    </a>
+</script>
+<div class="modal-header">
+    <h3 class="modal-title">{{account.label}} Users</h3>
+</div>
+<div class="modal-body">
+    <nav class="navbar navbar-default" role="navigation">
+        <div class="container-fluid">
+            <div class="collapse navbar-collapse navbar-form nav navbar-nav">
+                    <div class="form-group">
+                        <input focus-me="focusInput" ng-enter="addUser()"  style="width:350px;" type="text" ng-model="form.user" placeholder="Add user..." typeahead="user as user.main.fullName for user in allUsers | filter:$viewValue" typeahead-template-url="customTemplate.html" class="form-control">
+                    </div>
+                    <button type="submit" ng-click="addUser()" class="btn btn-default">Add</button>
+            </div>
+        </div>
+    </nav>
+    <div>
+        <table class="table table-hover">
+            <tr ng-repeat="user in users">
+                <td>{{user.fullName}} ({{user.email}})</td>
+                <td>
+                    <button class="btn  btn-xs btn-label"
+                            ng-class="{'btn-primary': user.permissions.indexOf(permission.id) > -1}"
+                            ng-repeat="permission in (permissions | filter:filterPermissions | orderBy: 'label')"
+                            ng-bind="permission.label"
+                            ng-click="togglePermissionToUser(user.id, permission.id, user.permissions.indexOf(permission.id) > -1)" />
+                </td>
+                <td style="width:10px">
+                    <span ng-click="deleteUserFromAccount(user.id)" class="glyphicon glyphicon-remove-sign glyphicon-click"/>
+                </td>
+            </tr>
+            <tr>
+                <td ng-class="{'hidden': users.length != 0 }">No Users Found.</td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-default" ng-click="cancel()">Close</button>
+</div>

@@ -1,0 +1,15 @@
+<div class="modal-header">
+    <h3 class="modal-title">{{account.label}} Permissions</h3>
+</div>
+<div class="modal-body">
+    Permissions available to <b>{{account.label}}</b>.
+    <table class="table table-hover">
+        <tr ng-repeat="permission in permissions">
+            <td width="10px;"><input type="checkbox" ng-click="togglePermission(permission.id)" ng-checked="account.permissions.indexOf(permission.id) > -1"/></td>
+            <td>{{permission.label}}</td>
+        </tr>
+    </table>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-default" ng-click="cancel()">Close</button>
+</div>

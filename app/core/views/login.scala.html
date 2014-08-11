@@ -1,0 +1,28 @@
+@(loginForm: Form[(String,String)], errorMsg: Option[String] = None)(implicit request: RequestHeader, lang: Lang, env:securesocial.core.RuntimeEnvironment[_])
+<html lang="en" ng-app="myLogin">
+    <head>
+        <meta charset="utf-8">
+        <title>Bravo</title>
+        <link rel="shortcut icon" type="image/png" href='@routes.Assets.at("images/favicon.png")'>
+        <link rel="stylesheet" href='@routes.Assets.at("css/login.css")'>
+        <link rel="stylesheet" href='@routes.WebJarAssets.at(WebJarAssets.locate("css/bootstrap.min.css"))'>
+        <link rel="stylesheet" href='@routes.WebJarAssets.at(WebJarAssets.locate("css/bootstrap-theme.min.css"))'>
+        <script src='@routes.WebJarAssets.at(WebJarAssets.locate("jquery.min.js"))'></script>
+        <script src='@routes.WebJarAssets.at(WebJarAssets.locate("angular.min.js"))'></script>
+        <script src='@routes.WebJarAssets.at(WebJarAssets.locate("ui-bootstrap-tpls.min.js"))'></script>
+        <script src='@routes.Assets.at("js/login/services.js")'></script>
+        <script src='@routes.Assets.at("js/login/controllers.js")'></script>
+        <script src='@routes.Assets.at("js/login/app.js")'></script>
+    </head>
+    <body>
+        <div class="loginArea" ng-controller="LoginCtrl">
+        <h2>Login</h2>
+            <alert ng-repeat="alert in alerts" type="alert.type" close="closeAlert($index)">{{alert.msg}}</alert>
+            <div class="form-group">
+                <input type="text" class="form-control" ng-model="email" placeholder="Email"/>
+                <input type="password" class="form-control" ng-model="password" placeholder="Password"/>
+            </div>
+            <button type="submit" class="btn btn-primary" ng-click="login()">Login</button>
+        </div>
+    </body>
+</html>
