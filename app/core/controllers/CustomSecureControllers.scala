@@ -1,5 +1,6 @@
 package core.controllers
 
+import com.google.inject.Inject
 import play.api.Play
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -15,7 +16,7 @@ import securesocial.core.utils._
 
 import scala.concurrent.Future
 
-class CustomLoginPage(override implicit val env: RuntimeEnvironment[BasicProfile]) extends BaseLoginPage[BasicProfile] {
+class CustomLoginPage @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile]) extends BaseLoginPage[BasicProfile] {
   /**
    * Renders the login page
    * @return
@@ -35,7 +36,7 @@ class CustomLoginPage(override implicit val env: RuntimeEnvironment[BasicProfile
   }
 }
 
-class CustomRegistration(override implicit val env: RuntimeEnvironment[BasicProfile]) extends BaseRegistration[BasicProfile] {
+class CustomRegistration @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile]) extends BaseRegistration[BasicProfile] {
   override def handleStartSignUp = Action.async {
     implicit request =>
       startForm.bindFromRequest.fold(
@@ -173,7 +174,7 @@ class CustomRegistration(override implicit val env: RuntimeEnvironment[BasicProf
 /**
  * A default controller that uses the BasicProfile as the user type
  */
-class CustomProviderController(override implicit val env: RuntimeEnvironment[BasicProfile])
+class CustomProviderController @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile])
   extends BaseProviderController[BasicProfile]
 
 /**

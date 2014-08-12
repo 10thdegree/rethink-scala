@@ -1,6 +1,7 @@
 package core.controllers
 
 import java.util.UUID
+import com.google.inject.Inject
 import com.rethinkscala.reflect.Reflector
 import core.dataBrokers.{Connection, CoreBroker}
 import core.models._
@@ -8,44 +9,45 @@ import play.api.libs.{json => pjson}
 import play.api.mvc.{Action, BodyParsers}
 import securesocial.core.RuntimeEnvironment
 
-class AccountController(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User]  {
+class AccountController @Inject()(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
   implicit val accountFormat = pjson.Json.format[Account]
   implicit val labelFormat = pjson.Json.format[Label]
   implicit val userIdFormat = pjson.Json.format[UserIds]
 
   case class Label(label: String)
+
   case class UserIds(userIds: List[UUID])
 
   implicit val c = Connection.connection
   lazy val coreBroker: CoreBroker = new CoreBroker
 
-  def getAccount(accountId: String) =  Action {
+  def getAccount(accountId: String) = Action {
     import com.rethinkscala.Blocking._
     coreBroker.accountsTable.get(accountId).run match {
-      case Right(tx) => Ok(pjson.Json.obj("status" -> "OK", "account"->pjson.Json.parse(Reflector.toJson(tx))))
-      case Left(er) => BadRequest(pjson.Json.toJson(Map("error"->er.getMessage)))
+      case Right(tx) => Ok(pjson.Json.obj("status" -> "OK", "account" -> pjson.Json.parse(Reflector.toJson(tx))))
+      case Left(er) => BadRequest(pjson.Json.toJson(Map("error" -> er.getMessage)))
     }
   }
 
-  def getAccounts =  Action {
+  def getAccounts = Action {
     import com.rethinkscala.Blocking._
     coreBroker.accountsTable.run match {
-      case Right(tx) => Ok(pjson.Json.obj("status" -> "OK", "accounts"->pjson.Json.parse(Reflector.toJson(tx))))
-      case Left(er) => BadRequest(pjson.Json.toJson(Map("error"->er.getMessage)))
+      case Right(tx) => Ok(pjson.Json.obj("status" -> "OK", "accounts" -> pjson.Json.parse(Reflector.toJson(tx))))
+      case Left(er) => BadRequest(pjson.Json.toJson(Map("error" -> er.getMessage)))
     }
   }
 
-  def getAccountUsers(accountId: String) =  Action {
+  def getAccountUsers(accountId: String) = Action {
     import com.rethinkscala.Blocking._
     coreBroker.usersTable.filter(f => (f \ "permissions").contains(i => (i \ "accountId" === accountId))).run match {
       case Right(tx) => {
         val userPermissions = tx.map(x =>
-          Map("id" -> x.id,"fullName" -> x.main.fullName,"email"->x.main.email,
-            "permissions"-> (x.permissions collect {case (i: AccountPermissions) if i.accountId.toString == accountId => i.permissionIds}).flatten)
+          Map("id" -> x.id, "fullName" -> x.main.fullName, "email" -> x.main.email,
+            "permissions" -> (x.permissions collect { case (i: AccountPermissions) if i.accountId.toString == accountId => i.permissionIds}).flatten)
         )
-        Ok(pjson.Json.obj("status" -> "OK", "users"->pjson.Json.parse(Reflector.toJson(userPermissions))))
+        Ok(pjson.Json.obj("status" -> "OK", "users" -> pjson.Json.parse(Reflector.toJson(userPermissions))))
       }
-      case Left(er) => BadRequest(pjson.Json.toJson(Map("error"->er.getMessage)))
+      case Left(er) => BadRequest(pjson.Json.toJson(Map("error" -> er.getMessage)))
     }
   }
 
@@ -59,7 +61,7 @@ class AccountController(override implicit val env: RuntimeEnvironment[User]) ext
           import com.rethinkscala.Blocking._
           coreBroker.accountsTable.insert(account).run match {
             case Right(x) => Ok(pjson.Json.obj("status" -> "OK", "message" -> "Account created."))
-            case Left(x) =>  BadRequest(pjson.Json.obj("status" -> "OK", "message" -> x.getMessage))
+            case Left(x) => BadRequest(pjson.Json.obj("status" -> "OK", "message" -> x.getMessage))
           }
         }
       )
@@ -119,6 +121,7 @@ class AccountController(override implicit val env: RuntimeEnvironment[User]) ext
         }
       )
   }
+
   def addAccountUsers(accountId: String) = Action(BodyParsers.parse.json) {
     request =>
       request.body.validate[UserIds].fold(
@@ -135,7 +138,7 @@ class AccountController(override implicit val env: RuntimeEnvironment[User]) ext
 
                 accountIndex match {
                   case -1 => {
-                    val updatedList = existingUserPermissions ++ List(new AccountPermissions(UUID.fromString(accountId),List()))
+                    val updatedList = existingUserPermissions ++ List(new AccountPermissions(UUID.fromString(accountId), List()))
                     coreBroker.usersTable.get(userId.toString).update(
                       Map("permissions" -> updatedList.map(Reflector.toMap(_)))
                     ).run

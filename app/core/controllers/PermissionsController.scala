@@ -1,5 +1,6 @@
 package core.controllers
 
+import com.google.inject.Inject
 import com.rethinkscala.reflect.Reflector
 import core.dataBrokers.{Connection, CoreBroker}
 import core.models._
@@ -7,7 +8,7 @@ import play.api.libs.{json => pjson}
 import play.api.mvc.{Action, BodyParsers}
 import securesocial.core.RuntimeEnvironment
 
-class PermissionsController(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User]  {
+class PermissionsController @Inject() (override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User]  {
   implicit val accountPermissionsFormat = pjson.Json.format[AccountPermissions]
   implicit val permissionsFormat = pjson.Json.format[PermissionIds]
   implicit val permissionFormat = pjson.Json.format[Permission]

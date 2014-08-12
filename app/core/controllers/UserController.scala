@@ -1,5 +1,6 @@
 package core.controllers
 
+import com.google.inject.Inject
 import com.rethinkscala.reflect.Reflector
 import core.dataBrokers.{Connection, CoreBroker}
 import core.models._
@@ -7,7 +8,7 @@ import play.api.libs.{json => pjson}
 import play.api.mvc.Action
 import securesocial.core.RuntimeEnvironment
 
-class UserController(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User]  {
+class UserController @Inject() (override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User]  {
 
 
   implicit val c = Connection.connection

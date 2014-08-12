@@ -1,8 +1,10 @@
 import java.lang.reflect.Constructor
 
+import com.google.inject.{AbstractModule, Guice}
 import core.dataBrokers.Setup
 import core.models.User
 import core.services.{RethinkAuthenticatorStore, RethinkUserService}
+import net.codingwell.scalaguice.ScalaModule
 import play.api.GlobalSettings
 import securesocial.core.RuntimeEnvironment
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticatorBuilder, HttpHeaderAuthenticatorBuilder}
@@ -12,6 +14,13 @@ import securesocial.core.services.AuthenticatorService
  * Set up the Guice injector and provide the mechanism for return objects from the dependency graph.
  */
 object Global extends GlobalSettings {
+
+  val injector = Guice.createInjector(new AbstractModule with ScalaModule {
+    protected def configure() {
+      //bind[core.controllers.AccountController].in[javax.inject.Singleton]
+      bind[RuntimeEnvironment[User]].toInstance(MyRuntimeEnvironment)
+    }
+  })
 
   override def onStart(app: play.api.Application) {
     Setup.initial
@@ -26,15 +35,8 @@ object Global extends GlobalSettings {
    * @return
    */
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
-    val instance  = controllerClass.getConstructors.find { c =>
-      val params = c.getParameterTypes
-      params.length == 1 && params(0) == classOf[RuntimeEnvironment[User]]
-    }.map {
-      _.asInstanceOf[Constructor[A]].newInstance(MyRuntimeEnvironment)
-    }
-    instance.getOrElse(super.getControllerInstance(controllerClass))
+    injector.getInstance(controllerClass)
   }
-
 
   object MyRuntimeEnvironment extends RuntimeEnvironment.Default[User] {
 
