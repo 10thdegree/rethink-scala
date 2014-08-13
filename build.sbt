@@ -50,7 +50,9 @@ libraryDependencies ++= Seq(
   // "com.github.tototoshi" %% "slick-joda-mapper" % "1.2.0-SNAPSHOT"
   //
   // Rules Engine
-  "org.codehaus.groovy" % "groovy-jsr223" % "2.3.6"
+  "org.codehaus.groovy" % "groovy-jsr223" % "2.3.6",
   //"org.jruby" % "jruby-complete" % "1.7.13"
+  //
+  "org.scalaz" %% "scalaz-effect" % "7.1.0"
 )
 
