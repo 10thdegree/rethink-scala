@@ -19,6 +19,24 @@ object Global extends GlobalSettings {
     protected def configure() {
       //bind[core.controllers.AccountController].in[javax.inject.Singleton]
       bind[RuntimeEnvironment[User]].toInstance(MyRuntimeEnvironment)
+
+      try {
+        /*import scala.reflect.runtime.universe
+        for (
+          t <- universe.runtimeMirror(getClass.getClassLoader)
+            .staticPackage("securesocial.controllers")
+            .typeSignature.decls
+          if t.isClass
+        ) {
+          val cls = t.asClass.getClass
+          bind(cls).toConstructor(cls.getConstructor(classOf[RuntimeEnvironment[User]]))
+        }*/
+
+        bind[securesocial.controllers.LoginPage]
+          .toConstructor(classOf[securesocial.controllers.LoginPage].getConstructor(classOf[RuntimeEnvironment[User]]))
+      } catch {
+        case e: NoSuchMethodException => addError(e)
+      }
     }
   })
 
@@ -48,4 +66,5 @@ object Global extends GlobalSettings {
     )
 
   }
+
 }
