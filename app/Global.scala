@@ -6,7 +6,7 @@ import core.models.User
 import core.services.{RethinkAuthenticatorStore, RethinkUserService}
 import net.codingwell.scalaguice.ScalaModule
 import play.api.GlobalSettings
-import securesocial.core.RuntimeEnvironment
+import securesocial.core.{BasicProfile, RuntimeEnvironment}
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticatorBuilder, HttpHeaderAuthenticatorBuilder}
 import securesocial.core.services.AuthenticatorService
 
@@ -15,10 +15,11 @@ import securesocial.core.services.AuthenticatorService
  */
 object Global extends GlobalSettings {
 
-  val injector = Guice.createInjector(new AbstractModule with ScalaModule {
+  lazy val injector = Guice.createInjector(new AbstractModule with ScalaModule {
     protected def configure() {
       //bind[core.controllers.AccountController].in[javax.inject.Singleton]
       bind[RuntimeEnvironment[User]].toInstance(MyRuntimeEnvironment)
+      bind[RuntimeEnvironment[BasicProfile]].toInstance(MyRuntimeEnvironment.asInstanceOf[RuntimeEnvironment[BasicProfile]])
 
       try {
         /*import scala.reflect.runtime.universe
@@ -33,7 +34,7 @@ object Global extends GlobalSettings {
         }*/
 
         bind[securesocial.controllers.LoginPage]
-          .toConstructor(classOf[securesocial.controllers.LoginPage].getConstructor(classOf[RuntimeEnvironment[User]]))
+          .toConstructor(classOf[securesocial.controllers.LoginPage].getConstructor(classOf[RuntimeEnvironment[BasicProfile]]))
       } catch {
         case e: NoSuchMethodException => addError(e)
       }
