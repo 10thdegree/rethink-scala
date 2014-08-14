@@ -9,6 +9,194 @@ import reporting.models.{Field, Report}
 
 import scala.concurrent.{Await, Future, ExecutionContext}
 
+object Groovy {
+
+  trait Accessor[K, A] {
+    def apply(key: K): A
+
+    def getAt(key: K): A = apply(key)
+  }
+
+  trait Ops[T] {
+    def +(that: T): T
+
+    def -(that: T): T
+
+    def /(that: T): T
+
+    def *(that: T): T
+
+    def unary_-(): T
+
+    def plus(that: T): T = this + that
+
+    def minus(that: T): T = this - that
+
+    def div(that: T): T = this / that
+
+    def multiply(that: T): T = this * that
+
+    def negative(): T = this.unary_-()
+  }
+
+}
+
+// TODO: All terms probably need an implicit environment reference
+
+object FormulaEvaluator {
+
+  // Represents the current report
+  case class Report(start: DateTime, end: DateTime)
+
+  // Represents the current row being processed
+  case class Row(date: DateTime)(implicit report: Report) {
+    def month = date.getMonthOfYear
+
+    def year = date.getYear
+
+    def totalDays = date.dayOfMonth.getMaximumValue
+
+    def currentDays = if (date.getMonthOfYear == report.end.getMonthOfYear) {
+      date.getDayOfMonth
+    } else if (date.getMonthOfYear == report.start.getMonthOfYear) {
+      date.dayOfMonth.getMaximumValue - (report.start.getDayOfMonth - 1)
+    } else {
+      totalDays
+    }
+
+    // Number of days in the month, i.e. 28, 30, 31
+    def totalDaysInMonth: Int = totalDays
+
+    // Number of days in the report, e.g. if it's the 15th, 15, if the 3rd, 3.
+    // At most, equals total days in month.
+    def reportDaysInMonth: Int = currentDays
+  }
+
+  class EvaluationCxt(val report: Report, val row: Row) {
+
+    case class Sum(count: Long, sum: Double)
+
+    private val rowVals = collection.mutable.Map[String, Double]()
+    private val monthSums = collection.mutable.Map[String, collection.mutable.Map[String, Sum]]()
+    private val sums = collection.mutable.Map[String, Sum]()
+
+    def sum(key: String): Double = sums(key).sum
+
+    def monthlySum(key: String): Double = monthSums(row.year + "/" + row.month)(key).sum
+
+    def apply(key: String): Double = rowVals(key)
+
+    def update(key: String, value: Double) = {
+      // Month sums
+      val m = monthSums.getOrElseUpdate(row.year + "/" + row.month, collection.mutable.Map[String, Sum]())
+      m(key) = m.get(key).map(s => s.copy(count = s.count + 1, sum = s.sum + value)).getOrElse(Sum(1, value))
+      // Global sums
+      sums(key) = sums.get(key).map(s => s.copy(count = s.count + 1, sum = s.sum + value)).getOrElse(Sum(1, value))
+      // Row value
+      rowVals(key) = value
+    }
+
+    object ServingFees {
+      def cpm = 0d
+
+      def cpc = 0d
+    }
+
+    object AgencyFees {
+      def monthly = 0d // agencyFeesLookup(row.month)
+
+      def percentileMonthly(impressions: Int) = 0d //agencyFeesLookup(row.month, Some(impressions))
+    }
+
+    def servingFees(label: String) = ServingFees
+
+    def agencyFees(label: String) = AgencyFees
+  }
+
+  case class Fees() {
+    def agency(label: String): AgencyFees = AgencyFees(label)
+
+    def serving(label: String): ServingFees = ServingFees(label)
+  }
+
+  object ServingFeeTypes {
+
+    case class ServingFeeType(name: String)
+
+    val Cpc = ServingFeeType("cpc")
+
+    val Cpm = ServingFeeType("cpm")
+  }
+
+  case class ServingFee(override val label: String, feeType: ServingFeeTypes.ServingFeeType) extends AST.Term
+
+  case class ServingFees(label: String) {
+    def cpc: AST.Term = ServingFee(label, ServingFeeTypes.Cpc)
+
+    def cpm: AST.Term = ServingFee(label, ServingFeeTypes.Cpm)
+  }
+
+  object AgencyFeeTypes {
+
+    case class AgencyFeeType(name: String)
+
+    val Monthly = AgencyFeeType("monthly")
+
+    val PercentileMonth = AgencyFeeType("percentileMonth")
+  }
+
+  case class AgencyFee(override val label: String, feeType: AgencyFeeTypes.AgencyFeeType, ref: Option[AST.Term] = None) extends AST.Term
+
+  case class AgencyFees(label: String) {
+    def monthly: AST.Term = AgencyFee(label, AgencyFeeTypes.Monthly)
+
+    def percentileMonth(impressions: AST.Term): AST.Term = AgencyFee(label, AgencyFeeTypes.Monthly, Some(impressions))
+  }
+
+  import AST._
+
+  def eval(term: Term)(implicit cxt: EvaluationCxt): Double = term match {
+    case t@Constant(v) => t.toDouble
+    // Operators
+    case Add(left, right) => eval(left) + eval(right)
+    case Subtract(left, right) => eval(left) + eval(right)
+    case Divide(left, right) => eval(left) + eval(right)
+    case Multiply(left, right) => eval(left) + eval(right)
+    // Deferred lookup
+    case Variable(label) => cxt(label)
+    // Row functions
+    case AST.Row.TotalDaysInMonth => cxt.row.totalDaysInMonth
+    case AST.Row.ReportDaysInMonth => cxt.row.reportDaysInMonth
+    // Month functions
+    case Month.Sum(n) => cxt.monthlySum(n.label)
+    // case MonthlyAvg(n) => cxt.monthlySum(n.label) / cxt.monthlyCount(n.label)
+    // Global functions
+    case t@WholeNumber(n) => eval(n).toLong
+    case t@FractionalNumber(n) => eval(n)
+    case Sum(n) => cxt.sum(n.label)
+    // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
+    case Max(left, right) => math.max(eval(left), eval(right))
+    // Fees
+    case ServingFee(label, ft) if ft == ServingFeeTypes.Cpc => cxt.servingFees(label).cpc
+    case ServingFee(label, ft) if ft == ServingFeeTypes.Cpm => cxt.servingFees(label).cpm
+    case AgencyFee(label, ft, ref) if ft == AgencyFeeTypes.Monthly => cxt.agencyFees(label).monthly
+    case AgencyFee(label, ft, ref) if ft == AgencyFeeTypes.PercentileMonth =>
+      cxt.agencyFees(label).percentileMonthly(ref.map(eval).getOrElse(0d).toInt)
+  }
+
+  // TODO: terms must be already ordered based on dependancies!
+  def eval(terms: List[(String, Term)])(implicit cxt: EvaluationCxt): Map[String, Double] = {
+    // TODO: update cxt with results of each eval()
+    (for ((name, term) <- terms) yield {
+      val res = eval(term)
+      cxt(name) = res // Update context with result so it can be used in subsequent loops
+      name -> res
+    }).toMap
+  }
+
+  implicit def TermOrdering: Ordering[Term] = Ordering.fromLessThan((a, b) => !a.exists(_.label == b.label))
+}
+
 object AST {
 
   /*
@@ -24,9 +212,9 @@ object AST {
    * global functions:
    *   - round(expression)
    *   - fractional(expression)
+   *   - format(expression, "%2.4f")
    * month-based aggregate functions:
    *   - month.sum(field)
-   *   - month.max(field)
    *   - month.avg(field).[mean|median|mode]
    * row-based constants:
    *   - row.totalDaysInMonth
@@ -38,121 +226,85 @@ object AST {
    *   - fees.serving("label").cpm
    */
 
-  // TODO: All terms probably need an implicit environment reference
-
-  // Represents the current report
-  case class Report(start: DateTime, end: DateTime)
-
-  // Represents the current row being processed
-  case class Row(date: DateTime)(implicit report: Report) {
-    def month = date.getMonthOfYear
-
-    def totalDays = date.dayOfMonth.getMaximumValue
-
-    def currentDays = if (date.getMonthOfYear == report.end.getMonthOfYear) {
-      date.getDayOfMonth
-    } else if (date.getMonthOfYear == report.start.getMonthOfYear) {
-      date.dayOfMonth.getMaximumValue - (report.start.getDayOfMonth - 1)
-    } else {
-      totalDays
-    }
-
-    // Number of days in the month, i.e. 28, 30, 31
-    def totalDaysInMonth: Value[Int] = new Value(totalDays)
-
-    // Number of days in the report, e.g. if it's the 15th, 15, if the 3rd, 3.
-    // At most, equals total days in month.
-    def reportDaysInMonth: Value[Int] = new Value(currentDays)
-
-  }
-
-  case class Fees(agencyLookup: String => AgencyFee, servingLookup: String => ServingFee)(implicit row: Row, report: Report) {
-    def agency(label: String): AgencyFee = agencyLookup(label)
-
-    def serving(label: String): ServingFee = servingLookup(label)
-  }
-
-  case class ServingFee(_cpc: Double, _cpm: Double) {
-    def cpc: Value[Double] = new Value(_cpc)
-
-    def cpm: Value[Double] = new Value(_cpm)
-  }
-
-  case class AgencyFee(percentileLookup: Int => Double, monthlyLookup: Int => Double)(implicit row: Row) {
-    def monthly: Value[Double] = new Value(monthlyLookup(row.month))
-
-    def percentileMonth(impressions: Term): Value[Double] = new Value(percentileLookup(impressions.eval.toInt))
-  }
-
-  trait GroovyAccessor[K, A] {
-    def apply(key: K): A
-    def getAt(key: K): A = apply(key)
-  }
-
-  trait GroovyOps[T] {
-    def +(that: T): T
-    def -(that: T): T
-    def /(that: T): T
-    def *(that: T): T
-    def unary_-(): T
-
-    def plus(that: T): T = this + that
-    def minus(that: T): T = this - that
-    def div(that: T): T = this / that
-    def multiply(that: T): T = this * that
-    def negative(): T = this.unary_-()
-  }
-
-  trait Term extends GroovyOps[Term] {
+  trait Term extends Groovy.Ops[Term] {
     def +(that: Term): Term = Add(this, that)
+
     def -(that: Term): Term = Subtract(this, that)
+
     def /(that: Term): Term = Divide(this, that)
+
     def *(that: Term): Term = Multiply(this, that)
 
-    def unary_-() = Multiply(this, new Value(-1))
+    def unary_-() = Multiply(this, new Constant(-1))
 
-    def +[A:Numeric](that: A): Term = this + new Value(that)
-    def -[A:Numeric](that: A): Term = this - new Value(that)
-    def /[A:Numeric](that: A): Term = this / new Value(that)
-    def *[A:Numeric](that: A): Term = this * new Value(that)
+    def +[A: Numeric](that: A): Term = this + new Constant(that)
 
-    def eval: Double
+    def -[A: Numeric](that: A): Term = this - new Constant(that)
+
+    def /[A: Numeric](that: A): Term = this / new Constant(that)
+
+    def *[A: Numeric](that: A): Term = this * new Constant(that)
+
+    def label: String = ""
+
+    def exists(f: Term => Boolean): Boolean = f(this)
   }
 
-  class Value[A: Numeric](v: => A) extends Term {
+  case class Constant[A: Numeric](v: A) extends Term {
     val ops = implicitly[Numeric[A]]
-
-    def eval = ops.toDouble(v)
+    val toDouble = ops.toDouble(v)
+    val toLong = ops.toLong(v)
   }
 
   case class WholeNumber(t: Term) extends Term {
-    def eval = t.eval.toLong.toDouble
+    override def exists(f: Term => Boolean): Boolean = f(this) || f(t)
   }
 
   case class FractionalNumber(t: Term) extends Term {
-    def eval = t.eval
+    override def exists(f: Term => Boolean): Boolean = f(this) || f(t)
   }
 
-  class Variable[A: Numeric](label: String, v: => A) extends Term {
-    val value = new Value[A](v)
-
-    def eval = value.eval
+  case class Max(left: Term, right: Term) extends Term {
+    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
   }
+
+  case class Sum(t: Term) extends Term {
+    override def exists(f: Term => Boolean): Boolean = f(this) || f(t)
+  }
+
+  case class Variable[A: Numeric](override val label: String) extends Term
 
   case class Add(left: Term, right: Term) extends Term {
-    def eval = left.eval + right.eval
+    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
   }
 
   case class Subtract(left: Term, right: Term) extends Term {
-    def eval = left.eval - right.eval
+    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
   }
 
   case class Divide(left: Term, right: Term) extends Term {
-    def eval = left.eval / right.eval
+    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
   }
 
   case class Multiply(left: Term, right: Term) extends Term {
-    def eval = left.eval * right.eval
+    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
+  }
+
+  // Represents the current row being processed
+  object Row {
+
+    case object TotalDaysInMonth extends Term
+
+    case object ReportDaysInMonth extends Term
+
+  }
+
+  object Month {
+
+    case class Sum(t: Term) extends Term {
+      override def exists(f: Term => Boolean): Boolean = f(this) || f(t)
+    }
+
   }
 
 }
@@ -171,7 +323,7 @@ class FormulaEvaluator(/* TODO: Pass in fees and other needed state */) {
     val e = new ScriptEngineManager().getEngineByName("groovy")
     //val settings = engine.asInstanceOf[scala.tools.nsc.interpreter.IMain].settings
     // MyScalaClass is just any class in your project
-    env(e)("foo" -> new AST.Value(10), "bar" -> new AST.Value(5))
+    env(e)("foo" -> new AST.Constant(10), "bar" -> new AST.Constant(5))
     //settings.embeddedDefaults[MyScalaClass]
     e
   }
@@ -193,10 +345,10 @@ class FormulaEvaluator(/* TODO: Pass in fees and other needed state */) {
     try {
       engine.eval(formula).asInstanceOf[Any] match {
         case t: AST.Term => t
-        case n: Int => new AST.Value(n)
-        case n: Long => new AST.Value(n)
-        case n: Float => new AST.Value(n)
-        case n: Double => new AST.Value(n)
+        case n: Int => new AST.Constant(n)
+        case n: Long => new AST.Constant(n)
+        case n: Float => new AST.Constant(n)
+        case n: Double => new AST.Constant(n)
         case n => throw new ClassCastException(s"${n.getClass} is not supported as the result of an expression.")
       }
     } catch {
@@ -210,7 +362,7 @@ class FormulaEvaluator(/* TODO: Pass in fees and other needed state */) {
   }
 
   // Take a discrete value and wrap it in an AST node
-  def wrap[A:Numeric](attr: String, value: A): AST.Term = new AST.Variable(attr, value)
+  //def wrap[A: Numeric](attr: String, value: A): AST.Term = new AST.Variable(attr, value)
 }
 
 trait DataSourceFinder {
@@ -225,7 +377,7 @@ object Joda {
   implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isBefore _)
 }
 
-class ReportGenerator @Inject() (dsFinder: DataSourceFinder, fieldFinder: FieldFinder) {
+class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFinder) {
 
   import scalaz._, Scalaz._
 
@@ -241,7 +393,7 @@ class ReportGenerator @Inject() (dsFinder: DataSourceFinder, fieldFinder: FieldF
 
     val dsRows = Await
       .result(dsRowsF.toList.sequence[Future, (DataSource, Seq[DataSource.Row])], 5.minutes)
-      .flatMap({case (key, list) =>  list.map(i => key -> i)})
+      .flatMap({ case (key, list) => list.map(i => key -> i)})
 
     import Joda._
     // A map of DSes to optional rows coalesced together by date
@@ -266,7 +418,7 @@ class ReportGenerator @Inject() (dsFinder: DataSourceFinder, fieldFinder: FieldF
         attr = fieldBinding.dataSourceAttribute
       } yield field.formula match {
           case Some(formula) => attr -> fe.eval(formula)(row)
-          case None => attr -> fe.wrap(attr, 0)//row.attributes(attr))
+          case None => attr -> fe.wrap(attr, 0) //row.attributes(attr))
         }).toMap)
 
     // TODO
