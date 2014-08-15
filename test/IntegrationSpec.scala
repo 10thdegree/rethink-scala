@@ -11,7 +11,7 @@ import play.api.test.Helpers._
  */
 @RunWith(classOf[JUnitRunner])
 class IntegrationSpec extends Specification {
-
+/*
   "Application" should {
 
     "work from within a browser" in new WithBrowser {
@@ -21,4 +21,5 @@ class IntegrationSpec extends Specification {
       browser.pageSource must contain("Your new application is ready.")
     }
   }
+  */
 }

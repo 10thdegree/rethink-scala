@@ -53,6 +53,7 @@ libraryDependencies ++= Seq(
   "org.codehaus.groovy" % "groovy-jsr223" % "2.3.6",
   //"org.jruby" % "jruby-complete" % "1.7.13"
   //
-  "org.scalaz" %% "scalaz-effect" % "7.1.0"
+  "org.scalaz" %% "scalaz-effect" % "7.1.0",
+  "org.specs2" % "specs2_2.11" % "2.4"
 )
 

@@ -41,8 +41,6 @@ object Groovy {
 
 }
 
-// TODO: All terms probably need an implicit environment reference
-
 object FormulaEvaluator {
 
   // Represents the current report
@@ -72,6 +70,12 @@ object FormulaEvaluator {
     def reportDaysInMonth: Int = currentDays
   }
 
+  object EvaluationCxt {
+    class RowEvaluationCxt()
+  }
+
+  // TODO: Modified EvaluationCxt to be the global evaluation context, and
+  // TODO: Create a RowEvalCxt() that gets emitted from the global context via "def row(date)"
   class EvaluationCxt(val report: Report, val row: Row) {
 
     case class Sum(count: Long, sum: Double)
@@ -155,6 +159,32 @@ object FormulaEvaluator {
 
   import AST._
 
+  // TODO: Use this
+  abstract class Result[A: Numeric] {
+    val ops = implicitly[Numeric[A]]
+
+    def value: A
+
+    def format: Option[String]
+
+    def +[B: Numeric](that: Result[B]): Result[A]
+
+    def formatted = format.map(_.format(value)).getOrElse(value.toString)
+  }
+
+  object Result {
+
+    case class WholeNumber(value: Long, format: Option[String] = None) extends Result[Long] {
+      def +[B: Numeric](that: Result[B]) = WholeNumber(value = ops.plus(this.value, that.ops.toLong(that.value)), format = format)
+    }
+
+    case class FractionalNumber(value: Double, format: Option[String] = None) extends Result[Double] {
+      def +[B: Numeric](that: Result[B]) = FractionalNumber(value = ops.plus(this.value, that.ops.toDouble(that.value)), format = format)
+    }
+
+  }
+
+  // Should instead return a Result() instead
   def eval(term: Term)(implicit cxt: EvaluationCxt): Double = term match {
     case t@Constant(v) => t.toDouble
     // Operators
@@ -173,6 +203,7 @@ object FormulaEvaluator {
     // Global functions
     case t@WholeNumber(n) => eval(n).toLong
     case t@FractionalNumber(n) => eval(n)
+    // case t@Format(n, fmt) => eval(n) // TODO: handle format
     case Sum(n) => cxt.sum(n.label)
     // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
     case Max(left, right) => math.max(eval(left), eval(right))
@@ -184,17 +215,37 @@ object FormulaEvaluator {
       cxt.agencyFees(label).percentileMonthly(ref.map(eval).getOrElse(0d).toInt)
   }
 
-  // TODO: terms must be already ordered based on dependancies!
-  def eval(terms: List[(String, Term)])(implicit cxt: EvaluationCxt): Map[String, Double] = {
+  type LabeledTerm = (String, Option[Term])
+
+  def eval(orderedTerms: List[LabeledTerm])(implicit cxt: EvaluationCxt): Map[String, Double] = {
     // TODO: update cxt with results of each eval()
-    (for ((name, term) <- terms) yield {
+    (for ((name, termO) <- orderedTerms) yield {
+      val term = termO.get
       val res = eval(term)
       cxt(name) = res // Update context with result so it can be used in subsequent loops
       name -> res
     }).toMap
   }
 
-  implicit def TermOrdering: Ordering[Term] = Ordering.fromLessThan((a, b) => !a.exists(_.label == b.label))
+  implicit def TermOrdering(implicit tl: TermLookup): Ordering[LabeledTerm] = Ordering fromLessThan {
+    (a, b) => !a._2.exists(_.has(_.label == b._1))
+  }
+
+  def segment(terms: LabeledTerm*) = {
+    case class State(groups: List[List[LabeledTerm]] = List())
+    def toLookup(list: List[LabeledTerm]) = list.toMap.withDefaultValue(None)
+    def hasDependency(cur: List[LabeledTerm])(t: LabeledTerm) = {
+      cur.exists(c => t._2.exists(_.has(_.label == c._1)(toLookup(cur))))
+    }
+
+    terms.foldLeft(State()) { (accum, t) =>
+      accum.groups.headOption match {
+        case None => accum.copy(groups = List(t) :: Nil)
+        case Some(cur) if hasDependency(cur)(t) => accum.copy(groups = List(t) :: accum.groups)
+        case Some(cur) => accum.copy(groups = (t :: cur) :: accum.groups.tail)
+      }
+    }.groups.map(_.reverse).reverse
+  }
 }
 
 object AST {
@@ -226,6 +277,8 @@ object AST {
    *   - fees.serving("label").cpm
    */
 
+  type TermLookup = String => Option[Term]
+
   trait Term extends Groovy.Ops[Term] {
     def +(that: Term): Term = Add(this, that)
 
@@ -247,7 +300,20 @@ object AST {
 
     def label: String = ""
 
-    def exists(f: Term => Boolean): Boolean = f(this)
+    final def has(f: Term => Boolean)(implicit tl: TermLookup): Boolean = f(this) || contains(f)
+
+    protected[this] def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = false
+  }
+
+  trait OpTerm extends Term {
+    def left: Term
+    def right: Term
+    override def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = (left has f) || (right has f)
+  }
+
+  trait WrappedTerm extends Term {
+    def term: Term
+    override def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = term has f
   }
 
   case class Constant[A: Numeric](v: A) extends Term {
@@ -256,39 +322,27 @@ object AST {
     val toLong = ops.toLong(v)
   }
 
-  case class WholeNumber(t: Term) extends Term {
-    override def exists(f: Term => Boolean): Boolean = f(this) || f(t)
+  case class WholeNumber(term: Term) extends WrappedTerm
+
+  case class FractionalNumber(term: Term) extends WrappedTerm
+
+  case class Format(term: Term, fmt: String) extends WrappedTerm
+
+  case class Max(left: Term, right: Term) extends OpTerm
+
+  case class Sum(term: Term) extends WrappedTerm
+
+  case class Variable(override val label: String) extends Term {
+    override def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = tl(label) exists (_ has f)
   }
 
-  case class FractionalNumber(t: Term) extends Term {
-    override def exists(f: Term => Boolean): Boolean = f(this) || f(t)
-  }
+  case class Add(left: Term, right: Term) extends OpTerm
 
-  case class Max(left: Term, right: Term) extends Term {
-    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
-  }
+  case class Subtract(left: Term, right: Term) extends OpTerm
 
-  case class Sum(t: Term) extends Term {
-    override def exists(f: Term => Boolean): Boolean = f(this) || f(t)
-  }
+  case class Divide(left: Term, right: Term) extends OpTerm
 
-  case class Variable[A: Numeric](override val label: String) extends Term
-
-  case class Add(left: Term, right: Term) extends Term {
-    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
-  }
-
-  case class Subtract(left: Term, right: Term) extends Term {
-    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
-  }
-
-  case class Divide(left: Term, right: Term) extends Term {
-    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
-  }
-
-  case class Multiply(left: Term, right: Term) extends Term {
-    override def exists(f: Term => Boolean): Boolean = f(this) || f(left) || f(right)
-  }
+  case class Multiply(left: Term, right: Term) extends OpTerm
 
   // Represents the current row being processed
   object Row {
@@ -301,9 +355,7 @@ object AST {
 
   object Month {
 
-    case class Sum(t: Term) extends Term {
-      override def exists(f: Term => Boolean): Boolean = f(this) || f(t)
-    }
+    case class Sum(term: Term) extends WrappedTerm
 
   }
 
@@ -314,27 +366,21 @@ case class ReportDisplay()
 //(reportInstance: ReportInstance, rows: DataSource.Row)
 
 // These is our evaluation environment; it knows about state when processing rows.
-// TODO: Create scripting environment for evaluating scala expressions using our AST
 class FormulaEvaluator(/* TODO: Pass in fees and other needed state */) {
 
   import javax.script.{ScriptException, ScriptContext, ScriptEngineManager, ScriptEngine}
 
   val engine = {
     val e = new ScriptEngineManager().getEngineByName("groovy")
-    //val settings = engine.asInstanceOf[scala.tools.nsc.interpreter.IMain].settings
-    // MyScalaClass is just any class in your project
     env(e)("foo" -> new AST.Constant(10), "bar" -> new AST.Constant(5))
-    //settings.embeddedDefaults[MyScalaClass]
     e
   }
 
-  def env(e: ScriptEngine)(props: (String, Any)*): (ScriptEngine, () => Unit) = {
-    for {
-      (key, value) <- props
-    } e.getContext.setAttribute(key, value, ScriptContext.ENGINE_SCOPE)
-
-    val cleanup = () => for ((key, _) <- props) e.getContext.removeAttribute(key, ScriptContext.ENGINE_SCOPE)
-    e -> cleanup
+  def env(e: ScriptEngine)(props: (String, AnyRef)*): ScriptEngine = {
+    import collection.JavaConverters._
+    val b = e.createBindings()
+    b.putAll(props.toMap.asJava)
+    e
   }
 
   //case class FEInput(date: DateTime, formulae: List[(String, String)])
@@ -385,18 +431,20 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
 
   def getReport(report: Report)(start: DateTime, end: DateTime)(implicit ec: ExecutionContext): ReportDisplay = {
 
+    // Get a list of futures for each data source
     val dsRowsF: Seq[Future[(DataSource, Seq[DataSource.Row])]] = for {
       dsBinding <- report.dsBindings
       ds <- dsFinder(report.accountId)(dsBinding.dataSourceId).toList
       data = ds.dataForRange(start, end) // applies filters and merges rows by keyselectors
     } yield data.map(ds -> _)
 
+    // Get a single future for all of them, and await the result
     val dsRows = Await
-      .result(dsRowsF.toList.sequence[Future, (DataSource, Seq[DataSource.Row])], 5.minutes)
+      .result(dsRowsF.toList.sequence[Future, (DataSource, Seq[DataSource.Row])], 2.minutes)
       .flatMap({ case (key, list) => list.map(i => key -> i)})
 
+    // Group the results by date, with a map of data sources to rows
     import Joda._
-    // A map of DSes to optional rows coalesced together by date
     val rows: Seq[(DateTime, Map[DataSource, DataSource.Row])] =
       dsRows.groupBy(_._2.date).toSeq
         .sortBy(x => x._1)
@@ -408,8 +456,8 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
     val fe = new FormulaEvaluator(/* TODO: PASS IN NEEDED ENV INFO */)
 
     // TODO: Apply rules engine to report fields with data
-    val rowsAst = for ((date, row) <- mergedRows) yield
-    // For each row, replace the attributes with an AST of the formulae
+    val rowsAst = for ((date, row) <- mergedRows) yield {
+      // For each row, replace the attributes with an AST of the formulae
       row.copy(attributes = (for {
       // TODO: We need to iterate over the template/view fields,
       // and _optionally_ pull binded fields in the case we have one
@@ -418,8 +466,9 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
         attr = fieldBinding.dataSourceAttribute
       } yield field.formula match {
           case Some(formula) => attr -> fe.eval(formula)(row)
-          case None => attr -> fe.wrap(attr, 0) //row.attributes(attr))
+          //case None => attr -> fe.wrap(attr) //row.attributes(attr))
         }).toMap)
+    }
 
     // TODO
     rowsAst
