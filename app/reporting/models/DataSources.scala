@@ -58,6 +58,7 @@ object DataSources {
 
     case class Row(key: String, date: DateTime, attributes: Map[String, Any]) {
       def +(that:Row): Row = ???
+      def apply(attr: String): Any
     }
 
   }

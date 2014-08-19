@@ -16,9 +16,9 @@ object ReportGeneratorTests {
 
   val fields = List(foo, bar, fooAndBar, fooAndBar2, fooAndBar3)
   val fieldLookup = fields.toMap.withDefaultValue(None)
-  val fieldsSorted1 = fields.reverse.sorted(FormulaEvaluator.TermOrdering(fieldLookup))
-  val fieldsSorted2 = fields.sorted(FormulaEvaluator.TermOrdering(fieldLookup))
-  val fieldsSorted3 = Random.shuffle(fields).sorted(FormulaEvaluator.TermOrdering(fieldLookup))
+  val fieldsSorted1 = fields.reverse.sorted(FormulaCompiler.TermOrdering(fieldLookup))
+  val fieldsSorted2 = fields.sorted(FormulaCompiler.TermOrdering(fieldLookup))
+  val fieldsSorted3 = Random.shuffle(fields).sorted(FormulaCompiler.TermOrdering(fieldLookup))
 
   val fieldsSegmented = List(
     Set(foo, bar),
@@ -47,7 +47,7 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
 
     "segment labeled terms by dependencies" in {
 
-      val segmented = FormulaEvaluator.segment(fieldsSorted1: _*)
+      val segmented = FormulaCompiler.segment(fieldsSorted1: _*)
 
       segmented must size(3)
 

@@ -46,58 +46,81 @@ object FormulaEvaluator {
   // Represents the current report
   case class Report(start: DateTime, end: DateTime)
 
-  // Represents the current row being processed
-  case class Row(date: DateTime)(implicit report: Report) {
-    def month = date.getMonthOfYear
+  object EvaluationCxt {
 
-    def year = date.getYear
+    trait Row {
+      def month: Int
 
-    def totalDays = date.dayOfMonth.getMaximumValue
+      def year: Int
 
-    def currentDays = if (date.getMonthOfYear == report.end.getMonthOfYear) {
-      date.getDayOfMonth
-    } else if (date.getMonthOfYear == report.start.getMonthOfYear) {
-      date.dayOfMonth.getMaximumValue - (report.start.getDayOfMonth - 1)
-    } else {
-      totalDays
+      def totalDaysInMonth: Int
+
+      def reportDaysInMonth: Int
+
+      def apply(key: String): Double
+
+      def update(key: String, value: Double)
+
+      private val rowVals = collection.mutable.Map[String, Double]()
     }
 
-    // Number of days in the month, i.e. 28, 30, 31
-    def totalDaysInMonth: Int = totalDays
-
-    // Number of days in the report, e.g. if it's the 15th, 15, if the 3rd, 3.
-    // At most, equals total days in month.
-    def reportDaysInMonth: Int = currentDays
-  }
-
-  object EvaluationCxt {
-    class RowEvaluationCxt()
   }
 
   // TODO: Modified EvaluationCxt to be the global evaluation context, and
-  // TODO: Create a RowEvalCxt() that gets emitted from the global context via "def row(date)"
-  class EvaluationCxt(val report: Report, val row: Row) {
+  class EvaluationCxt[R](val report: Report) {
 
     case class Sum(count: Long, sum: Double)
 
-    private val rowVals = collection.mutable.Map[String, Double]()
+    // Represents the current row being processed
+    case class RowCxt(date: DateTime)(implicit report: Report) extends EvaluationCxt.Row {
+      def month = date.getMonthOfYear
+
+      def year = date.getYear
+
+      def totalDays = date.dayOfMonth.getMaximumValue
+
+      def currentDays = if (date.getMonthOfYear == report.end.getMonthOfYear) {
+        date.getDayOfMonth
+      } else if (date.getMonthOfYear == report.start.getMonthOfYear) {
+        date.dayOfMonth.getMaximumValue - (report.start.getDayOfMonth - 1)
+      } else {
+        totalDays
+      }
+
+      // Number of days in the month, i.e. 28, 30, 31
+      def totalDaysInMonth: Int = totalDays
+
+      // Number of days in the report, e.g. if it's the 15th, 15, if the 3rd, 3.
+      // At most, equals total days in month.
+      def reportDaysInMonth: Int = currentDays
+
+      private val rowVals = collection.mutable.Map[String, Double]()
+
+      def apply(key: String): Double = rowVals(key)
+
+      def update(key: String, value: Double) = {
+        updateSums(this, key, value)
+        rowVals(key) = value
+      }
+    }
+
+    private val rows = collection.mutable.Map[R, EvaluationCxt.Row]()
+
+    def row(rowKey: R, date: DateTime): EvaluationCxt.Row = rows.getOrElseUpdate(rowKey, RowCxt(date)(report))
+
     private val monthSums = collection.mutable.Map[String, collection.mutable.Map[String, Sum]]()
     private val sums = collection.mutable.Map[String, Sum]()
 
     def sum(key: String): Double = sums(key).sum
 
-    def monthlySum(key: String): Double = monthSums(row.year + "/" + row.month)(key).sum
+    def monthlySum(row: EvaluationCxt.Row)(key: String): Double = monthSums(row.year + "/" + row.month)(key).sum
 
-    def apply(key: String): Double = rowVals(key)
-
-    def update(key: String, value: Double) = {
+    def updateSums(row: EvaluationCxt.Row, key: String, value: Double) = {
       // Month sums
       val m = monthSums.getOrElseUpdate(row.year + "/" + row.month, collection.mutable.Map[String, Sum]())
       m(key) = m.get(key).map(s => s.copy(count = s.count + 1, sum = s.sum + value)).getOrElse(Sum(1, value))
       // Global sums
       sums(key) = sums.get(key).map(s => s.copy(count = s.count + 1, sum = s.sum + value)).getOrElse(Sum(1, value))
-      // Row value
-      rowVals(key) = value
     }
 
     object ServingFees {
@@ -184,8 +207,8 @@ object FormulaEvaluator {
 
   }
 
-  // Should instead return a Result() instead
-  def eval(term: Term)(implicit cxt: EvaluationCxt): Double = term match {
+  // Should instead return a Result()
+  def eval[A](term: Term)(implicit cxt: EvaluationCxt[A], rcxt: EvaluationCxt.Row): Double = term match {
     case t@Constant(v) => t.toDouble
     // Operators
     case Add(left, right) => eval(left) + eval(right)
@@ -193,12 +216,12 @@ object FormulaEvaluator {
     case Divide(left, right) => eval(left) + eval(right)
     case Multiply(left, right) => eval(left) + eval(right)
     // Deferred lookup
-    case Variable(label) => cxt(label)
+    case Variable(label) => rcxt(label)
     // Row functions
-    case AST.Row.TotalDaysInMonth => cxt.row.totalDaysInMonth
-    case AST.Row.ReportDaysInMonth => cxt.row.reportDaysInMonth
+    case AST.Row.TotalDaysInMonth => rcxt.totalDaysInMonth
+    case AST.Row.ReportDaysInMonth => rcxt.reportDaysInMonth
     // Month functions
-    case Month.Sum(n) => cxt.monthlySum(n.label)
+    case Month.Sum(n) => cxt.monthlySum(rcxt)(n.label)
     // case MonthlyAvg(n) => cxt.monthlySum(n.label) / cxt.monthlyCount(n.label)
     // Global functions
     case t@WholeNumber(n) => eval(n).toLong
@@ -215,40 +238,19 @@ object FormulaEvaluator {
       cxt.agencyFees(label).percentileMonthly(ref.map(eval).getOrElse(0d).toInt)
   }
 
-  type LabeledTerm = (String, Option[Term])
-
-  def eval(orderedTerms: List[LabeledTerm])(implicit cxt: EvaluationCxt): Map[String, Double] = {
-    // TODO: update cxt with results of each eval()
-    (for ((name, termO) <- orderedTerms) yield {
-      val term = termO.get
+  def eval[R](row: R, date: DateTime, orderedTerms: List[LabeledTerm])(implicit cxt: EvaluationCxt[R]): Map[String, Double] = {
+    (for ((name, termO) <- orderedTerms; term <- termO) yield {
+      implicit val rcxt = cxt.row(row, date)
       val res = eval(term)
-      cxt(name) = res // Update context with result so it can be used in subsequent loops
+      rcxt(name) = res
       name -> res
     }).toMap
-  }
-
-  implicit def TermOrdering(implicit tl: TermLookup): Ordering[LabeledTerm] = Ordering fromLessThan {
-    (a, b) => !a._2.exists(_.has(_.label == b._1))
-  }
-
-  def segment(terms: LabeledTerm*) = {
-    case class State(groups: List[List[LabeledTerm]] = List())
-    def toLookup(list: List[LabeledTerm]) = list.toMap.withDefaultValue(None)
-    def hasDependency(cur: List[LabeledTerm])(t: LabeledTerm) = {
-      cur.exists(c => t._2.exists(_.has(_.label == c._1)(toLookup(cur))))
-    }
-
-    terms.foldLeft(State()) { (accum, t) =>
-      accum.groups.headOption match {
-        case None => accum.copy(groups = List(t) :: Nil)
-        case Some(cur) if hasDependency(cur)(t) => accum.copy(groups = List(t) :: accum.groups)
-        case Some(cur) => accum.copy(groups = (t :: cur) :: accum.groups.tail)
-      }
-    }.groups.map(_.reverse).reverse
   }
 }
 
 object AST {
+
+  type LabeledTerm = (String, Option[Term])
 
   /*
    * We need to be able to support the following operations:
@@ -307,12 +309,15 @@ object AST {
 
   trait OpTerm extends Term {
     def left: Term
+
     def right: Term
+
     override def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = (left has f) || (right has f)
   }
 
   trait WrappedTerm extends Term {
     def term: Term
+
     override def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = term has f
   }
 
@@ -365,29 +370,54 @@ case class ReportDisplay()
 
 //(reportInstance: ReportInstance, rows: DataSource.Row)
 
-// These is our evaluation environment; it knows about state when processing rows.
-class FormulaEvaluator(/* TODO: Pass in fees and other needed state */) {
+object FormulaCompiler {
 
-  import javax.script.{ScriptException, ScriptContext, ScriptEngineManager, ScriptEngine}
+  import AST._
 
-  val engine = {
-    val e = new ScriptEngineManager().getEngineByName("groovy")
-    env(e)("foo" -> new AST.Constant(10), "bar" -> new AST.Constant(5))
-    e
+  implicit def TermOrdering(implicit tl: TermLookup): Ordering[LabeledTerm] = Ordering fromLessThan {
+    (a, b) => !a._2.exists(_.has(_.label == b._1))
   }
 
-  def env(e: ScriptEngine)(props: (String, AnyRef)*): ScriptEngine = {
+  def segment(terms: LabeledTerm*) = {
+    case class State(groups: List[List[LabeledTerm]] = List())
+    def toLookup(list: List[LabeledTerm]) = list.toMap.withDefaultValue(None)
+    def hasDependency(cur: List[LabeledTerm])(t: LabeledTerm) = {
+      cur.exists(c => t._2.exists(_.has(_.label == c._1)(toLookup(cur))))
+    }
+
+    terms.foldLeft(State()) { (accum, t) =>
+      accum.groups.headOption match {
+        case None => accum.copy(groups = List(t) :: Nil)
+        case Some(cur) if hasDependency(cur)(t) => accum.copy(groups = List(t) :: accum.groups)
+        case Some(cur) => accum.copy(groups = (t :: cur) :: accum.groups.tail)
+      }
+    }.groups.map(_.reverse).reverse
+  }
+}
+
+// varNames will be accessible and referencable variables when compiling expressions.
+class FormulaCompiler(varNames: String*) {
+
+  import javax.script.{ScriptException, ScriptEngineManager, ScriptEngine}
+
+  val engine = new ScriptEngineManager().getEngineByName("groovy")
+
+  def env(e: ScriptEngine)(props: (String, AnyRef)*) {
     import collection.JavaConverters._
     val b = e.createBindings()
     b.putAll(props.toMap.asJava)
-    e
   }
+
+  def initVars(e: ScriptEngine)(vars: String*) = env(e)(vars.map(v => v -> AST.Variable(v)): _*)
+
+  initVars(engine)(varNames: _*)
 
   //case class FEInput(date: DateTime, formulae: List[(String, String)])
 
+  def apply(formula: String) = compile(formula)
+
   // Convert formula to an AST, referencing needed aggregates for deferred computation
-  def eval(formula: String)(row: DataSource.Row): AST.Term = {
-    // TODO: Set row specific properties here.
+  def compile(formula: String): AST.Term = {
     try {
       engine.eval(formula).asInstanceOf[Any] match {
         case t: AST.Term => t
@@ -406,9 +436,6 @@ class FormulaEvaluator(/* TODO: Pass in fees and other needed state */) {
         throw ex
     }
   }
-
-  // Take a discrete value and wrap it in an AST node
-  //def wrap[A: Numeric](attr: String, value: A): AST.Term = new AST.Variable(attr, value)
 }
 
 trait DataSourceFinder {
@@ -417,6 +444,8 @@ trait DataSourceFinder {
 
 trait FieldFinder {
   def apply(accountId: UUID)(fieldId: UUID): Option[Field] = { ??? }
+
+  def byTemplate(templateId: UUID): List[Field] = { ??? }
 }
 
 object Joda {
@@ -452,27 +481,40 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
 
     // TODO: Merge DSes for each date, if attributes collide, sum them or error.
     val mergedRows = rows.map({ case (date, dses) => date -> dses.head._2})
+    val allFields = fieldFinder.byTemplate(report.templateId)
+    val compiler = new FormulaCompiler(allFields.map(_.label): _*)
+    val compiledFields = allFields.map(f => f -> f.formula.map(compiler.apply))
+    val labeledTerms = compiledFields.map({ case (field, term) => field.label -> term}).toMap
+    val labeledFields = compiledFields.map({ case (field, term) => field.label -> field}).toMap
+    val orderedTerms = labeledTerms.toList.sorted(FormulaCompiler.TermOrdering(labeledTerms))
+    val groupedTerms = FormulaCompiler.segment(orderedTerms: _*)
+    val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
+    val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
+    val labeledBindings = allFields.map(f => f.label -> f.id.map(id => bindings(id))).toMap
 
-    val fe = new FormulaEvaluator(/* TODO: PASS IN NEEDED ENV INFO */)
-
-    // TODO: Apply rules engine to report fields with data
-    val rowsAst = for ((date, row) <- mergedRows) yield {
-      // For each row, replace the attributes with an AST of the formulae
-      row.copy(attributes = (for {
-      // TODO: We need to iterate over the template/view fields,
-      // and _optionally_ pull binded fields in the case we have one
-        fieldBinding <- report.fieldBindings
-        field <- fieldFinder(report.accountId)(fieldBinding.fieldId)
-        attr = fieldBinding.dataSourceAttribute
-      } yield field.formula match {
-          case Some(formula) => attr -> fe.eval(formula)(row)
-          //case None => attr -> fe.wrap(attr) //row.attributes(attr))
-        }).toMap)
+    // Do K iterations over all rows, where K = groupedLabels.length
+    // Each of K groups separates dependencies, so we must process A before B where B depends on A.
+    val cxt = new FormulaEvaluator.EvaluationCxt[DataSource.Row](FormulaEvaluator.Report(start, end))
+    for ((group, groupIdx) <- groupedLabels.zipWithIndex) {
+      for ((date, row) <- mergedRows) {
+        val groupTerms = group.map { label =>
+          val term = labeledTerms(label) orElse {
+            // TODO: each row should ideally know how to map a label to its internal ds attribute name
+            labeledBindings(label).map(b => AST.Constant(row(b.dataSourceAttribute).toString.toDouble))
+          }
+          label -> term
+        }
+        FormulaEvaluator.eval(row, date, groupTerms)(cxt)
+      }
     }
+    // cxt should have all the values at the end of this
+    val resultRows = mergedRows.map({ case (date, row) => cxt.row(row, date)})
 
-    // TODO
-    rowsAst
+    // If we need footer values, we can pull them out of cxt here.
+    // TODO: must compile footer formulae first, then eval them here
+    // var footerVals = allFields.map(f => f.footerFormula.map(ff => FormulaEvaluator.eval(footerTerms(f.label)))))
 
+    // TODO: Make a return object encapsulating the result rows
     null
   }
 }
