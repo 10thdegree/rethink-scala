@@ -65,13 +65,23 @@ Currently, only two data source types are needed:
 1. Dart
 2. Marchex
 
-An instance of a data source is essentially responsible for returning a matrix of "reportable entities" with attributes. URP is designed around having metrics for specific dates (individual days) and reportable entities (such as "ad campaigns" or "ad publishers"); therefore a data source must provide information on these two things so that its data can be combined with other data source data.
+An instance of a data source is essentially responsible for returning a matrix of "reportable entities" with attributes. URP is designed around having metrics for specific datetimes and reportable entities (such as "ad campaigns" or "ad publishers"); therefore a data source must provide information on these two things so that its data can be combined with other data source data.
 
 The system should be able to combine data from multiple data sources, including the following cases: 
 
-1. when different data sources provide different attributes for the same entities.
-2. when different data sources provide the same attributes for the same entities (sum these values).
-3. when different data sources provide the same attributes for different entities (e.g. a Bing data source returns stats for Bing campaigns, and an AdWords data source returns stats for AdWords campaigns).
+1. when different data sources provide different attributes for the same entities
+2. when different data sources provide the same attributes for the same entities (sum these values)
+3. when different data sources provide the same attributes for different entities (e.g. a Bing data source returns stats for Bing campaigns, and an AdWords data source returns stats for AdWords campaigns)
+
+However, different data sources will not always provide the same granularity of of metrics; the system must still be able to reconcile this, coalescing the data into the same report. For example, Marchex campaigns may only exist for publisher, but those numbers may need to be distributed across all the ad campaigns within each. In such cases, the system must provide a means for aligning data sources that provide different levels of granularity on reportable entities; further, a dependant field to be used in distributing the metrics provided by less granular data source(s).
+
+#### Examples
+
+##### Example 1: Multiple data sources, with varying granularity
+
+Let's say we have the following data sources: Bing, AdWords, and Marchex. Bing and AdWords provide metrics by ad campaign. For Marchex, for bing-sourced campaigns, we only have a single phone number, whil for AdWords, we thought through the setup better and have one number per ad campaign. This means that for Bing, we need to take those phone calls and distribute all the calls proportionally (e.g. by # of clicks) across the Bing ad campaigns; for AdWords, on the other hand, we have a one-to-one mapping for ad campaigns with Marchex.
+
+If we alter the example to instead want to report on keywords rather than ad campaigns, the Marchex numbers for both Bing and AdWords no longer match one-to-one. In this case, all of the numbers will need to be proportionally distributed; for Bing, this means taking the publisher level metrics from Marchex and distributing them across all Bing ad campaigns; for AdWords, this means taking the metrics from Marchex for each ad campaign, and distributing them across the keywords.
 
 ### Templates
 
@@ -86,7 +96,11 @@ spendWithFees = max(
     agencyFees("display").percentileMonth(sumMonth(impressions)) * sumMonth(spend))
 ```
 
-Based on user permissions, fields in the report should be hidden/shown; this allows administrators to view reports with and without the agency/serving fees included, but for clients, to only show them included.
+Based on user permissions, different reports should be visible to the user.
+
+Also, it may be desirable, based on user permissions, for fields in the report to be hidden/shown; this allows administrators to view reports with and without the agency/serving fees included, but for clients, to only show them included.
+
+There must be a way to specify the formatting for fields, so that money can be formatted as money, whole numbers without decimal places, and fractional numbers with them (and with a configurable amount of precision).
 
 ### Viewing Reports
 
