@@ -66,17 +66,18 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
     // Do K iterations over all rows, where K = groupedLabels.length
     // Each of K groups separates dependencies, so we must process A before B where B depends on A.
     val cxt = new FormulaEvaluator.EvaluationCxt[DataSource.Row](FormulaEvaluator.Report(start, end))
-    for ((group, groupIdx) <- groupedLabels.zipWithIndex) {
-      for ((date, row) <- mergedRows) {
-        val groupTerms = group.map { label =>
-          val term = labeledTerms(label) orElse {
-            // TODO: each row should ideally know how to map a label to its internal ds attribute name
-            labeledBindings(label).map(b => AST.Constant(row(b.dataSourceAttribute).toString.toDouble))
-          }
-          label -> term
+    for {
+      (group, groupIdx) <- groupedLabels.zipWithIndex
+      (date, row) <- mergedRows
+    } {
+      val groupTerms = group.map { label =>
+        val term = labeledTerms(label) orElse {
+          // TODO: each row should ideally know how to map a label to its internal ds attribute name
+          labeledBindings(label).map(b => AST.Constant(row(b.dataSourceAttribute).toString.toDouble))
         }
-        FormulaEvaluator.eval(row, date, groupTerms)(cxt)
+        label -> term
       }
+      FormulaEvaluator.eval(row, date, groupTerms)(cxt)
     }
     // cxt should have all the values at the end of this
     val resultRows = mergedRows.map({ case (date, row) => cxt.row(row, date)})

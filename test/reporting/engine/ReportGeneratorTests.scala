@@ -16,8 +16,9 @@ object ReportGeneratorTests {
   val fooAndBar = "fooAndBar" -> AST.Add(AST.Variable("foo"), AST.Variable("bar")).some
   val fooAndBar2 = "fooAndBar2" -> AST.WholeNumber(AST.Max(AST.Variable("foo"), AST.Variable("fooAndBar"))).some
   val fooAndBar3 = "fooAndBar3" -> AST.Sum(AST.Variable("fooAndBar")).some
+  val fooBarMax2 =  "fooBarMax2" -> AST.Max(AST.Variable("fooAndBar"), AST.Variable("fooAndBar3")).some
 
-  val fields = List(foo, bar, fooAndBar, fooAndBar2, fooAndBar3)
+  val fields = List(foo, bar, fooAndBar, fooAndBar2, fooAndBar3, fooBarMax2)
   val fieldLookup = fields.toMap.withDefaultValue(None)
   val fieldsSorted1 = fields.reverse.sorted(FormulaCompiler.TermOrdering(fieldLookup))
   val fieldsSorted2 = fields.sorted(FormulaCompiler.TermOrdering(fieldLookup))
@@ -26,7 +27,8 @@ object ReportGeneratorTests {
   val fieldsSegmented = List(
     Set(foo, bar),
     Set(fooAndBar),
-    Set(fooAndBar2, fooAndBar3)
+    Set(fooAndBar2, fooAndBar3),
+    Set(fooBarMax2)
   )
 }
 
@@ -46,6 +48,8 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
       fieldsSorted2(0)._2 === None
       fieldsSorted3(1)._2 === None
       fieldsSorted3(1)._2 === None
+      fieldsSorted1.last._1 === "fooBarMax2"
+      // TODO: Add single tests for checking ordering
 
       success
     }
@@ -54,7 +58,7 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
 
       val segmented = FormulaCompiler.segment(fieldsSorted1: _*)
 
-      segmented.size === 3
+      segmented.size === fieldsSegmented.size
 
       for ((grp, idx) <- segmented.zipWithIndex) {
         grp.toSet === fieldsSegmented(idx)
@@ -71,7 +75,9 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
         "fooBar" -> Some("foo + bar"),
         "fooBarSum" -> Some("sum(fooBar)"),
         "fooBarInt" -> Some("wholeNumber(fooBar)"),
-        "fooBarMonthSum" -> Some("month.sum(fooBar)")
+        "fooBarMonthSum" -> Some("month.sum(fooBar)"),
+        "fooBarMax" -> Some("max(foo, bar)"),
+        "fooBarMax2" -> Some("max(fooBarMax, fooBarMonthSum)")
       )
       val formulaeAst = Map(
         "foo" -> Some(AST.Constant(4)),
@@ -79,7 +85,9 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
         "fooBar" -> Some(AST.Add(AST.Variable("foo"), AST.Variable("bar"))),
         "fooBarSum" -> Some(AST.Sum(AST.Variable("fooBar"))),
         "fooBarInt" -> Some(AST.WholeNumber(AST.Variable("fooBar"))),
-        "fooBarMonthSum" -> Some(AST.Month.Sum(AST.Variable("fooBar")))
+        "fooBarMonthSum" -> Some(AST.Month.Sum(AST.Variable("fooBar"))),
+        "fooBarMax" -> Some(AST.Max(AST.Variable("foo"), AST.Variable("bar"))),
+        "fooBarMax2" -> Some(AST.Max(AST.Variable("fooBarMax"), AST.Variable("fooBarMonthSum")))
       )
 
       val fc = new FormulaCompiler(formulae.keys.toSeq: _*)
@@ -145,14 +153,20 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
         "bar" -> None,
         "fooBar" -> Some("foo + bar"),
         "fooBarMonthSum" -> Some("month.sum(fooBar)"),
-        "fooBarSum" -> Some("sum(fooBar)"))
+        "fooBarSum" -> Some("sum(fooBar)"),
+        "fooBarMax" -> Some("max(foo, bar)"),
+        "fooBarMax2" -> Some("max(fooBarMonthSum, fooBarSum)")
+      )
 
       val formulaeAst = Map(
         "foo" -> Some(AST.Constant(4)),
         "bar" -> None,
         "fooBar" -> Some(AST.Add(AST.Variable("foo"), AST.Variable("bar"))),
         "fooBarMonthSum" -> Some(AST.Month.Sum(AST.Variable("fooBar"))),
-        "fooBarSum" -> Some(AST.Sum(AST.Variable("fooBar"))))
+        "fooBarSum" -> Some(AST.Sum(AST.Variable("fooBar"))),
+        "fooBarMax" -> Some(AST.Max(AST.Variable("foo"), AST.Variable("bar"))),
+        "fooBarMax2" -> Some(AST.Max(AST.Variable("fooBarMonthSum"), AST.Variable("fooBarSum")))
+      )
 
       val fc = new FormulaCompiler(formulae.keys.toSeq: _*)
 
@@ -165,17 +179,19 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
       )
 
       val rowResults = List(
-        Map("foo" -> 4.0, "bar" -> 5.0, "fooBar" -> 9.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 15.0),
-        Map("foo" -> 4.0, "bar" -> 2.0, "fooBar" -> 6.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 15.0),
-        Map("foo" -> 4.0, "bar" -> 10.0, "fooBar" -> 14.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 14.0)
+        Map("foo" -> 4.0, "bar" -> 5.0, "fooBar" -> 9.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 15.0, "fooBarMax" -> 5.0, "fooBarMax2" -> 29.0),
+        Map("foo" -> 4.0, "bar" -> 2.0, "fooBar" -> 6.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 15.0, "fooBarMax" -> 4.0, "fooBarMax2" -> 29.0),
+        Map("foo" -> 4.0, "bar" -> 10.0, "fooBar" -> 14.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 14.0, "fooBarMax" -> 10.0, "fooBarMax2" -> 29.0)
       )
 
-      val labeledTerms = formulaeAst
+      val labeledTerms = for ((key, formulaOpt) <- formulae) yield key -> formulaOpt.map(fc.apply)
       val orderedTerms = labeledTerms.toList.sorted(FormulaCompiler.TermOrdering(labeledTerms))
+      println("ordered terms: " + orderedTerms)
       val groupedTerms = FormulaCompiler.segment(orderedTerms: _*)
 
       implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))
 
+      groupedTerms.foreach(println)
       for {
         grpTerms <- groupedTerms
         row <- rows

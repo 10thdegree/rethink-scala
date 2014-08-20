@@ -199,68 +199,64 @@ object FormulaEvaluator {
 
   import reporting.engine.AST._
 
-  // TODO: Use this
-  abstract class Result[A: Numeric] {
-    val ops = implicitly[Numeric[A]]
-
-    def value: A
-
-    def format: Option[String]
-
-    def +[B: Numeric](that: Result[B]): Result[A]
-
-    def formatted = format.map(_.format(value)).getOrElse(value.toString)
+  case class Result(value: BigDecimal, format: Option[String]) {
+    def toDouble: Double = value.toDouble
+    def toLong: Long = value.toLong
+    def toInt: Int = value.toInt
+    val dfOpt = format.map(f => new java.text.DecimalFormat(f))
+    def formatted = dfOpt.map(_.format(value)).getOrElse(value.toString())
+    def +(that: Result) = new Result(this.value + that.value, this.format orElse that.format)
+    def -(that: Result) = new Result(this.value - that.value, this.format orElse that.format)
+    def *(that: Result) = new Result(this.value * that.value, this.format orElse that.format)
+    def /(that: Result) = new Result(this.value / that.value, this.format orElse that.format)
   }
-
   object Result {
-
-    case class WholeNumber(value: Long, format: Option[String] = None) extends Result[Long] {
-      def +[B: Numeric](that: Result[B]) = WholeNumber(value = ops.plus(this.value, that.ops.toLong(that.value)), format = format)
+    def apply[A: Numeric](value: A, format: Option[String] = None): Result = value match {
+      case v: Double => new Result(v, format)
+      case v: Float => new Result(v.toDouble, format)
+      case v: Long => new Result(v, format)
+      case v: Int => new Result(v, format)
+      case v: BigDecimal => new Result(v, format)
+      case v => new Result(BigDecimal(v.toString), format)
     }
-
-    case class FractionalNumber(value: Double, format: Option[String] = None) extends Result[Double] {
-      def +[B: Numeric](that: Result[B]) = FractionalNumber(value = ops.plus(this.value, that.ops.toDouble(that.value)), format = format)
-    }
-
   }
 
-  // XXX: Should instead return a Result()
-  def eval[A](term: Term)(implicit cxt: EvaluationCxt[A], rcxt: EvaluationCxt.Row): Double = term match {
-    case t@Constant(v) => t.toDouble
+  def eval[A](term: Term)(implicit cxt: EvaluationCxt[A], rcxt: EvaluationCxt.Row): Result = term match {
+    case t@Constant(v) => Result(t)
     // Operators
     case Add(left, right) => eval(left) + eval(right)
-    case Subtract(left, right) => eval(left) + eval(right)
-    case Divide(left, right) => eval(left) + eval(right)
-    case Multiply(left, right) => eval(left) + eval(right)
+    case Subtract(left, right) => eval(left) - eval(right)
+    case Divide(left, right) => eval(left) / eval(right)
+    case Multiply(left, right) => eval(left) * eval(right)
     // Deferred lookup
-    case Variable(label) => rcxt(label)
+    case Variable(label) => Result(rcxt(label))
     // Row functions
-    case AST.Row.TotalDaysInMonth => rcxt.totalDaysInMonth
-    case AST.Row.ReportDaysInMonth => rcxt.reportDaysInMonth
+    case AST.Row.TotalDaysInMonth => Result(rcxt.totalDaysInMonth)
+    case AST.Row.ReportDaysInMonth => Result(rcxt.reportDaysInMonth)
     // Month functions
-    case Month.Sum(n) => cxt.monthlySum(rcxt)(n.label)
+    case Month.Sum(n) => Result(cxt.monthlySum(rcxt)(n.label))
     // case MonthlyAvg(n) => cxt.monthlySum(n.label) / cxt.monthlyCount(n.label)
     // Global functions
-    case t@WholeNumber(n) => eval(n).toLong
+    case t@WholeNumber(n) => Result(eval(n).toDouble)
     case t@FractionalNumber(n) => eval(n)
-    // case t@Format(n, fmt) => eval(n) // TODO: handle format
-    case Sum(n) => cxt.sum(n.label)
+    case t@Format(n, fmt) => eval(n).copy(format = Some(fmt))
+    case Sum(n) => Result(cxt.sum(n.label))
     // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
-    case Max(left, right) => math.max(eval(left), eval(right))
+    case Max(left, right) => Result(eval(left).value.max(eval(right).value)) // loses format
     // Fees
-    case ServingFee(label, ft) if ft == ServingFeeTypes.Cpc => cxt.servingFees(label).cpc
-    case ServingFee(label, ft) if ft == ServingFeeTypes.Cpm => cxt.servingFees(label).cpm
-    case AgencyFee(label, ft, ref) if ft == AgencyFeeTypes.Monthly => cxt.agencyFees(label).monthly
+    case ServingFee(label, ft) if ft == ServingFeeTypes.Cpc => Result(cxt.servingFees(label).cpc)
+    case ServingFee(label, ft) if ft == ServingFeeTypes.Cpm => Result(cxt.servingFees(label).cpm)
+    case AgencyFee(label, ft, ref) if ft == AgencyFeeTypes.Monthly => Result(cxt.agencyFees(label).monthly)
     case AgencyFee(label, ft, ref) if ft == AgencyFeeTypes.PercentileMonth =>
-      cxt.agencyFees(label).percentileMonthly(ref.map(r => eval(r)).getOrElse(0d).toInt)
+      Result(cxt.agencyFees(label).percentileMonthly(ref.map(r => eval(r).toInt).getOrElse(0)))
   }
 
   def eval[R](row: R, date: DateTime, orderedTerms: List[LabeledTerm])(implicit cxt: EvaluationCxt[R]): Map[String, Double] = {
     (for ((name, termO) <- orderedTerms; term <- termO) yield {
       implicit val rcxt = cxt.row(row, date)
       val res = eval(term)
-      rcxt(name) = res
-      name -> res
+      rcxt(name) = res.toDouble // TODO: Should keep Result() instead of converting to Double
+      name -> res.toDouble
     }).toMap
   }
 }
@@ -319,7 +315,9 @@ object AST {
 
     def label: String = ""
 
-    final def has(f: Term => Boolean)(implicit tl: TermLookup): Boolean = f(this) || contains(f)
+    final def has(f: Term => Boolean)(implicit tl: TermLookup): Boolean = {
+      f(this) || contains(f)
+    }
 
     protected[this] def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = false
   }
@@ -395,6 +393,8 @@ object AST {
 
     def format(term: Term, format: String) = Format(term, format)
 
+    def currency(term: Term) = Format(term, "\u00A4#,###.00")
+
     def sum(term: Term): Sum = Sum(term)
 
     object functions {
@@ -404,6 +404,10 @@ object AST {
 
       val format = new Function2[AST.Term, String, AST.Term] with Groovy.Closure2[AST.Term, String, AST.Term] {
         def apply(arg: AST.Term, fmt: String): AST.Term = AST.Functions.format(arg, fmt)
+      }
+
+      val currency = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
+        def apply(arg: AST.Term): AST.Term = AST.Functions.currency(arg)
       }
 
       val max = new Function2[AST.Term, AST.Term, AST.Term] with Groovy.Closure2[AST.Term, AST.Term, AST.Term] {
@@ -439,7 +443,9 @@ object FormulaCompiler {
     case class State(groups: List[List[LabeledTerm]] = List())
     def toLookup(list: List[LabeledTerm]) = list.toMap.withDefaultValue(None)
     def hasDependency(cur: List[LabeledTerm])(t: LabeledTerm) = {
-      cur.exists(c => t._2.exists(_.has(_.label == c._1)(toLookup(cur))))
+      val r = cur.exists(c => t._2.exists(_.has(_.label == c._1)(toLookup(cur))))
+      println(s"${cur} <=$r=> ${t._1} ${t._2}")
+      r
     }
 
     terms.foldLeft(State()) { (accum, t) =>
@@ -465,9 +471,11 @@ class FormulaCompiler(varNames: String*) {
     b.put("row", AST.Row)
     b.put("func", AST.Functions)
 
+    // TODO: Use reflection to automatically generate this
     import AST.Functions.{functions => funcs}
     b.put("sum", funcs.sum)
     b.put("format", funcs.format)
+    b.put("currency", funcs.currency)
     b.put("max", funcs.max)
     b.put("wholeNumber", funcs.wholeNumber)
     b.put("fractionalNumber", funcs.wholeNumber)
