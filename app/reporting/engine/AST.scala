@@ -55,221 +55,13 @@ private[engine] object Groovy {
 
 }
 
-object FormulaEvaluator {
-
-  // Represents the current report
-  case class Report(start: DateTime, end: DateTime)
-
-  object EvaluationCxt {
-
-    trait Row {
-      def month: Int
-
-      def year: Int
-
-      def totalDaysInMonth: Int
-
-      def reportDaysInMonth: Int
-
-      def apply(key: String): Double
-
-      def update(key: String, value: Double)
-
-      def values: Map[String, Double]
-    }
-
-  }
-
-  class EvaluationCxt[R](val report: Report) {
-
-    case class Sum(count: Long, sum: Double)
-
-    // Represents the current row being processed
-    case class RowCxt(date: DateTime)(implicit report: Report) extends EvaluationCxt.Row {
-      def month = date.getMonthOfYear
-
-      def year = date.getYear
-
-      def totalDays = date.dayOfMonth.getMaximumValue
-
-      def currentDays = if (date.getMonthOfYear == report.end.getMonthOfYear) {
-        date.getDayOfMonth
-      } else if (date.getMonthOfYear == report.start.getMonthOfYear) {
-        date.dayOfMonth.getMaximumValue - (report.start.getDayOfMonth - 1)
-      } else {
-        totalDays
-      }
-
-      // Number of days in the month, i.e. 28, 30, 31
-      def totalDaysInMonth: Int = totalDays
-
-      // Number of days in the report, e.g. if it's the 15th, 15, if the 3rd, 3.
-      // At most, equals total days in month.
-      def reportDaysInMonth: Int = currentDays
-
-      private val rowVals = collection.mutable.Map[String, Double]()
-
-      def values = rowVals.toMap
-
-      def apply(key: String): Double = rowVals(key)
-
-      def update(key: String, value: Double) = {
-        updateSums(this, key, value)
-        rowVals(key) = value
-      }
-    }
-
-    private val rows = collection.mutable.Map[R, EvaluationCxt.Row]()
-
-    def allRows = rows.toMap
-
-    def row(rowKey: R, date: DateTime): EvaluationCxt.Row = rows.getOrElseUpdate(rowKey, RowCxt(date)(report))
-
-    private val monthSums = collection.mutable.Map[String, collection.mutable.Map[String, Sum]]()
-    private val sums = collection.mutable.Map[String, Sum]()
-
-    def sum(key: String): Double = sums(key).sum
-
-    def monthlySum(row: EvaluationCxt.Row)(key: String): Double = monthSums(row.year + "/" + row.month)(key).sum
-
-    def updateSums(row: EvaluationCxt.Row, key: String, value: Double) = {
-      // Month sums
-      val m = monthSums.getOrElseUpdate(row.year + "/" + row.month, collection.mutable.Map[String, Sum]())
-      m(key) = m.get(key).map(s => s.copy(count = s.count + 1, sum = s.sum + value)).getOrElse(Sum(1, value))
-      // Global sums
-      sums(key) = sums.get(key).map(s => s.copy(count = s.count + 1, sum = s.sum + value)).getOrElse(Sum(1, value))
-    }
-
-    object ServingFees {
-      def cpm = 0d
-
-      def cpc = 0d
-    }
-
-    object AgencyFees {
-      def monthly = 0d // agencyFeesLookup(row.month)
-
-      def percentileMonthly(impressions: Int) = 0d //agencyFeesLookup(row.month, Some(impressions))
-    }
-
-    def servingFees(label: String) = ServingFees
-
-    def agencyFees(label: String) = AgencyFees
-  }
-
-  case class Fees() {
-    def agency(label: String): AgencyFees = AgencyFees(label)
-
-    def serving(label: String): ServingFees = ServingFees(label)
-  }
-
-  object ServingFeeTypes {
-
-    case class ServingFeeType(name: String)
-
-    val Cpc = ServingFeeType("cpc")
-
-    val Cpm = ServingFeeType("cpm")
-  }
-
-  case class ServingFee(override val label: String, feeType: ServingFeeTypes.ServingFeeType) extends AST.Term
-
-  case class ServingFees(label: String) {
-    def cpc: AST.Term = ServingFee(label, ServingFeeTypes.Cpc)
-
-    def cpm: AST.Term = ServingFee(label, ServingFeeTypes.Cpm)
-  }
-
-  object AgencyFeeTypes {
-
-    case class AgencyFeeType(name: String)
-
-    val Monthly = AgencyFeeType("monthly")
-
-    val PercentileMonth = AgencyFeeType("percentileMonth")
-  }
-
-  case class AgencyFee(override val label: String, feeType: AgencyFeeTypes.AgencyFeeType, ref: Option[AST.Term] = None) extends AST.Term
-
-  case class AgencyFees(label: String) {
-    def monthly: AST.Term = AgencyFee(label, AgencyFeeTypes.Monthly)
-
-    def percentileMonth(impressions: AST.Term): AST.Term = AgencyFee(label, AgencyFeeTypes.Monthly, Some(impressions))
-  }
-
-  import reporting.engine.AST._
-
-  case class Result(value: BigDecimal, format: Option[String]) {
-    def toDouble: Double = value.toDouble
-    def toLong: Long = value.toLong
-    def toInt: Int = value.toInt
-    val dfOpt = format.map(f => new java.text.DecimalFormat(f))
-    def formatted = dfOpt.map(_.format(value)).getOrElse(value.toString())
-    def +(that: Result) = new Result(this.value + that.value, this.format orElse that.format)
-    def -(that: Result) = new Result(this.value - that.value, this.format orElse that.format)
-    def *(that: Result) = new Result(this.value * that.value, this.format orElse that.format)
-    def /(that: Result) = new Result(this.value / that.value, this.format orElse that.format)
-  }
-  object Result {
-    def apply[A: Numeric](value: A, format: Option[String] = None): Result = value match {
-      case v: Double => new Result(v, format)
-      case v: Float => new Result(v.toDouble, format)
-      case v: Long => new Result(v, format)
-      case v: Int => new Result(v, format)
-      case v: BigDecimal => new Result(v, format)
-      case v => new Result(BigDecimal(v.toString), format)
-    }
-  }
-
-  def eval[A](term: Term)(implicit cxt: EvaluationCxt[A], rcxt: EvaluationCxt.Row): Result = term match {
-    case t@Constant(v) => Result(t)
-    // Operators
-    case Add(left, right) => eval(left) + eval(right)
-    case Subtract(left, right) => eval(left) - eval(right)
-    case Divide(left, right) => eval(left) / eval(right)
-    case Multiply(left, right) => eval(left) * eval(right)
-    // Deferred lookup
-    case Variable(label) => Result(rcxt(label))
-    // Row functions
-    case AST.Row.TotalDaysInMonth => Result(rcxt.totalDaysInMonth)
-    case AST.Row.ReportDaysInMonth => Result(rcxt.reportDaysInMonth)
-    // Month functions
-    case Month.Sum(n) => Result(cxt.monthlySum(rcxt)(n.label))
-    // case MonthlyAvg(n) => cxt.monthlySum(n.label) / cxt.monthlyCount(n.label)
-    // Global functions
-    case t@WholeNumber(n) => Result(eval(n).toDouble)
-    case t@FractionalNumber(n) => eval(n)
-    case t@Format(n, fmt) => eval(n).copy(format = Some(fmt))
-    case Sum(n) => Result(cxt.sum(n.label))
-    // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
-    case Max(left, right) => Result(eval(left).value.max(eval(right).value)) // loses format
-    // Fees
-    case ServingFee(label, ft) if ft == ServingFeeTypes.Cpc => Result(cxt.servingFees(label).cpc)
-    case ServingFee(label, ft) if ft == ServingFeeTypes.Cpm => Result(cxt.servingFees(label).cpm)
-    case AgencyFee(label, ft, ref) if ft == AgencyFeeTypes.Monthly => Result(cxt.agencyFees(label).monthly)
-    case AgencyFee(label, ft, ref) if ft == AgencyFeeTypes.PercentileMonth =>
-      Result(cxt.agencyFees(label).percentileMonthly(ref.map(r => eval(r).toInt).getOrElse(0)))
-  }
-
-  def eval[R](row: R, date: DateTime, orderedTerms: List[LabeledTerm])(implicit cxt: EvaluationCxt[R]): Map[String, Double] = {
-    (for ((name, termO) <- orderedTerms; term <- termO) yield {
-      implicit val rcxt = cxt.row(row, date)
-      val res = eval(term)
-      rcxt(name) = res.toDouble // TODO: Should keep Result() instead of converting to Double
-      name -> res.toDouble
-    }).toMap
-  }
-}
-
 object AST {
-
-  type LabeledTerm = (String, Option[Term])
 
   /*
    * We need to be able to support the following operations:
    *
    * constants: 7 + 1
-   * bindable fields: somefield + anotherfield
+   * bindable fields: somefield or anotherfield
    * aliases: foo = 5; foo * 2
    * global aggregate functions:
    *   - sum(field)
@@ -278,7 +70,7 @@ object AST {
    * global functions:
    *   - round(expression)
    *   - fractional(expression)
-   *   - format(expression, "%2.4f")
+   *   - format(expression, "#,###.00")
    * month-based aggregate functions:
    *   - month.sum(field)
    *   - month.avg(field).[mean|median|mode]
@@ -287,10 +79,12 @@ object AST {
    *   - row.reportDaysInMonth
    * fee functions:
    *   - fees.agency("label").monthly
-   *   - fees.agency("label").percentileMonth
+   *   - fees.agency("label").percentileMonth(impressions)
    *   - fees.serving("label").cpc
    *   - fees.serving("label").cpm
    */
+
+  type LabeledTerm = (String, Option[Term])
 
   type TermLookup = String => Option[Term]
 
@@ -364,16 +158,56 @@ object AST {
 
   case class Multiply(left: Term, right: Term) extends OpTerm
 
-  // Represents the current row being processed
+  object Fees {
+
+    def agency(label: String): AgencyFees = AgencyFees(label)
+
+    def serving(label: String): ServingFees = ServingFees(label)
+
+    object ServingFeeTypes {
+
+      case class ServingFeeType(name: String)
+
+      val Cpc = ServingFeeType("cpc")
+
+      val Cpm = ServingFeeType("cpm")
+    }
+
+    case class ServingFee(override val label: String, feeType: ServingFeeTypes.ServingFeeType) extends AST.Term
+
+    case class ServingFees(label: String) {
+      val cpc: AST.Term = ServingFee(label, ServingFeeTypes.Cpc)
+      val cpm: AST.Term = ServingFee(label, ServingFeeTypes.Cpm)
+    }
+
+    object AgencyFeeTypes {
+
+      case class AgencyFeeType(name: String)
+
+      val Monthly = AgencyFeeType("monthly")
+
+      val PercentileMonth = AgencyFeeType("percentileMonth")
+    }
+
+    case class AgencyFee(override val label: String, feeType: AgencyFeeTypes.AgencyFeeType, ref: Option[AST.Term] = None) extends AST.Term
+
+    case class AgencyFees(label: String) {
+      val monthly: AST.Term = AgencyFee(label, AgencyFeeTypes.Monthly)
+
+      def percentileMonth(impressions: AST.Term): AST.Term = AgencyFee(label, AgencyFeeTypes.PercentileMonth, Some(impressions))
+    }
+
+  }
+
   object Row {
 
     case object TotalDaysInMonth extends Term
 
     case object ReportDaysInMonth extends Term
 
-    def totalDaysInMonth = TotalDaysInMonth
+    val totalDaysInMonth = TotalDaysInMonth
 
-    def reportDaysInMonth = ReportDaysInMonth
+    val reportDaysInMonth = ReportDaysInMonth
   }
 
   object Month {
@@ -387,13 +221,15 @@ object AST {
 
     def max(left: Term, right: Term) = Max(left, right)
 
-    def fractionalNumber(term: Term) = FractionalNumber(term)
+    def fractional(term: Term) = FractionalNumber(term)
 
-    def wholeNumber(term: Term) = WholeNumber(term)
+    def round(term: Term) = WholeNumber(term)
 
     def format(term: Term, format: String) = Format(term, format)
 
-    def currency(term: Term) = Format(term, "\u00A4#,###.00")
+    val CurrencyFormat = "\u00A4#,###.00"
+
+    def currency(term: Term) = Format(term, CurrencyFormat)
 
     def sum(term: Term): Sum = Sum(term)
 
@@ -414,12 +250,12 @@ object AST {
         def apply(arg: AST.Term, arg2: AST.Term): AST.Term = AST.Functions.max(arg, arg2)
       }
 
-      val wholeNumber = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
-        def apply(arg: AST.Term): AST.Term = AST.Functions.wholeNumber(arg)
+      val round = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
+        def apply(arg: AST.Term): AST.Term = AST.Functions.round(arg)
       }
 
-      val fractionalNumber = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
-        def apply(arg: AST.Term): AST.Term = AST.Functions.wholeNumber(arg)
+      val fractional = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
+        def apply(arg: AST.Term): AST.Term = AST.Functions.fractional(arg)
       }
     }
 
@@ -427,28 +263,32 @@ object AST {
 
 }
 
-case class ReportDisplay()
-
-//(reportInstance: ReportInstance, rows: DataSource.Row)
-
 object FormulaCompiler {
 
   import reporting.engine.AST._
 
-  implicit def TermOrdering(implicit tl: TermLookup): Ordering[LabeledTerm] = Ordering fromLessThan {
+  // XXX: This can't be used as a normal Ordering for Seq.sorted(), probably because of the sort alg.
+  def termOrdering(implicit tl: TermLookup): Ordering[LabeledTerm] = Ordering fromLessThan {
     (a, b) => !a._2.exists(_.has(_.label == b._1))
   }
 
-  def segment(terms: LabeledTerm*) = {
+  def insertSort[X](list: List[X])(implicit ord: Ordering[X]) = {
+    def insert(list: List[X], value: X) = list.span(x => ord.lt(x, value)) match {
+      case (lower, upper) => lower ::: value :: upper
+    }
+    list.foldLeft(List.empty[X])(insert)
+  }
+
+  def sort(terms: LabeledTerm*)(implicit tl: TermLookup) = insertSort(terms.toList)(termOrdering)
+
+  def segment(terms: LabeledTerm*)(implicit tl: TermLookup) = {
     case class State(groups: List[List[LabeledTerm]] = List())
     def toLookup(list: List[LabeledTerm]) = list.toMap.withDefaultValue(None)
     def hasDependency(cur: List[LabeledTerm])(t: LabeledTerm) = {
-      val r = cur.exists(c => t._2.exists(_.has(_.label == c._1)(toLookup(cur))))
-      println(s"${cur} <=$r=> ${t._1} ${t._2}")
-      r
+      cur.exists(c => t._2.exists(_.has(_.label == c._1)(toLookup(cur))))
     }
 
-    terms.foldLeft(State()) { (accum, t) =>
+    sort(terms: _*).foldLeft(State()) { (accum, t) =>
       accum.groups.headOption match {
         case None => accum.copy(groups = List(t) :: Nil)
         case Some(cur) if hasDependency(cur)(t) => accum.copy(groups = List(t) :: accum.groups)
@@ -470,6 +310,7 @@ class FormulaCompiler(varNames: String*) {
     b.put("month", AST.Month)
     b.put("row", AST.Row)
     b.put("func", AST.Functions)
+    b.put("fees", AST.Fees)
 
     // TODO: Use reflection to automatically generate this
     import AST.Functions.{functions => funcs}
@@ -477,8 +318,8 @@ class FormulaCompiler(varNames: String*) {
     b.put("format", funcs.format)
     b.put("currency", funcs.currency)
     b.put("max", funcs.max)
-    b.put("wholeNumber", funcs.wholeNumber)
-    b.put("fractionalNumber", funcs.wholeNumber)
+    b.put("round", funcs.round)
+    b.put("fractional", funcs.round)
     // TODO: fees
     for ((k, v) <- props) b.put(k, v)
     e.setBindings(b, ScriptContext.ENGINE_SCOPE)

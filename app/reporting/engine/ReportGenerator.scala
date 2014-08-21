@@ -10,18 +10,22 @@ import reporting.models.{Field, Report}
 import scala.concurrent.{Await, Future, ExecutionContext}
 
 trait DataSourceFinder {
-  def apply(accountId: UUID)(dsId: UUID): Option[DataSource] = { ??? }
+  def apply(accountId: UUID)(dsId: UUID): Option[DataSource]
 }
 
 trait FieldFinder {
-  def apply(accountId: UUID)(fieldId: UUID): Option[Field] = { ??? }
+  def apply(accountId: UUID)(fieldId: UUID): Option[Field]
 
-  def byTemplate(templateId: UUID): List[Field] = { ??? }
+  def byTemplate(templateId: UUID): List[Field]
 }
 
 object Joda {
   implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isBefore _)
 }
+
+case class ReportDisplay()
+
+//(reportInstance: ReportInstance, rows: DataSource.Row)
 
 class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFinder) {
 
@@ -57,8 +61,7 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
     val compiledFields = allFields.map(f => f -> f.formula.map(compiler.apply))
     val labeledTerms = compiledFields.map({ case (field, term) => field.label -> term}).toMap
     val labeledFields = compiledFields.map({ case (field, term) => field.label -> field}).toMap
-    val orderedTerms = labeledTerms.toList.sorted(FormulaCompiler.TermOrdering(labeledTerms))
-    val groupedTerms = FormulaCompiler.segment(orderedTerms: _*)
+    val groupedTerms = FormulaCompiler.segment(labeledTerms.toList: _*)(labeledTerms)
     val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
     val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
     val labeledBindings = allFields.map(f => f.label -> f.id.map(id => bindings(id))).toMap

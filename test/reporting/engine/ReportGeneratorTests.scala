@@ -10,19 +10,23 @@ import org.specs2.runner._
 import org.junit.runner._
 
 object ReportGeneratorTests {
+
   import scalaz._, Scalaz._
-  val foo = "foo" -> None //AST.Variable("foo")
-  val bar = "bar" -> None //AST.Variable("bar")
+
+  val foo = "foo" -> None
+  //AST.Variable("foo")
+  val bar = "bar" -> None
+  //AST.Variable("bar")
   val fooAndBar = "fooAndBar" -> AST.Add(AST.Variable("foo"), AST.Variable("bar")).some
   val fooAndBar2 = "fooAndBar2" -> AST.WholeNumber(AST.Max(AST.Variable("foo"), AST.Variable("fooAndBar"))).some
   val fooAndBar3 = "fooAndBar3" -> AST.Sum(AST.Variable("fooAndBar")).some
-  val fooBarMax2 =  "fooBarMax2" -> AST.Max(AST.Variable("fooAndBar"), AST.Variable("fooAndBar3")).some
+  val fooBarMax2 = "fooBarMax2" -> AST.Max(AST.Variable("fooAndBar"), AST.Variable("fooAndBar3")).some
 
   val fields = List(foo, bar, fooAndBar, fooAndBar2, fooAndBar3, fooBarMax2)
   val fieldLookup = fields.toMap.withDefaultValue(None)
-  val fieldsSorted1 = fields.reverse.sorted(FormulaCompiler.TermOrdering(fieldLookup))
-  val fieldsSorted2 = fields.sorted(FormulaCompiler.TermOrdering(fieldLookup))
-  val fieldsSorted3 = Random.shuffle(fields).sorted(FormulaCompiler.TermOrdering(fieldLookup))
+  val fieldsSorted1 = FormulaCompiler.sort(fields: _*)(fieldLookup)
+  val fieldsSorted2 = FormulaCompiler.sort(fields.reverse: _*)(fieldLookup)
+  val fieldsSorted3 = FormulaCompiler.sort(Random.shuffle(fields): _*)(fieldLookup)
 
   val fieldsSegmented = List(
     Set(foo, bar),
@@ -34,6 +38,7 @@ object ReportGeneratorTests {
 
 
 import ReportGeneratorTests._
+
 @RunWith(classOf[JUnitRunner])
 class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownExpectations {
 
@@ -56,7 +61,7 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
 
     "segment labeled terms by dependencies" >> {
 
-      val segmented = FormulaCompiler.segment(fieldsSorted1: _*)
+      val segmented = FormulaCompiler.segment(fieldsSorted1: _*)(fieldLookup)
 
       segmented.size === fieldsSegmented.size
 
@@ -74,7 +79,13 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
         "bar" -> None,
         "fooBar" -> Some("foo + bar"),
         "fooBarSum" -> Some("sum(fooBar)"),
-        "fooBarInt" -> Some("wholeNumber(fooBar)"),
+        "agencyFees1" -> Some("fees.agency(\"FOO\").monthly"),
+        "agencyFees2" -> Some("fees.agency(\"FOO\").percentileMonth(bar)"),
+        "servingFeesCpc" -> Some("fees.serving(\"BAZ\").cpc"),
+        "fooBarInt" -> Some("round(fooBar)"),
+        "barMoney" -> Some("currency(bar)"),
+        "rowDays" -> Some("row.totalDaysInMonth"),
+        "fooBarFormat" -> Some("format(fooBar, \"#,###\")"),
         "fooBarMonthSum" -> Some("month.sum(fooBar)"),
         "fooBarMax" -> Some("max(foo, bar)"),
         "fooBarMax2" -> Some("max(fooBarMax, fooBarMonthSum)")
@@ -84,7 +95,13 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
         "bar" -> None,
         "fooBar" -> Some(AST.Add(AST.Variable("foo"), AST.Variable("bar"))),
         "fooBarSum" -> Some(AST.Sum(AST.Variable("fooBar"))),
+        "agencyFees1" -> Some(AST.Fees.AgencyFee("FOO", AST.Fees.AgencyFeeTypes.Monthly)),
+        "agencyFees2" -> Some(AST.Fees.AgencyFee("FOO", AST.Fees.AgencyFeeTypes.PercentileMonth, Some(AST.Variable("bar")))),
+        "servingFeesCpc" -> Some(AST.Fees.ServingFee("BAZ", AST.Fees.ServingFeeTypes.Cpc)),
         "fooBarInt" -> Some(AST.WholeNumber(AST.Variable("fooBar"))),
+        "barMoney" -> Some(AST.Format(AST.Variable("bar"), AST.Functions.CurrencyFormat)),
+        "rowDays" -> Some(AST.Row.TotalDaysInMonth),
+        "fooBarFormat" -> Some(AST.Format(AST.Variable("fooBar"), "#,###")),
         "fooBarMonthSum" -> Some(AST.Month.Sum(AST.Variable("fooBar"))),
         "fooBarMax" -> Some(AST.Max(AST.Variable("foo"), AST.Variable("bar"))),
         "fooBarMax2" -> Some(AST.Max(AST.Variable("fooBarMax"), AST.Variable("fooBarMonthSum")))
@@ -185,13 +202,11 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
       )
 
       val labeledTerms = for ((key, formulaOpt) <- formulae) yield key -> formulaOpt.map(fc.apply)
-      val orderedTerms = labeledTerms.toList.sorted(FormulaCompiler.TermOrdering(labeledTerms))
-      println("ordered terms: " + orderedTerms)
-      val groupedTerms = FormulaCompiler.segment(orderedTerms: _*)
+      val orderedTerms = FormulaCompiler.sort(labeledTerms.toList: _*)(labeledTerms)
+      val groupedTerms = FormulaCompiler.segment(orderedTerms: _*)(labeledTerms)
 
       implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))
 
-      groupedTerms.foreach(println)
       for {
         grpTerms <- groupedTerms
         row <- rows
