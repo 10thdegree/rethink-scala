@@ -1,0 +1,25 @@
+body {
+    padding-top: 70px;
+}
+
+.glyphicon-click {
+    padding: 4px;
+    color: #cccccc;
+}
+
+.glyphicon-click:hover {
+    color: #222222;
+}
+
+.glyphicon-menu {
+    font-size: 24px;
+    color: #000000;
+}
+
+.glyphicon-menu:hover {
+    color: #696969;
+}
+
+.selectedAccount {
+    background: #ccc;
+}

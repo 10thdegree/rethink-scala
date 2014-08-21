@@ -46,9 +46,12 @@ DELETE        /account/permissions/:accountId         @core.controllers.Permissi
 GET           /account                                @core.controllers.AccountController.getAccounts
 GET           /account/users/:accountId               @core.controllers.AccountController.getAccountUsers(accountId: String)
 GET           /account/:accountId                     @core.controllers.AccountController.getAccount(accountId: String)
+GET           /availableaccount                       @core.controllers.AccountController.getAvailableAccounts
+GET           /lastselectedaccount                    @core.controllers.AccountController.getLastSelectedAccount
 POST          /account                                @core.controllers.AccountController.addAccount
 POST          /account/rename/:accountId              @core.controllers.AccountController.renameAccount(accountId: String)
 POST          /account/users/:accountId               @core.controllers.AccountController.addAccountUsers(accountId: String)
+POST          /lastselectedaccount/:accountId         @core.controllers.AccountController.setLastSelectedAccount(accountId: String)
 DELETE        /account/users/:accountId               @core.controllers.AccountController.deleteAccountUsers(accountId: String)
 DELETE        /account/:accountId                     @core.controllers.AccountController.deleteAccount(accountId: String)
 

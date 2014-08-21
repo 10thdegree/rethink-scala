@@ -1,0 +1,14 @@
+<form class="navbar-form navbar-right">
+    <div class="btn-group accountDropDown" ng-show="accounts.length > 1">
+        <button style="width : 250px; margin-top : 5px ;" type="button" class="btn dropdown-toggle dropdown-account" ng-class="{'btn-primary':selectedAccount.id != '', 'btn-danger':selectedAccount.id == ''}">
+            <span ng-model="selectedAccountLabel" style="font-size : 16px ; float : left ;" >
+                {{selectedAccount.label}}</span>
+            <span style="font-size : 20px ; float : right ;" class="glyphicon"
+            ng-class="{'glyphicon-collapse-down': true}"></span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+            <li style="width : 250px ;" ng-click="accountSelected(account)" ng-repeat="account in accounts" ng-class="{'selectedAccount':selectedAccount.id == account.id}"><a href="#">
+                {{account.label}}</a></li>
+        </ul>
+    </div>
+</form>

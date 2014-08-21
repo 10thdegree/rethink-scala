@@ -1,17 +1,24 @@
 package core.controllers
 
+import java.util.UUID
+
 import com.google.inject.Inject
 import core.models.User
 import play.api.mvc.Action
+import play.twirl.api.Html
 import securesocial.core.RuntimeEnvironment
 
 class CoreApplication @Inject() (override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
 
-  def index = SecuredAction {
-    Ok(core.views.html.index("core"))
+  def index = UserAwareAction { implicit request =>
+    val userName = request.user match {
+      case Some(user) => user.permissions
+      case _ => "none"
+    }
+    Ok(core.views.html.main(Html.apply(""), Html.apply("Permissoins Test: %s".format(userName)), UUID.randomUUID().toString, true))
   }
 
   def userManagement = Action {
-    Ok(core.views.html.manage())
+    Ok(core.views.html.main(core.views.html.manage.head(), core.views.html.manage.main(), "Management"))
   }
 }

@@ -22,8 +22,15 @@ object RethinkAuthenticatorStore {
         case Left(x) => None
       }
       val authGive = auth match {
-        case Some(x) => Some(new CookieAuthenticator[User](x.authId,x.user,
-          new DateTime(x.expirationDate),new DateTime(x.lastUsed),new DateTime(x.creationDate),this))
+        case Some(x) => {
+          coreBroker.usersTable.get(x.user.id.get.toString).run match {
+            case Right(user) => {
+              Some(new CookieAuthenticator[User](x.authId,user,
+                new DateTime(x.expirationDate),new DateTime(x.lastUsed),new DateTime(x.creationDate),this))
+            }
+            case Left(u) => None
+          }
+        }
         case None => None
       }
       Future.successful(authGive)
@@ -45,7 +52,10 @@ object RethinkAuthenticatorStore {
             if (x.size == 0)
               coreBroker.authenticatorsTable.insert(auth).run
             else {
-              coreBroker.authenticatorsTable.filter(Map("authId"->x(0).authId)).update(
+              coreBroker.authenticatorsTable.filter(Map(
+                "authId"-> x(0).authId
+//                "user"-> Map("permissions" -> Reflector.toMap(Reflector.toMap(authenticator.user.permissions)))
+              )).update(
                 Map("lastUsed" -> authenticator.lastUsed.toString())).run
             }
           }

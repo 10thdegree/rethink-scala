@@ -21,6 +21,45 @@ class AccountController @Inject()(override implicit val env: RuntimeEnvironment[
   implicit val c = Connection.connection
   lazy val coreBroker: CoreBroker = new CoreBroker
 
+  def getLastSelectedAccount = UserAwareAction { implicit request =>
+    request.user match {
+      case Some(user) => Ok(pjson.Json.obj("status" -> "OK", "lastSelectedAccount" -> user.lastSelectedAccount))
+      case _ => Ok(pjson.Json.obj("status" -> "OK", "lastSelectedAccount" -> ""))
+    }
+  }
+
+  def setLastSelectedAccount(accountId: String) = UserAwareAction { implicit request =>
+    request.user match {
+      case Some(user) => {
+        import com.rethinkscala.Blocking._
+        coreBroker.usersTable.get(user.id.get.toString).update(
+          Map("lastSelectedAccount" -> accountId)
+        ).run
+      }
+      case _ => None
+    }
+    Ok(pjson.Json.obj("status" -> "OK", "lastSelectedAccount" -> "complete"))
+  }
+
+
+  def getAvailableAccounts = UserAwareAction { implicit request =>
+    val userPermissions = request.user match {
+      case Some(user) => user.permissions.filterNot(x => x.permissionIds.isEmpty).map(x => x.accountId.toString)
+      case _ => Nil
+    }
+    import com.rethinkscala.Blocking._
+    if (userPermissions.isEmpty) {
+      Ok(pjson.Json.obj("status" -> "OK", "accounts" -> ""))
+    } else {
+      coreBroker.accountsTable.getAll(userPermissions: _*).run match {
+        case Right(tx) => {
+          Ok(pjson.Json.obj("status" -> "OK", "accounts" -> pjson.Json.parse(Reflector.toJson(tx))))
+        }
+        case Left(er) => BadRequest(pjson.Json.toJson(Map("error" -> er.getMessage)))
+      }
+    }
+  }
+
   def getAccount(accountId: String) = Action {
     import com.rethinkscala.Blocking._
     coreBroker.accountsTable.get(accountId).run match {

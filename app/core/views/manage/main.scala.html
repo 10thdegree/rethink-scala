@@ -1,0 +1,14 @@
+<div class="container" ng-app="myUserManagement">
+    <div class="row">
+        <div class="col-md-3" ng-controller="NavCtrl">
+            <ul class="nav nav-pills nav-stacked">
+                <li ng-class="{ active: isActive('/accounts')}"><a href="#/accounts">Accounts</a></li>
+                <li ng-class="{ active: isActive('/users')}"><a href="#/users">Users</a></li>
+                <li ng-class="{ active: isActive('/permissions')}"><a href="#/permissions">Permissions</a></li>
+            </ul>
+        </div>
+        <div class="col-md-9">
+            <div ui-view style="padding: 10px">loading...</div>
+        </div>
+    </div>
+</div>
