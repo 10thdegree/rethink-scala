@@ -10,11 +10,8 @@ import securesocial.core.RuntimeEnvironment
 
 class CoreApplication @Inject() (override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
 
-  def index = UserAwareAction { implicit request =>
-    val userName = request.user match {
-      case Some(user) => user.permissions
-      case _ => "none"
-    }
+  def index = SecuredAction { implicit request =>
+    val userName = request.user.permissions
     Ok(core.views.html.main(Html.apply(""), Html.apply("Permissoins Test: %s".format(userName)), UUID.randomUUID().toString, true))
   }
 

@@ -30,7 +30,7 @@ class CustomLoginPage @Inject() (override implicit val env: RuntimeEnvironment[B
       if ( SecureSocial.enableRefererAsOriginalUrl ) {
         SecureSocial.withRefererAsOriginalUrl(Ok(env.viewTemplates.getLoginPage(UsernamePasswordProvider.loginForm)))
       } else {
-        Ok(core.views.html.main(core.views.html.login.head(), core.views.html.login.main(), "Login"))
+        Ok(core.views.html.nonuser(core.views.html.login.head(), core.views.html.login.main(), "Login"))
       }
     }
   }
