@@ -55,7 +55,12 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
         .map({ case (date, tuples) => date -> tuples.toMap})
 
     // TODO: Merge DSes for each date, if attributes collide, sum them or error.
+    // TODO: We also need to create a hierarchy based on overlapping partial keys for each row.
+    // TODO: Rows with partially matched keys need to pull the dependant field for proportionally distributing the values
+    //   across all the rows that contain a matching partial key.
     val mergedRows = rows.map({ case (date, dses) => date -> dses.head._2})
+    //val mergedRows = rows.map(_ -> _.head._2)
+
     val allFields = fieldFinder.byTemplate(report.templateId)
     val compiler = new FormulaCompiler(allFields.map(_.label): _*)
     val compiledFields = allFields.map(f => f -> f.formula.map(compiler.apply))

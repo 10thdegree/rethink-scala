@@ -2,24 +2,22 @@ package reporting.engine
 
 import javax.script.ScriptContext
 
-import org.joda.time.DateTime
-
 // Extensions for Groovy-interop to get nice operators for formulae.
 private[engine] object Groovy {
 
-  trait Closure0[O] {
+  trait Closure0[+O] {
     def call(): O = apply()
 
     def apply(): O
   }
 
-  trait Closure1[A, O] {
+  trait Closure1[-A, +O] {
     def call(arg: A): O = apply(arg)
 
     def apply(arg: A): O
   }
 
-  trait Closure2[A, B, O] {
+  trait Closure2[-A, -B, +O] {
     def call(arg: A, arg2: B): O = apply(arg, arg2)
 
     def apply(arg: A, arg2: B): O
@@ -233,6 +231,7 @@ object AST {
 
     def sum(term: Term): Sum = Sum(term)
 
+    // TODO: Autogenerate this from the above
     object functions {
       val sum = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
         def apply(arg: AST.Term): AST.Term = AST.Functions.sum(arg)
@@ -265,7 +264,7 @@ object AST {
 
 object FormulaCompiler {
 
-  import reporting.engine.AST._
+  import reporting.engine.AST.{TermLookup, LabeledTerm}
 
   // XXX: This can't be used as a normal Ordering for Seq.sorted(), probably because of the sort alg.
   def termOrdering(implicit tl: TermLookup): Ordering[LabeledTerm] = Ordering fromLessThan {
@@ -320,7 +319,7 @@ class FormulaCompiler(varNames: String*) {
     b.put("max", funcs.max)
     b.put("round", funcs.round)
     b.put("fractional", funcs.round)
-    // TODO: fees
+
     for ((k, v) <- props) b.put(k, v)
     e.setBindings(b, ScriptContext.ENGINE_SCOPE)
   }
@@ -332,23 +331,21 @@ class FormulaCompiler(varNames: String*) {
   def apply(formula: String) = compile(formula)
 
   // Convert formula to an AST, referencing needed aggregates for deferred computation
-  def compile(formula: String): AST.Term = {
-    try {
-      engine.eval(formula).asInstanceOf[Any] match {
-        case t: AST.Term => t
-        case n: Int => new AST.Constant(n)
-        case n: Long => new AST.Constant(n)
-        case n: Float => new AST.Constant(n)
-        case n: Double => new AST.Constant(n)
-        case n => throw new ClassCastException(s"${n.getClass} is not supported as the result of an expression.")
-      }
-    } catch {
-      case ex: ClassCastException =>
-        ex.printStackTrace()
-        throw ex
-      case ex: ScriptException =>
-        ex.printStackTrace()
-        throw ex
+  def compile(formula: String): AST.Term = try {
+    engine.eval(formula).asInstanceOf[Any] match {
+      case t: AST.Term => t
+      case n: Int => new AST.Constant(n)
+      case n: Long => new AST.Constant(n)
+      case n: Float => new AST.Constant(n)
+      case n: Double => new AST.Constant(n)
+      case n => throw new ClassCastException(s"${n.getClass} is not supported as the result of an expression.")
     }
+  } catch {
+    case ex: ClassCastException =>
+      ex.printStackTrace()
+      throw ex
+    case ex: ScriptException =>
+      ex.printStackTrace()
+      throw ex
   }
 }

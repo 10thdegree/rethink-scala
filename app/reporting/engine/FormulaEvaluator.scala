@@ -87,6 +87,7 @@ object FormulaEvaluator {
       sums(key) = sums.get(key).map(s => s.copy(count = s.count + 1, sum = s.sum + value)).getOrElse(Sum(1, value))
     }
 
+    // TODO: Actually connect to getting the fees
     object ServingFees {
       def cpm = 0d
 
