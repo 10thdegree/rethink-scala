@@ -146,3 +146,61 @@ Billing involves integrating client billing/invoices. Today we generate an Excel
 Approved budgets are delivered by way of a Media Authorization Form (MAF) today. This MAF would need to have an interface with client login so they can use Digi-sign to approve the budget electronically. 
 
 Using the [Quickbooks API](https://developer.intuit.com/docs/0025_quickbooksapi/0005_introduction_to_quickbooksapi) we could also automatically generate invoices to send the client.
+
+## Users
+
+### Administrators
+
+* Can generate/edit PreApproved MAFs for an Account.
+* Can approve modified MAF from account user
+* View list of accounts with approval status
+* View list of accounts invoice status
+* Need 2 views, dashboard to view status for all account and account level view.
+
+### Account User
+
+* Can respond to generated MAFs. (Approve, Deny, Modify)
+* View proposed MAF
+* View MAF previous months with actuals & future budget amounts
+* Request Refunds
+
+## Generate MAFs
+
+Create a MAF for an account for N months and set Monthly budget for each budgeted item (will default values across all months with option to modify specific month)
+
+Input budgeted items:
+
+1. search
+2. display
+3. pre-roll
+4. ...
+ 
+Save. (Notify Account for Approval)
+
+## Account Approval
+
+### Declined or Modified
+
+Moves back to generate MAF with updated values or declined with Reason.
+
+### Approved
+
+Account user accepts and e-signs MAF.
+
+## Generates Invoices
+
+X day of the N month generates invoice for N+1 month, if N+1 moth has approved budget. Monitors new approved budgets till end of month generating invoices.
+
+
+## Refund Balance
+
+Screen to request remaining funds at the end of the month. If a user requests a refund in month N, then the user will be cut a check for the RolloverAmount amount in month N+1, after this has been calculated. If the RolloverAmount is negative the user will be refunded $0.
+
+## Tracking Over/Under Spending
+
+Account overflow is tracked by using actuals from month N-1. By storing the SUM of budgeted - actual into month N+1 RolloverAmount.
+
+When budget amount for a month is requested it uses the budgeted SUM of all items + RolloverAmount. Which the RolloweverAmount may be positive or negative.
+
+In the case the budget amount for a month of a particular item is requested, it uses the budgeted item plus the percent of the budgeted item over the total budget times the RolloverAmountThat is to say, budget item + (budget item)/(SUM of all items) * RolloverAmount
+
