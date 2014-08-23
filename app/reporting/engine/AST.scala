@@ -3,7 +3,7 @@ package reporting.engine
 import javax.script.ScriptContext
 
 // Extensions for Groovy-interop to get nice operators for formulae.
-private[engine] object Groovy {
+private[engine] object GroovyInterop {
 
   trait Closure0[+O] {
     def call(): O = apply()
@@ -86,7 +86,7 @@ object AST {
 
   type TermLookup = String => Option[Term]
 
-  trait Term extends Groovy.Ops[Term] {
+  trait Term extends GroovyInterop.Ops[Term] {
     def +(that: Term): Term = Add(this, that)
 
     def -(that: Term): Term = Subtract(this, that)
@@ -233,27 +233,27 @@ object AST {
 
     // TODO: Autogenerate this from the above
     object functions {
-      val sum = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
+      val sum = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
         def apply(arg: AST.Term): AST.Term = AST.Functions.sum(arg)
       }
 
-      val format = new Function2[AST.Term, String, AST.Term] with Groovy.Closure2[AST.Term, String, AST.Term] {
+      val format = new Function2[AST.Term, String, AST.Term] with GroovyInterop.Closure2[AST.Term, String, AST.Term] {
         def apply(arg: AST.Term, fmt: String): AST.Term = AST.Functions.format(arg, fmt)
       }
 
-      val currency = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
+      val currency = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
         def apply(arg: AST.Term): AST.Term = AST.Functions.currency(arg)
       }
 
-      val max = new Function2[AST.Term, AST.Term, AST.Term] with Groovy.Closure2[AST.Term, AST.Term, AST.Term] {
+      val max = new Function2[AST.Term, AST.Term, AST.Term] with GroovyInterop.Closure2[AST.Term, AST.Term, AST.Term] {
         def apply(arg: AST.Term, arg2: AST.Term): AST.Term = AST.Functions.max(arg, arg2)
       }
 
-      val round = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
+      val round = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
         def apply(arg: AST.Term): AST.Term = AST.Functions.round(arg)
       }
 
-      val fractional = new Function1[AST.Term, AST.Term] with Groovy.Closure1[AST.Term, AST.Term] {
+      val fractional = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
         def apply(arg: AST.Term): AST.Term = AST.Functions.fractional(arg)
       }
     }
