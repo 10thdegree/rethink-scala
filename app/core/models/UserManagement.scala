@@ -17,9 +17,16 @@ object BasicPermissions {
 
 case class User(main: BasicProfile,
                 permissions: List[AccountPermissions],
+                systemPermissions: List[UUID],
+                lastSelectedAccount: Option[UUID],
                 id: Option[UUID] = None) extends Document
 
-case class Account(label: String,
+object User {
+  object fieledName {
+
+  }
+}
+case class Account(val label: String,
                    permissions: List[UUID],
                    id: Option[UUID] = None) extends Document
 
@@ -36,6 +43,9 @@ case class MailTokens(email: String,
   def toMailToken: MailToken = new MailToken(id.toString, email, new DateTime(creationTime), new DateTime(expirationTime), isSignUp)
 }
 
+object MailTokens {
+  val expirationTime: String = "expirationTime"
+}
 case class Authenticators(creationDate: String,
                           expirationDate: String,
                           lastUsed: String,

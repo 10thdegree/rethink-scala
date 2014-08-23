@@ -13,21 +13,6 @@ import scala.concurrent.Future
 
 class RethinkUserService extends UserService[User] {
 
-  import com.rethinkscala._
-
-//  val hostWithKey = java.net.InetAddress.getLocalHost().getHostName() match {
-//    case "MO-MBA" => ("127.0.0.1","scalaDrive")
-//    case _ => ("127.0.0.1","")
-//  }
-//  val port = 28015
-//  val version1 = new Version1(hostWithKey._1, port)
-//  val version2 = new Version2(hostWithKey._1, port, authKey = hostWithKey._2)
-//
-//  type TableType = Document
-//
-//  def useVersion = version2
-//
-//  implicit val connection: BlockingConnection = BlockingConnection(useVersion)
   implicit val c = Connection.connection
   lazy val coreBroker: CoreBroker = new CoreBroker
 
@@ -78,7 +63,7 @@ class RethinkUserService extends UserService[User] {
           case Some(existingUser) =>
             Future.successful(existingUser)
           case None =>
-            val newUser = User(user, Nil)
+            val newUser = User(user, Nil, Nil, None)
             coreBroker.usersTable.insert(newUser).run
             coreBroker.tokensTable.filter(Map("email"->newUser.main.email)).delete().run
             Future.successful(newUser)
@@ -102,7 +87,7 @@ class RethinkUserService extends UserService[User] {
           case Some(existingUser) =>
             Future.successful(existingUser)
           case None =>
-            val newUser = User(user, Nil)
+            val newUser = User(user, Nil, Nil, None)
             coreBroker.usersTable.insert(newUser).run
             Future.successful(newUser)
         }

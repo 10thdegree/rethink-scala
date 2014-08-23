@@ -29,15 +29,8 @@
   padding: 0;
 }
 
-.nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
-
-.glyphicon-click {
-    padding: 4px;
-    color: #cccccc;
-}
-
-.glyphicon-click:hover {
-    color: #222222;
+.nav, .pagination, .carousel, .panel-title a {
+    cursor: pointer;
 }
 
 .xl-dialog .modal-dialog {

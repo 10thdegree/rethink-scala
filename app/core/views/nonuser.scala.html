@@ -1,4 +1,4 @@
-@(addedHead: Html, content: Html, title: String = "", showAccountPicker: Boolean = false)
+@(addedHead: Html, content: Html, title: String = "")
 
 <!DOCTYPE html>
 
@@ -19,7 +19,13 @@
         @addedHead
     </head>
     <body>
-        @core.views.html._header(showAccountPicker)
+        <div class="header container">
+            <div class="row">
+                <div class="page-header">
+                    <h1>Bravo! <small>uniting billing, reporting, auditing, and more...</small></h1>
+                </div>
+            </div>
+        </div>
         @content
     </body>
     <footer>
