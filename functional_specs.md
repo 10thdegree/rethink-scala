@@ -6,6 +6,8 @@
 
 The goal of URP (unified reporting platform), is to take metrics from third parties, such as Dart (which in turn gets numbers from AdWords and Bing) and Marchex, and generate *unified* reports on them. Reports show metrics for some entities of interest (such as ad campaigns, or ad publishers), with various numbers (metrics) for each, including impressions, clicks, conversions, etc. One of the major motivating reasons behind the creation of URP is adding the ability to distribute fees across report metrics, as Dart does not do this for you today, making URP not only a helpful unified reporting engine, but an essential component in 10TH DEGREE’s services offering. As such, the mechanism behind creating fees and applying them must be robust or it precludes the neccessity of URP entirely.
 
+TODO: List of future data sources
+
 ### Fees
 
 There are two categories of fees we need to work with, **serving** and **agency**. There should be default value for fees within each category if no account level values are specified; this default should not expire.
@@ -82,7 +84,15 @@ The system should be able to combine data from multiple data sources, including 
 2. when different data sources provide the same attributes for the same entities (sum these values)
 3. when different data sources provide the same attributes for different entities (e.g. a Bing data source returns stats for Bing campaigns, and an AdWords data source returns stats for AdWords campaigns)
 
-However, different data sources will not always provide the same granularity of of metrics; the system must still be able to reconcile this, coalescing the data into the same report. For example, Marchex campaigns may only exist for publisher, but those numbers may need to be distributed across all the ad campaigns within each. In such cases, the system must provide a means for aligning data sources that provide different levels of granularity on reportable entities; further, a dependant field to be used in distributing the metrics provided by less granular data source(s).
+However, different data sources will not always provide the same granularity of metrics; the system must still be able to reconcile this, coalescing the data into the same report. For example, Marchex campaigns may only exist for publisher, but those numbers may need to be distributed across all the ad campaigns within each. In such cases, the system must provide a means for aligning data sources that provide different levels of granularity on reportable entities; further, a dependant field to be used in distributing the metrics provided by less granular data source(s).
+
+#### Dart
+
+TODO
+
+#### Marchex
+
+TODO
 
 #### Examples
 
@@ -99,10 +109,11 @@ Given that many clients will use the same reports, it is crucial that the system
 A report template should be composed of fields, which will form the columns of the report displayed to the user. Fields should be specified in a manner similar to inputting formulae in an Excel spreadsheet. This makes defining a report template incredibly flexible. Some fields will come from data source attributes, and some will be formulae, e.g.:
 
 ```
-#!javascript
-spendWithFees = max(
+#!groovy
+spendWithServingFees = spend + servingFees(adType).cpc * clicks + servingFees(adType).cpm * impressions / 1000
+spendWithBothFees = max(
     agencyFees("display").monthlyFee / row.totalDaysInMonth * row.monthDays,
-    agencyFees("display").percentileMonth(sumMonth(impressions)) * sumMonth(spend))
+    agencyFees("display").percentileMonth(month.sum(spendWithServingFees))
 ```
 
 Based on user permissions, different reports should be visible to the user.
