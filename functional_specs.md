@@ -6,21 +6,28 @@
 
 The goal of URP (unified reporting platform), is to take metrics from third parties, such as Dart (which in turn gets numbers from AdWords and Bing) and Marchex, and generate *unified* reports on them. Reports show metrics for some entities of interest (such as ad campaigns, or ad publishers), with various numbers (metrics) for each, including impressions, clicks, conversions, etc. One of the major motivating reasons behind the creation of URP is adding the ability to distribute fees across report metrics, as Dart does not do this for you today, making URP not only a helpful unified reporting engine, but an essential component in 10TH DEGREE’s services offering. As such, the mechanism behind creating fees and applying them must be robust or it precludes the neccessity of URP entirely.
 
+TODO: List of future data sources
+
 ### Fees
 
 There are two categories of fees we need to work with, **serving** and **agency**. There should be default value for fees within each category if no account level values are specified; this default should not expire.
 
 #### Serving Fees
 
-Fees incurred by utilizing a 3rd party ad server (e.g. DoubleClick) to track conversions across multiple channels, publishers, and placements. There are currently two kinds of serving ads, banner ads, and video ads, but there may be others in the future. Fundamentally, there are only two serving fees:
+Fees incurred by utilizing a 3rd party ad server (e.g. DoubleClick) to track conversions across multiple channels, publishers, and placements. There are currently three kinds of serving ads, PPC (search), banner/flash ads (display), and video ads (display), but there may be others in the future. However, regardless of type, there are only two possible fees for each:
 
 * CPM Fee (cost per 1000 impressions)
 * CPC Fee (cost per click)
 
-Since we have two kinds of ads, initially we'll need two sets of the above fees:
+CPM is always computed using impressions, and CPC always using clicks.
 
-* Banner ads
+For example:
+
+* PPC
     * CPM Fee: E.g. $0.25 (per 1000 impressions)
+    * CPC Fee: none
+* Banner ads
+    * CPM Fee: E.g. $1.00 (per 1000 impressions)
     * CPC Fee: E.g. $0.25 (per click)
 * Video ads
     * CPM Fee: E.g. $1.00 (per 1000 impressions)
@@ -28,14 +35,18 @@ Since we have two kinds of ads, initially we'll need two sets of the above fees:
 
 In addition, valid date ranges for when to apply the sets of fees is needed. (e.g. 01/2001-01/2010) This allows a shcedule to be inputted for automatically incrementing fees.
 
+Note that in the case both fees (CPM and CPC) apply, both must be added when the serving fee of that kind is used in a given calculation.
+
+In the future, CPM may shift to a percentage of total spend instead, making it more like agency fees (see below).
+
 #### Agency Fees
 
-Fees charged by us for our services. For this we bill in tiers, usually charging less as more ads are served. However, there is also a minimum fee charged if not enough ads are served. Thus, we minimally have a table of:
+Fees charged by us for our services. For this we bill in tiers, usually charging a lower percentage bracket as more ads are served. However, there is also a minimum fee charged if not enough ads are served. Thus, we minimally have a table of:
 
-* Range (number of impressions, e.g. "0-10000")
+* Range (of total spend, e.g. "0.00-10000.00")
 * Percentage of Spend (e.g. "15%")
 
-So we know for what quanity of impressions, what percentage of the total spend to apply. However, if there were too few impressions, we want to default to a minimum management fee instead:
+So we know for what amount of total spend, what percentage of that total spend to apply. However, if there was too little total spend, we want to default to a minimum management fee instead:
 
 * Monthly Management Fee: E.g. $750
 
@@ -73,7 +84,15 @@ The system should be able to combine data from multiple data sources, including 
 2. when different data sources provide the same attributes for the same entities (sum these values)
 3. when different data sources provide the same attributes for different entities (e.g. a Bing data source returns stats for Bing campaigns, and an AdWords data source returns stats for AdWords campaigns)
 
-However, different data sources will not always provide the same granularity of of metrics; the system must still be able to reconcile this, coalescing the data into the same report. For example, Marchex campaigns may only exist for publisher, but those numbers may need to be distributed across all the ad campaigns within each. In such cases, the system must provide a means for aligning data sources that provide different levels of granularity on reportable entities; further, a dependant field to be used in distributing the metrics provided by less granular data source(s).
+However, different data sources will not always provide the same granularity of metrics; the system must still be able to reconcile this, coalescing the data into the same report. For example, Marchex campaigns may only exist for publisher, but those numbers may need to be distributed across all the ad campaigns within each. In such cases, the system must provide a means for aligning data sources that provide different levels of granularity on reportable entities; further, a dependant field to be used in distributing the metrics provided by less granular data source(s).
+
+#### Dart
+
+TODO
+
+#### Marchex
+
+TODO
 
 #### Examples
 
@@ -90,10 +109,11 @@ Given that many clients will use the same reports, it is crucial that the system
 A report template should be composed of fields, which will form the columns of the report displayed to the user. Fields should be specified in a manner similar to inputting formulae in an Excel spreadsheet. This makes defining a report template incredibly flexible. Some fields will come from data source attributes, and some will be formulae, e.g.:
 
 ```
-#!javascript
-spendWithFees = max(
+#!groovy
+spendWithServingFees = spend + servingFees(adType).cpc * clicks + servingFees(adType).cpm * impressions / 1000
+spendWithBothFees = max(
     agencyFees("display").monthlyFee / row.totalDaysInMonth * row.monthDays,
-    agencyFees("display").percentileMonth(sumMonth(impressions)) * sumMonth(spend))
+    agencyFees("display").percentileMonth(month.sum(spendWithServingFees))
 ```
 
 Based on user permissions, different reports should be visible to the user.
@@ -151,7 +171,7 @@ Using the [Quickbooks API](https://developer.intuit.com/docs/0025_quickbooksapi/
 
 ### Administrators
 
-* Can generate/edit PreApproved MAFs for an Account.
+* Can generate/edit proposed MAFs for an Account
 * Can approve modified MAF from account user
 * View list of accounts with approval status
 * View list of accounts invoice status
@@ -189,7 +209,7 @@ Account user accepts and e-signs MAF.
 
 ## Generates Invoices
 
-X day of the N month generates invoice for N+1 month, if N+1 moth has approved budget. Monitors new approved budgets till end of month generating invoices.
+X day of the N month generates invoice for N+1 month, if N+1 month has approved budget. Monitors new approved budgets till end of month generating invoices.
 
 
 ## Refund Balance
@@ -198,9 +218,9 @@ Screen to request remaining funds at the end of the month. If a user requests a 
 
 ## Tracking Over/Under Spending
 
-Account overflow is tracked by using actuals from month N-1. By storing the SUM of budgeted - actual into month N+1 RolloverAmount.
+Account overflow is tracked by using actuals from month N-1. By storing the SUM of `budgeted - actual` into month N+1 RolloverAmount.
 
 When budget amount for a month is requested it uses the budgeted SUM of all items + RolloverAmount. Which the RolloweverAmount may be positive or negative.
 
-In the case the budget amount for a month of a particular item is requested, it uses the budgeted item plus the percent of the budgeted item over the total budget times the RolloverAmountThat is to say, budget item + (budget item)/(SUM of all items) * RolloverAmount
+In the case the budget amount for a month of a particular item is requested, it uses the budgeted item plus the percent of the budgeted item over the total budget times the RolloverAmountThat is to say, `budget item + (budget item)/(SUM of all items) * RolloverAmount`
 
