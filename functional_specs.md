@@ -39,12 +39,12 @@ In the future, CPM may shift to a percentage of total spend instead, making it m
 
 #### Agency Fees
 
-Fees charged by us for our services. For this we bill in tiers, usually charging less as more ads are served. However, there is also a minimum fee charged if not enough ads are served. Thus, we minimally have a table of:
+Fees charged by us for our services. For this we bill in tiers, usually charging a lower percentage bracket as more ads are served. However, there is also a minimum fee charged if not enough ads are served. Thus, we minimally have a table of:
 
-* Range (number of impressions, e.g. "0-10000")
+* Range (of total spend, e.g. "0.00-10000.00")
 * Percentage of Spend (e.g. "15%")
 
-So we know for what quanity of impressions, what percentage of the total spend to apply. However, if there were too few impressions, we want to default to a minimum management fee instead:
+So we know for what amount of total spend, what percentage of that total spend to apply. However, if there was too little total spend, we want to default to a minimum management fee instead:
 
 * Monthly Management Fee: E.g. $750
 
