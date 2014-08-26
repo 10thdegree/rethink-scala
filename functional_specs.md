@@ -12,21 +12,30 @@ There are two categories of fees we need to work with, **serving** and **agency*
 
 #### Serving Fees
 
-Fees incurred by utilizing a 3rd party ad server (e.g. DoubleClick) to track conversions across multiple channels, publishers, and placements. There are currently two kinds of serving ads, banner ads, and video ads, but there may be others in the future. Fundamentally, there are only two serving fees:
+Fees incurred by utilizing a 3rd party ad server (e.g. DoubleClick) to track conversions across multiple channels, publishers, and placements. There are currently three kinds of serving ads, PPC (search), banner/flash ads (display), and video ads (display), but there may be others in the future. However, regardless of type, there are only two possible fees for each:
 
 * CPM Fee (cost per 1000 impressions)
 * CPC Fee (cost per click)
 
-Since we have two kinds of ads, initially we'll need two sets of the above fees:
+CPM is always computed using impressions, and CPC always using clicks.
 
-* Banner ads
+For example:
+
+* PPC
     * CPM Fee: E.g. $0.25 (per 1000 impressions)
+    * CPC Fee: none
+* Banner ads
+    * CPM Fee: E.g. $1.00 (per 1000 impressions)
     * CPC Fee: E.g. $0.25 (per click)
 * Video ads
     * CPM Fee: E.g. $1.00 (per 1000 impressions)
     * CPC Fee: E.g. $0.25 (per click)
 
 In addition, valid date ranges for when to apply the sets of fees is needed. (e.g. 01/2001-01/2010) This allows a shcedule to be inputted for automatically incrementing fees.
+
+Note that in the case both fees (CPM and CPC) apply, both must be added when the serving fee of that kind is used in a given calculation.
+
+In the future, CPM may shift to a percentage of total spend instead, making it more like agency fees (see below).
 
 #### Agency Fees
 
@@ -151,7 +160,7 @@ Using the [Quickbooks API](https://developer.intuit.com/docs/0025_quickbooksapi/
 
 ### Administrators
 
-* Can generate/edit PreApproved MAFs for an Account.
+* Can generate/edit proposed MAFs for an Account
 * Can approve modified MAF from account user
 * View list of accounts with approval status
 * View list of accounts invoice status
@@ -189,7 +198,7 @@ Account user accepts and e-signs MAF.
 
 ## Generates Invoices
 
-X day of the N month generates invoice for N+1 month, if N+1 moth has approved budget. Monitors new approved budgets till end of month generating invoices.
+X day of the N month generates invoice for N+1 month, if N+1 month has approved budget. Monitors new approved budgets till end of month generating invoices.
 
 
 ## Refund Balance
@@ -198,9 +207,9 @@ Screen to request remaining funds at the end of the month. If a user requests a 
 
 ## Tracking Over/Under Spending
 
-Account overflow is tracked by using actuals from month N-1. By storing the SUM of budgeted - actual into month N+1 RolloverAmount.
+Account overflow is tracked by using actuals from month N-1. By storing the SUM of `budgeted - actual` into month N+1 RolloverAmount.
 
 When budget amount for a month is requested it uses the budgeted SUM of all items + RolloverAmount. Which the RolloweverAmount may be positive or negative.
 
-In the case the budget amount for a month of a particular item is requested, it uses the budgeted item plus the percent of the budgeted item over the total budget times the RolloverAmountThat is to say, budget item + (budget item)/(SUM of all items) * RolloverAmount
+In the case the budget amount for a month of a particular item is requested, it uses the budgeted item plus the percent of the budgeted item over the total budget times the RolloverAmountThat is to say, `budget item + (budget item)/(SUM of all items) * RolloverAmount`
 
