@@ -6,7 +6,31 @@
 
 The goal of URP (unified reporting platform), is to take metrics from third parties, such as Dart (which in turn gets numbers from AdWords and Bing) and Marchex, and generate *unified* reports on them. Reports show metrics for some entities of interest (such as ad campaigns, or ad publishers), with various numbers (metrics) for each, including impressions, clicks, conversions, etc. One of the major motivating reasons behind the creation of URP is adding the ability to distribute fees across report metrics, as Dart does not do this for you today, making URP not only a helpful unified reporting engine, but an essential component in 10TH DEGREE’s services offering. As such, the mechanism behind creating fees and applying them must be robust or it precludes the neccessity of URP entirely.
 
-TODO: List of future data sources
+### Basic Features
+
+Ability to aggregate and coalesce data from a variety of sources (only those marked with "phase 1" are targeted for initial release):
+
+* AdWords
+* Bing
+* Dart (Phase 1)
+* Google Analytics website reporting
+* Social media tracking
+* Phone tracking
+	* Marchex (Phase 1)
+* SEO reporting
+
+In addition, the system needs to be able to:
+
+* smartly manage fees
+* output screen and printable reports
+* schedule and email reports (PDF/HTML5)
+* expose client facing login with 24/7 access
+* use a responsive design for mobile access
+* show different reports to differents users based on permissions
+* mimimise repetitive configuration across accounts
+* group accounts that all use the same reports
+* cache underlying data to prevent repeated access
+* easily compare any report to same for different interval (trend)
 
 ### Fees
 
@@ -23,15 +47,13 @@ CPM is always computed using impressions, and CPC always using clicks.
 
 For example:
 
-* PPC
+* PPC ads
+    * CPC Fee: E.g. $0.05 (per click)
+* Banner ads / HTML5 ads
     * CPM Fee: E.g. $0.25 (per 1000 impressions)
-    * CPC Fee: none
-* Banner ads
-    * CPM Fee: E.g. $1.00 (per 1000 impressions)
-    * CPC Fee: E.g. $0.25 (per click)
+    * CPC Fee: E.g. $0.05 (per click)
 * Video ads
     * CPM Fee: E.g. $1.00 (per 1000 impressions)
-    * CPC Fee: E.g. $0.25 (per click)
 
 In addition, valid date ranges for when to apply the sets of fees is needed. (e.g. 01/2001-01/2010) This allows a shcedule to be inputted for automatically incrementing fees.
 
@@ -41,7 +63,7 @@ In the future, CPM may shift to a percentage of total spend instead, making it m
 
 #### Agency Fees
 
-Fees charged by us for our services. For this we bill in tiers, usually charging a lower percentage bracket as more ads are served. However, there is also a minimum fee charged if not enough ads are served. Thus, we minimally have a table of:
+Fees charged by us for our services. For this we bill in tiers, usually charging a lower percentage bracket as more dollars are spent. However, there is also a minimum fee charged if not enough ads are served. Thus, we minimally have a table of:
 
 * Range (of total spend, e.g. "0.00-10000.00")
 * Percentage of Spend (e.g. "15%")
@@ -56,7 +78,7 @@ Like how serving fees has different sets of fees (e.g. "banner" and "video"), ag
 
 ## Reports
 
-Ultimately, a report (viewed by a user within URP) is composed of one or more rows and one or more columns, forming a grid with the entities of interest (e.g. campaign name, or publisher name) forming rows, and the metrics/stats forming columns. 
+Ultimately, a report (viewed by a user within the system) is composed of one or more rows and one or more columns, forming a grid with the entities of interest (e.g. campaign name, or publisher name) forming rows, and the metrics/stats forming columns. 
 
 In order to create such a report, two things must happen:
 
@@ -153,74 +175,103 @@ Upon completion of the existing customer facing reports, URP2 will need to deliv
 
 #### MTD Budget vs. MTD Actual Spend
 
-This will require interacting with *Bravo Billing* to get the approved budget for each client account. Once we have the *budget* for a client, the report will take the monthly budget and divide it by the number of days in the month to get the on-track MTD budget. This will be compared to the actual spend (`media cost + ad serving + agency fees`) to see how close we are to being on budget. The report should highlight in RED any accounts off by more than 10%, yellow all accounts from 5-9.99%. These ranges should be configurable by account and a great feature would be that the ranges change relative to where we are in the month. Being off by 15% on day 2 isn't as bad as bing off by 15% on day 20.
+This will require interacting with *Bravo Billing* to get the approved budget for each client account. Once we have the *budget* for a client, the report will take the monthly budget and divide it by the number of days in the month to get the on-track MTD budget. This will be compared to the actual spend (`media cost + ad serving + agency fees`) to see how close we are to being on budget. The report should highlight in RED any accounts off by more than 5%, yellow all accounts from 3-5%. These ranges should be configurable by account and a great feature would be that the ranges change relative to where we are in the month. Being off by 15% on day 2 isn't as bad as being off by 15% on day 20.
 
-#### Rolling 7 Day Metrics (e.g. CTR, CPC, CPL) vs. Prior Period ROlling 7 Day Metrics
+#### Rolling N Day Metrics (e.g. CTR, CPC, CPL) vs. Prior Period ROlling N Day Metrics
 
-The 7 DAY period is somewhat configurable or at least we have several options to choose from like 7/14/30 day.
+The N day period is configurable, i.e. there are several options to choose from like 7/14/30 day.
 
 # BRAVO - Billing (Functional)
 
-Billing involves integrating client billing/invoices. Today we generate an Excel spreadsheet by hand that lists out "spend by month" for N months, showing numbers per network/placement, for both search and display. It also totals all media spend and compares it to the authorised spend amount. Given the right permissions, a user should be able to see this dashboard for an account / edit budget sums. Ideally, a client could log in and approve the budget amounts. Further, given another permission, a user should be able to see a list of all accounts, their current spend vs. their predicted spend (`approved spend / number of days in month * current day`), and the difference highlighted in red if it is over 5% different; this allows immediate action to be taken. In future phases we may want the system to adjust ad campaigns (such as pausing them) depending on how the predicted spend matches the actual spend so that we can as closely as possible, meet the approved spend amount.
+## Overview
 
-Approved budgets are delivered by way of a Media Authorization Form (MAF) today. This MAF would need to have an interface with client login so they can use Digi-sign to approve the budget electronically. 
+The billing portion of Bravo should enable administrators to prepare MAFs (see below for definition) and for clients to review, potentially edit, and approve. Once a MAF has been approved (i.e. e-signed), the budgeted amounts can be used by other parts of the BRAVO system to spend the money. After a month has passed, viewing a MAF should optionally show the actual spend amounts (queried from another part of BRAVO) for those previous months. In the case that actuals were below/above the budget, the system should adjust following months so that spendable budgets include this +/-. A feature for providing refunds to clients must also be present.
 
-Using the [Quickbooks API](https://developer.intuit.com/docs/0025_quickbooksapi/0005_introduction_to_quickbooksapi) we could also automatically generate invoices to send the client.
+Using the [Quickbooks API](https://developer.intuit.com/docs/0025_quickbooksapi/0005_introduction_to_quickbooksapi), invoices should be automatically created in QuickBooks.
+
+## Accounts
+
+The system is composed of accounts for which MAFs should be managed. Users can be assigned to one or more accounts.
 
 ## Users
 
+The billing system has two types of users, administrators (which administer 1+ accounts) and clients (which access 1+ accounts).
+
 ### Administrators
 
-* Can generate/edit proposed MAFs for an Account
-* Can approve modified MAF from account user
-* View list of accounts with approval status
-* View list of accounts invoice status
-* Need 2 views, dashboard to view status for all account and account level view.
+* Can generate/edit proposed MAFs for an account
+* Can approve modified MAF from client user
+* View list of accounts with approval statuses
+* View list of accounts' invoice statuses
 
-### Account User
+Administrators need 2 views, a dashboard to view current status of approvals for upcoming months' MAFs, and also an account level view similar to the client view of an account with more functionality.
 
-* Can respond to generated MAFs. (Approve, Deny, Modify)
+### Clients
+
 * View proposed MAF
+* Can respond to generated MAFs: approve, deny, modify
 * View MAF previous months with actuals & future budget amounts
-* Request Refunds
+* Request refunds
 
-## Generate MAFs
+## Media Authorization Form (MAF)
 
-Create a MAF for an account for N months and set Monthly budget for each budgeted item (will default values across all months with option to modify specific month)
+A MAF is a form that details a set of budgets (e.g. search, display, and video) for a period of N months; this form is used to receive client permission to spend the budgetted money.
 
-Input budgeted items:
+### Generation
+
+Create a MAF for an account for N months and set monthly budget for each budgeted item (will default values across all months with option to modify specific month)
+
+Input **budgeted items**, e.g.:
 
 1. search
 2. display
 3. pre-roll
 4. ...
  
-Save. (Notify Account for Approval)
+* Button should be available for sending "approval needed" notification to client users for account.
 
-## Account Approval
+### Approval
 
-### Declined or Modified
+Approval happens by a client user. They log in and see the MAF for future months, where they can either decline, modify, or approve it.
 
-Moves back to generate MAF with updated values or declined with Reason.
+#### Declined or Modified
 
-### Approved
+If client declines or modifies, notificaiton should be sent to account administrator(s). In the case of declining, client user must provide a textual reason (e.g. "this isn't what we discussed and is too high", etc.)
+
+#### Approved
 
 Account user accepts and e-signs MAF.
 
-## Generates Invoices
+## Handling Bugdets and Actuals: Invoice Creation, Balance Rollover, and Refunds
 
-X day of the N month generates invoice for N+1 month, if N+1 month has approved budget. Monitors new approved budgets till end of month generating invoices.
+Invoice creation, balance rollover (actuals - budgetted), and refunds are all interrelated, and must be handled together, as explained below.
 
+X day of the N month generates invoice for M+1 month, if M+1 month has approved budget. Monitors new approved budgets till end of month generating invoices.
 
-## Refund Balance
+### Invoice Creation
 
-Screen to request remaining funds at the end of the month. If a user requests a refund in month N, then the user will be cut a check for the RolloverAmount amount in month N+1, after this has been calculated. If the RolloverAmount is negative the user will be refunded $0.
+Invoices should be generated for a given month M prior to entering that month, i.e. generated during month M-1, with enough time for the client to approve the invoice so we can use those funds. The generation of the invoice is not dependant on the previous month, but the spendable budget (approved budget + rollover amount) used by reporting system is.
 
-## Tracking Over/Under Spending
+### Balance Rollover (Tracking Over/underspending)
 
-Account overflow is tracked by using actuals from month N-1. By storing the SUM of `budgeted - actual` into month N+1 RolloverAmount.
+Actuals as reported by reporting system for a given month M may vary up to N days through the following month M+1. Thus, we retroactively calculate the balance that must be rolled over during a month M for the previous month M-1. However, since we are within a given month M already, the earliest we can use this rolled over amount is the following month, M+1. We therefore store the sum of `budgeted - actual` for month M-1 into month M+1. This sum may be positive or negative, depending on how spending went during month M-1. Therefore any given month M will only possibly ever have an impact on the budget for month M+2, as actuals for that month M are not known until partway through M+1.
 
-When budget amount for a month is requested it uses the budgeted SUM of all items + RolloverAmount. Which the RolloweverAmount may be positive or negative.
+#### Handling Rollover in Budgets
 
-In the case the budget amount for a month of a particular item is requested, it uses the budgeted item plus the percent of the budgeted item over the total budget times the RolloverAmountThat is to say, `budget item + (budget item)/(SUM of all items) * RolloverAmount`
+When the budget amount for a month is requested, such as by the BRAVO reporting system, the rollover amount will be added to the budgeted sum of all budgeted items. Note that this may effectively raise or lower the budgeted amount, depending on if the rollover amount was positive or negative (under or over spent).
 
+In the case the budgeted amount for a month of a particular budget item is requested, the system uses the budgeted item amount plus the percent of the budgeted item over the total budget times the rollover amount; i.e., `budget item + (budget item)/sum(all budgeted items) * (rollover amount)`
+
+### Refunds
+
+If a user requests a refund in month M, then the user will be cut a check for the rollover amount in month M+1, after this has been calculated (N days into the month, once actuals are properly known for month M-1). If the rollover amount is negative the user will be refunded $0.
+
+* Client user screen to request refund for remaining funds at the end of the month
+
+# BRAVO - Auditing (Functional)
+
+The goal of auditing is to show budgeted vs. actual spend and allow administrators to push/schedule a kill switch when the difference is too great.
+
+A user should be able to see a list of all accounts, their current spend vs. their predicted spend (`approved spend / number of days in month * current day`), and the difference highlighted in red if it is over 5% different; this allows immediate action to be taken. In future phases we may want the system to adjust ad campaigns (such as pausing them) depending on how the predicted spend matches the actual spend so that we can as closely as possible, meet the approved spend amount.
+
+Ideally, the report would show numbers per network/placement, for for budgeted items (e.g. search and display).
