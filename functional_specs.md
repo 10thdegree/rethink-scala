@@ -268,6 +268,10 @@ If a user requests a refund in month M, then the user will be cut a check for th
 
 * Client user screen to request refund for remaining funds at the end of the month
 
+### Example
+
+The current month is January. When we hit the 15th of the month, we can compute the rollover amount from the previous month, December, since the actuals will no longer change after the 15th. Let's say our budget for December was $15,000, and our actual was $14,000. This means there is a rollover amount of $1,000. Since the current month is January (and it is the 15th), the roll over amount can only be applied to a future month, in this case February. If the client has approved the MAF for Febuary, we issue the invoice, otherwise we remind them they need to approve the MAF. If the budgeted amount is the same as for December, $15,000, then the available budget for February will now be $16,000 ($15,000 + $1,000 (rollover amount)). If, however, the user had requested a refund during January, then this $1,000 would be refunded to them IFF the month of January does not go over budget (In the case that January's actuals are $16,000 and its budget was $15,000, then no more will be refunded to user).
+
 # BRAVO - Auditing (Functional)
 
 The goal of auditing is to show budgeted vs. actual spend and allow administrators to push/schedule a kill switch when the difference is too great.
