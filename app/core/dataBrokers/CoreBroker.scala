@@ -33,7 +33,7 @@ object Connection {
     case _ => ("127.0.0.1","")
   }
   val port = 28015
-  val version1 = new Version1(hostWithKey._1, port)
+  //val version1 = new Version1(hostWithKey._1, port)
   val version2 = new Version2(hostWithKey._1, port, authKey = hostWithKey._2)
 
   type TableType = Document
