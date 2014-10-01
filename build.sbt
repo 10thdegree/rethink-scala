@@ -10,7 +10,16 @@ resolvers ++= Seq("Sonatype Snapshots" at "https://oss.sonatype.org/content/repo
 
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 
-libraryDependencies ++= Seq(
+lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3")
+
+lazy val angularDeps = Seq(// Angular-js
+  "org.webjars" % "angularjs" % "1.2.16",
+  "org.webjars" % "angular-ui" % "0.4.0-2"  exclude("org.webjars", "angularjs"),
+  "org.webjars" % "angular-ui-bootstrap" % "0.10.0-1"  exclude("org.webjars", "angularjs"),
+  "org.webjars" % "angular-ui-router" % "0.2.10" exclude("org.webjars", "angularjs")
+)
+
+lazy val otherDeps = Seq(
   // Rethink-DB Driver
   "com.rethinkscala" % "core_2.11" % "0.4.4-SNAPSHOT",
   // Secure Social
@@ -26,11 +35,6 @@ libraryDependencies ++= Seq(
   //"org.webjars" % "react" % "0.10.0",
   "org.webjars" % "jquery" % "2.1.0-2",
   //
-  // Angular-js
-  "org.webjars" % "angularjs" % "1.2.16",
-  "org.webjars" % "angular-ui" % "0.4.0-2"  exclude("org.webjars", "angularjs"),
-  "org.webjars" % "angular-ui-bootstrap" % "0.10.0-1"  exclude("org.webjars", "angularjs"),
-  "org.webjars" % "angular-ui-router" % "0.2.10" exclude("org.webjars", "angularjs"),
   //
   // Bootstrap
   "org.webjars" % "bootstrap" % "3.1.1",
@@ -53,4 +57,6 @@ libraryDependencies ++= Seq(
   "org.codehaus.groovy" % "groovy-jsr223" % "2.3.6"
   //"org.jruby" % "jruby-complete" % "1.7.13"
 )
+
+libraryDependencies := (apiDeps ++ otherDeps ++ angularDeps)
 
