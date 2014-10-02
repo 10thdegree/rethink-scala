@@ -20,6 +20,8 @@ lazy val angularDeps = Seq(// Angular-js
 )
 
 lazy val otherDeps = Seq(
+  //scalaz
+  "org.scalaz" % "scalaz-core_2.11" % "7.1.0",
   // Rethink-DB Driver
   "com.rethinkscala" % "core_2.11" % "0.4.4-SNAPSHOT",
   // Secure Social
