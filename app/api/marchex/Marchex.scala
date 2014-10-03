@@ -68,7 +68,8 @@ object Marchex {
     }
   }
 
-  private def parseCallLog(implicit hm: HashMap[String,Object]): \/[Throwable, CallLog] = 
+  private def parseCallLog(implicit hm: HashMap[String,Object]): \/[Throwable, CallLog] = {
+    import bravo.api.marchex.DataCaster._ 
     for {
       acct <- getVal[String]("acct")
       assigned_to <- getVal[String]("assigned_to")
@@ -87,10 +88,10 @@ object Marchex {
       keyword <- getVal[String]("keyword")
       rating  <- getVal[String]("rating")
       recorded <- getVal[Boolean]("recorded")
-      ringdur <- getVal[String]("ring_duration")
+      ringdur <- getVal[Int]("ring_duration")
     } yield 
-      CallLog(acct, assigned_to, call_id, call_start, call_status, call_end, caller_name, caller_number, cmpid, disposition, forwardno, grpid, inbound_ext, inboundno, keyword, rating, recorded, ringdur)
-
+      CallLog(acct, assigned_to, call_id, /*call_start*/DateTime.now(), call_status, call_end, caller_name, caller_number, cmpid, disposition, forwardno, grpid, inbound_ext, inboundno, keyword, rating, recorded, ringdur)
+  }
   private def parseAccount(implicit hm: HashMap[String,Object]): \/[Throwable, MarchexAccount] = 
     for {
        acct <- getVal[String]("acct") 
@@ -119,84 +120,11 @@ object Marchex {
       descr <- getVal[String]("descr")
     } yield MarchexGroup(grpid, name, descr)
 
-  private def getVal[A](k: String)(implicit m: HashMap[String,Object]): \/[Throwable,A] = 
+  private def getVal[A](k: String)(implicit m: HashMap[String,Object], dc: DataCaster[A]): \/[Throwable,A] = 
     for {
       o <- \/.fromTryCatchNonFatal(m.get(k))
-      a <- \/.fromTryCatchNonFatal(o.asInstanceOf[A])
+      a <- \/.fromTryCatchNonFatal(dc.cast(o))
     } yield 
       a
 }
 
-trait DataCaster[A] {
-  def cast(o: Object): A
-}
-
-case class StringCaster() extends DataCaster[String] {
-  def cast(o: Object) = o.asInstanceOf[String]
-}
-
-case class IntCaster() extends DataCaster[Int] {
-  def cast(o: Object) = o.asInstanceOf[Int]
-}
-
-case class DateTimeCaster() extends DataCaster[DateTime] {
-  def cast(o: Object) = DateTime.now() 
-}
-
-case class BoolCaster() extends DataCaster[Boolean] {
-  def cast(o: Object) = o.asInstanceOf[Boolean]
-}
-
-
-object MarchexCredentials {
-  implicit def defaultC = MarchexCredentials("http://api.voicestar.com/api/xmlrpc/1", "urp@10thdegree.com", "10thdegreee")
-}
-sealed trait MarchexData 
-
-case class MarchexAccount(account: String, customerid: String, status: String, name: String) extends MarchexData
-
-case class MarchexGroup(groupid: String, name: String, description: String)
-
-case class MarchexAdCampaign(name: String, cmpid: String, customid: String, desc: String, inboundno: String)
-
-case class CallLog(acct: String, assigned_to: String, call_id: String, call_start: DateTime, call_status: String, call_end: DateTime, caller_name: String, caller_number: String, cmpid: String, 
-disposition: String, forwardno: String, grpid: String, inbound_ext: String, indoundno: String, keyword: String, rating: String, recorded: Boolean, ring_duration: String)
-
-case class MarchexCredentials(url: String, user: String, pass: String)
-
-//CtjSZlGyBocq2QDF//
-    /*
- CtjSZlGyBocq2QDF
-
-[XmlRpcMethod("acct.name.get")]
-string acctName(string accid);
-
-        [XmlRpcMethod("ad.list")]
-                AdCampaign[] adList(string grpId);
-
-                        //[XmlRpcMethod("acct.list")]
-                                //string accountList(string accid);
-
-                                        [XmlRpcMethod("group.list")]
-                                                Group[] groupList(string accid);
-
-                                                        [XmlRpcMethod("acct.list")]
-                                                                Account[] accountList();
-
-                                                                        [XmlRpcMethod("call.search")]
-                                                                                CallLog [] callSearch(string accid, CallLogQuery search);
-
-
-
-
- String accountNumber = new String("CmyGG0sUPGcROABU");
- 
-         HashMap search = new HashMap();
-                 csearch.put("start", "20070917T000000Z");
-                         search.put("end", "20091231T000000Z");
-                                 
-                                  // Create an array to hold the parameters 
-          Object[] params = new Object[] {accountNumber, search};
-
-
-    */
