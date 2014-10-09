@@ -37,24 +37,24 @@ case class MarchexGroup(groupid: String, name: String, description: String)
 case class MarchexAdCampaign(name: String, cmpid: String, customid: String, desc: String, inboundno: String)
 
 case class CallLog(
-  acct: String, 
-  assigned_to: String, 
-  call_id: String, 
-  call_start: DateTime, 
-  call_status: String, 
-  call_end: DateTime, 
-  caller_name: String, 
-  caller_number: String, 
+  account: String, 
+  assignedto: String, 
+  callid: String, 
+  callstart: DateTime, 
+  callstatus: String, 
+  callend: DateTime, 
+  callername: String, 
+  callernumber: String, 
   cmpid: String, 
   disposition: String, 
-  forwardno: String, 
-  grpid: String, 
-  inbound_ext: String, 
-  indoundno: String, 
+  forwardnumber: String, 
+  groupid: String, 
+  inboundext: String, 
+  indoundnumber: String, 
   keyword: String, 
   rating: String, 
   recorded: Boolean, 
-  ring_duration: Int)
+  ringduration: Int)
 
 case class MarchexCredentials(url: String, user: String, pass: String)
 
