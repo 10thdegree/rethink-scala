@@ -27,7 +27,7 @@ class TypeFactoryMarchexIso8601(pController: XmlRpcController) extends TypeFacto
   }
 
   override def getSerializer(pConfig: XmlRpcStreamConfig, pObject: Object): TypeSerializer = {
-    if (pObject.isInstanceOf[DateFormat]) {
+    if (pObject.isInstanceOf[java.util.Date]) {
       new DateSerializer(newFormat());
     } else {
       super.getSerializer(pConfig, pObject);

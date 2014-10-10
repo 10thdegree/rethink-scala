@@ -68,6 +68,10 @@ object server extends Properties("Bravo API tests") {
     val phm = new PropertyHandlerMapping()
     phm.addHandler("call", new Call().getClass) 
     xmlServer.setHandlerMapping(phm)
+    
+    val serverConfig = xmlServer.getConfig().asInstanceOf[XmlRpcServerConfigImpl]
+    serverConfig.setEncoding("ISO-8859-1");
+    xmlServer.setTypeFactory(new TypeFactoryMarchexIso8601(xmlServer))
     ws.start()
     Gen.containerOfN[List,CallLog](10,callLogGen).sample.foreach(cl => {
       callLogs = cl
@@ -75,14 +79,6 @@ object server extends Properties("Bravo API tests") {
     val credentials = MarchexCredentials("http://localhost:"+port.toString +"/", "asdf", "asdf")
     val dt = DateTime.now()
     val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)(credentials)
-    result.toOption.foreach(l => 
-      println(l)
-    )
-
-    val serverConfig = xmlServer.getConfig().asInstanceOf[XmlRpcServerConfigImpl]
-    serverConfig.setEncoding("ISO-8859-1");
-    
-    println("result = " + result) 
     ws.shutdown()
     result.fold(error => false, logs => result == logs)
     //"blah" == "blah"
