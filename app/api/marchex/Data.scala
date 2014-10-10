@@ -50,7 +50,7 @@ case class CallLog(
   forwardnumber: String, 
   groupid: String, 
   inboundext: String, 
-  indoundnumber: String, 
+  inboundnumber: String, 
   keyword: String, 
   rating: String, 
   recorded: Boolean, 
