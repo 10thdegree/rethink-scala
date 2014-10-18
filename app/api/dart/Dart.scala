@@ -1,82 +1,103 @@
 package bravo.api.dart
 
 import scalaz._
+import scalaz.Free._
 import Scalaz._
+import org.joda.time.DateTime
+
+sealed trait DartReportData {
+  def reportid: Long
+}
+
+//TODO: do we need dimensions?
+case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
+
+case class DownloadedReport(reportid: Long, data: String) extends DartReportData
+
+sealed trait DartRequest[A] 
+
+case class ListReports[B](clientId: Int, b: B) extends DartRequest[List[AvailableReport]]
+
+case class CreateReport[B](clientId: Int, fields: String, b: B) extends DartRequest[AvailableReport]
+
+case class GetReport[B](clientId: Int, reportId: Int, startDate: DateTime, endDate: DateTime, b: B) extends DartRequest[DownloadedReport]
+
+/*
+object DartTest {
+  def test(): Unit = {
+    val result =
+    for {
+      profiles <- Dart.getUserProfiles()
+      first    =  profiles.first //toEither.liftM
+      reports <- Dart.getReports()
+      freport  = reports.first //
+      realreport <- Dart.DownloadReport()
+    } yield {
+      print("process the report here?")
+    }
+    val f = Dart.runComputation()()
+}
+*/
 
 object Dart {
-  
-  //def createReport(startDate: DateTime, endDate: DateTime): M[Report] {
-
-  //}
-
-  //reporting.reports().files().get(userProfileId, file.getReportId(), file.getId()).execute();
-  
-  //def listClients
-  
-}
-
-object DartAuth {
-  import com.google.api.client.auth.oauth2.Credential;
-  import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-  import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
-  import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
-  import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
-  import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
-  import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-  import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-  import com.google.api.client.http.HttpResponseException;
-  import com.google.api.client.http.HttpTransport;
-  import com.google.api.client.json.JsonFactory;
-  import com.google.api.client.json.jackson2.JacksonFactory;
-  import com.google.api.client.util.store.DataStoreFactory;
-  import com.google.api.client.util.store.FileDataStoreFactory;
-  import scala.collection.JavaConversions._
   import com.google.api.services.dfareporting.{Dfareporting, DfareportingScopes} 
- 
-  def unsafeGetReporting(): \/[Exception, Dfareporting] = 
-    getCredentialService("/users/vmarquez/Bravo-44871094176f.p12","399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com","bravo@10thdegree.com")
-  /** Authorizes the installed application to access user's protected data.*/
+  import scala.collection.JavaConversions._
+  import com.google.api.services.dfareporting.model._
+  import java.io.InputStream
 
-  def getCredentialService(filePath: String, accountId: String, userAccount: String): \/[Exception, Dfareporting] = {
-    // Service account credential.
-    val jsonFactory = JacksonFactory.getDefaultInstance()
-    val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
+  def listReports(clientId: Int): Free[DartRequest, List[AvailableReport]]=  ???// Free.Suspend(
 
-    val credential = new GoogleCredential.Builder()
-      .setTransport(transport)
-      .setJsonFactory(jsonFactory)
-      .setServiceAccountId(accountId)
-      .setServiceAccountScopes(List(DfareportingScopes.DFAREPORTING))
-      .setServiceAccountPrivateKeyFromP12File(new java.io.File(filePath))
-      // Set the user you are impersonating (this can be yourself).
-      .setServiceAccountUser(userAccount)
-      .build()
-   
-    if (credential.refreshToken())
-      new Dfareporting(transport, jsonFactory, credential).right[Exception]
-    else 
-      new Exception("Error with credential").left[Dfareporting]
-  }
+  def getReport(clientId: Int, reportId: Int, startDate: DateTime, endDate: DateTime): Free[DartRequest, DownloadedReport] = ???// Free.Suspend(
 
-  def GoogleInstalledAppAuth(clientid: String, secret: String, user: String): \/[Exception, Credential] = {
-    //x   // load client secrets
-    try {
-      val scopes = List("https://www.googleapis.com/auth/dfareporting")
-      val dataStoreDir = new java.io.File("temp/");
-      val storeFactory = new FileDataStoreFactory(dataStoreDir)
-      val jsonFactory = JacksonFactory.getDefaultInstance()
-      //val GclientSecrets: GoogleClientSecrets  = GoogleClientSecrets.load(jsonFactory, "JSON" );
-      val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
-                                                                                    // set up authorization code flow
-      val flow: GoogleAuthorizationCodeFlow = new GoogleAuthorizationCodeFlow.Builder(transport, jsonFactory, clientid, secret, scopes)
-        .setDataStoreFactory(storeFactory)
-        .build()
-                                                                                                            // authorize
-      return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize(user).right  
-    } catch {
-      case ex: Exception => ex.left[Credential]
+  /*
+  @tailrec
+  def runFreeTest(Free)(repRunner): Task[Blah] = {
+    def runFreeThrough(rp: Option[Dfareporting]): Task[Blah] = {
+      free match {
+        case req =>
+        case getReport =>  
     }
   }
+  */
+  
 
+  private def viewDartReport(reportApi: Dfareporting, userid: Int, rid: Int ): \/[Throwable, List[AvailableReport]] = 
+    for {
+      reports <- \/.fromTryCatchNonFatal( reportApi.reports().list(userid).execute() )  
+      items   = (reports.getItems(): java.util.List[Report])
+    } yield 
+      items.toList.map(toAvailableReport(_))
+  
+  private def updateDartReport(reportApi: Dfareporting, 
 
+  private def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): \/[Throwable, Long] = 
+    for {
+      file <- \/.fromTryCatchNonFatal(reportApi.reports().run(userid, rid).setSynchronous(false).execute())
+    } yield { 
+      file.getId()
+    }
+
+  private def getDartReport(reportApi: Dfareporting, reportid: Long, fid: Long): \/[Throwable, DownloadedReport] = 
+    for {
+      filehandle  <- \/.fromTryCatchNonFatal(reportApi.files().get(reportid, fid))
+      file        <- \/.fromTryCatchNonFatal(filehandle.execute())
+      is          <- if (file.getStatus != "REPORT_AVAILABLE") 
+                      new Exception("Report " + reportid + "is not available").left[InputStream] 
+                    else
+                      \/.fromTryCatchNonFatal(filehandle.executeMediaAsInputStream()) 
+    } yield {
+      val reportData = scala.io.Source.fromInputStream(is).mkString  
+      DownloadedReport(reportid,reportData)
+    }
+    
+  private def toAvailableReport(r: Report):  AvailableReport = AvailableReport(r.getId(), 
+    r.getName(), 
+    r.getFormat(),
+    r.getFileName(),
+    new DateTime(r.getCriteria().getDateRange().getStartDate().toString),
+    new DateTime(r.getCriteria().getDateRange().getEndDate()))
+
+  private def getDartReport(reportApi: Dfareporting, rId: Int): \/[Exception, DownloadedReport] = ???
 }
+
+

@@ -48,6 +48,29 @@ object Marchex {
         ex.left[List[CallLog]]
     }
   }
+  //This is for roundtrips back to a format for XML-RPC.  We're using this for mocking/testing
+  def callLogToMap(c: CallLog): Map[String,Object] = {
+    val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
+    Map[String,Object](
+    "acct" -> c.account,
+    "assigned_to" -> c.assignedto,
+    "call_id" -> c.callid,
+    "call_start" -> c.callstart.toDate,
+    "call_status" -> c.callstatus,
+    "call_end" -> c.callend.toDate,
+    "caller_name" -> c.callername,
+    "cmpid" -> c.cmpid,
+    "disposition" -> c.disposition,
+    "forwardno" -> c.forwardnumber,
+    "grpid" -> c.groupid,
+    "inboundno" -> c.inboundnumber,
+    "keyword" -> c.keyword,
+    "rating" -> c.rating,
+    "recorded" -> c.recorded.asInstanceOf[Object],
+    "ring_duration" -> c.ringduration.asInstanceOf[Object]
+    )
+  }
+
   //END PUBLIC API
 
   private def makeCall(methodcall: String, params: List[Object])(implicit c: MarchexCredentials) : Array[Object] = {
@@ -89,28 +112,7 @@ object Marchex {
       CallLog(acct, assigned_to, call_id, /*call_start*/DateTime.now(), call_status, call_end, caller_name, caller_number, cmpid, disposition, forwardno, grpid, inbound_ext, inboundno, keyword, rating, recorded, ringdur)
   }
 
-  def callLogToMap(c: CallLog): Map[String,Object] = {
-    val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
-    Map[String,Object](
-    "acct" -> c.account,
-    "assigned_to" -> c.assignedto,
-    "call_id" -> c.callid,
-    "call_start" -> c.callstart.toDate,
-    "call_status" -> c.callstatus,
-    "call_end" -> c.callend.toDate,
-    "caller_name" -> c.callername,
-    "cmpid" -> c.cmpid,
-    "disposition" -> c.disposition,
-    "forwardno" -> c.forwardnumber,
-    "grpid" -> c.groupid,
-    "inboundno" -> c.inboundnumber,
-    "keyword" -> c.keyword,
-    "rating" -> c.rating,
-    "recorded" -> c.recorded.asInstanceOf[Object],
-    "ring_duration" -> c.ringduration.asInstanceOf[Object]
-    )
-  }
-  
+    
   private def parseAccount(implicit hm: HashMap[String,Object]): \/[Throwable, MarchexAccount] = 
     for {
        acct <- getVal[String]("acct") 
