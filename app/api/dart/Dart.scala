@@ -21,22 +21,11 @@ case class ListReports[B](clientId: Int, b: B) extends DartRequest[List[Availabl
 case class CreateReport[B](clientId: Int, fields: String, b: B) extends DartRequest[AvailableReport]
 
 case class GetReport[B](clientId: Int, reportId: Int, startDate: DateTime, endDate: DateTime, b: B) extends DartRequest[DownloadedReport]
+//THOUGHTS:
 
 /*
-object DartTest {
-  def test(): Unit = {
-    val result =
-    for {
-      profiles <- Dart.getUserProfiles()
-      first    =  profiles.first //toEither.liftM
-      reports <- Dart.getReports()
-      freport  = reports.first //
-      realreport <- Dart.DownloadReport()
-    } yield {
-      print("process the report here?")
-    }
-    val f = Dart.runComputation()()
-}
+Instead of polling for specific reports, we hsould just havea a queue of reports waiting to be fulfilled, get all the file handles, and then check them all at once? or no?
+
 */
 
 object Dart {
@@ -59,25 +48,39 @@ object Dart {
     }
   }
   */
-  
 
-  private def viewDartReport(reportApi: Dfareporting, userid: Int, rid: Int ): \/[Throwable, List[AvailableReport]] = 
+  def viewDartReports(reportApi: Dfareporting, userid: Int, rid: Int ): \/[Throwable, List[AvailableReport]] = 
     for {
       reports <- \/.fromTryCatchNonFatal( reportApi.reports().list(userid).execute() )  
       items   = (reports.getItems(): java.util.List[Report])
     } yield 
       items.toList.map(toAvailableReport(_))
   
-  private def updateDartReport(reportApi: Dfareporting, 
+  def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): \/[Throwable, Unit] = { 
+    for {
+      report    <- \/.fromTryCatchNonFatal(reportApi.reports().get(userid, rid).execute())
+      criteria  <- \/.fromTryCatchNonFatal(
+                    report.getCriteria().setDateRange(new DateRange().setStartDate(toGoogleDate(startDate)).setEndDate(toGoogleDate(endDate)))
+                  )
+      _         = report.setCriteria(criteria)
+      _         = \/.fromTryCatchNonFatal(reportApi.reports().update(userid, rid, report).execute())
+    } yield
+      ()
+  }
+      
+  
+  
+  def toGoogleDate(d: DateTime): com.google.api.client.util.DateTime = 
+    new com.google.api.client.util.DateTime(d.toString())  
 
-  private def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): \/[Throwable, Long] = 
+  def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): \/[Throwable, Long] = 
     for {
       file <- \/.fromTryCatchNonFatal(reportApi.reports().run(userid, rid).setSynchronous(false).execute())
     } yield { 
       file.getId()
     }
 
-  private def getDartReport(reportApi: Dfareporting, reportid: Long, fid: Long): \/[Throwable, DownloadedReport] = 
+  def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): \/[Throwable, DownloadedReport] = 
     for {
       filehandle  <- \/.fromTryCatchNonFatal(reportApi.files().get(reportid, fid))
       file        <- \/.fromTryCatchNonFatal(filehandle.execute())
@@ -90,14 +93,23 @@ object Dart {
       DownloadedReport(reportid,reportData)
     }
     
-  private def toAvailableReport(r: Report):  AvailableReport = AvailableReport(r.getId(), 
+  def toAvailableReport(r: Report):  AvailableReport = AvailableReport(r.getId(), 
     r.getName(), 
     r.getFormat(),
     r.getFileName(),
     new DateTime(r.getCriteria().getDateRange().getStartDate().toString),
     new DateTime(r.getCriteria().getDateRange().getEndDate()))
+  
+  def test() = 
+    for {
+      dfa <- DartAuth.unsafeGetReporting()
+      _   <- updateDartReport(dfa,1297324,15641682, new DateTime().minusWeeks(1),new DateTime())
+      id  <- runDartReport(dfa,1297324, 15641682) 
+      downloadedReport <- downloadReport(dfa, 15641682, id)
+    } yield {
+      print("process the report here?")
+    }
 
-  private def getDartReport(reportApi: Dfareporting, rId: Int): \/[Exception, DownloadedReport] = ???
 }
 
 

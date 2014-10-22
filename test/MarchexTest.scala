@@ -85,9 +85,3 @@ object server extends Properties("Bravo API tests") {
   }
 }
 
-abstract class Blah[+A] {
-  def tail[AA >: A]: IList[AA]  
-  //def h[AA >: A]: AA
-}
-
-def makeBlah[B, BB >: B](b: BB) = new Blah[B] { def tail[AA >: B] = ??? } //IList(b) }

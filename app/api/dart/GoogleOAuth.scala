@@ -1,21 +1,23 @@
+package bravo.api.dart
+
 object DartAuth {
   import scalaz._
   import java.io.File
   import Scalaz._
-  import com.google.api.client.auth.oauth2.Credential;
-  import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-  import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
-  import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+  import com.google.api.client.auth.oauth2.Credential
+  import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
+  import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
+  import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
   import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
-  import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
-  import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-  import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-  import com.google.api.client.http.HttpResponseException;
-  import com.google.api.client.http.HttpTransport;
-  import com.google.api.client.json.JsonFactory;
-  import com.google.api.client.json.jackson2.JacksonFactory;
-  import com.google.api.client.util.store.DataStoreFactory;
-  import com.google.api.client.util.store.FileDataStoreFactory;
+  import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
+  import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+  import com.google.api.client.googleapis.json.GoogleJsonResponseException
+  import com.google.api.client.http.HttpResponseException
+  import com.google.api.client.http.HttpTransport
+  import com.google.api.client.json.JsonFactory
+  import com.google.api.client.json.jackson2.JacksonFactory
+  import com.google.api.client.util.store.DataStoreFactory
+  import com.google.api.client.util.store.FileDataStoreFactory
   import scala.collection.JavaConversions._
   import com.google.api.services.dfareporting.{Dfareporting, DfareportingScopes} 
   
@@ -54,10 +56,10 @@ object DartAuth {
   def GoogleInstalledAppAuth(clientid: String, secret: String, user: String): \/[Exception, Credential] = {
     try {
       val scopes = List("https://www.googleapis.com/auth/dfareporting")
-      val dataStoreDir = new java.io.File("temp/");
+      val dataStoreDir = new java.io.File("temp/")
       val storeFactory = new FileDataStoreFactory(dataStoreDir)
       val jsonFactory = JacksonFactory.getDefaultInstance()
-      //val GclientSecrets: GoogleClientSecrets  = GoogleClientSecrets.load(jsonFactory, "JSON" );
+      //val GclientSecrets: GoogleClientSecrets  = GoogleClientSecrets.load(jsonFactory, "JSON" )
       val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
                                                                                     // set up authorization code flow
       val flow: GoogleAuthorizationCodeFlow = new GoogleAuthorizationCodeFlow.Builder(transport, jsonFactory, clientid, secret, scopes)
