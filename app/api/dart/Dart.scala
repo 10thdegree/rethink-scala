@@ -33,7 +33,10 @@ object Dart {
   import scala.collection.JavaConversions._
   import com.google.api.services.dfareporting.model._
   import java.io.InputStream
-
+  import bravo.core.util.Util._
+  import scala.concurrent.Future
+  import scala.concurrent.ExecutionContext.Implicits.global
+  
   def listReports(clientId: Int): Free[DartRequest, List[AvailableReport]]=  ???// Free.Suspend(
 
   def getReport(clientId: Int, reportId: Int, startDate: DateTime, endDate: DateTime): Free[DartRequest, DownloadedReport] = ???// Free.Suspend(
@@ -49,45 +52,45 @@ object Dart {
   }
   */
 
-  def viewDartReports(reportApi: Dfareporting, userid: Int, rid: Int ): \/[Throwable, List[AvailableReport]] = 
+  type DartM[A] = EitherT[Future, JazelError, A]
+
+  def viewDartReports(reportApi: Dfareporting, userid: Int, rid: Int ): DartM[List[AvailableReport]] = 
     for {
-      reports <- \/.fromTryCatchNonFatal( reportApi.reports().list(userid).execute() )  
+      reports <- ftry( reportApi.reports().list(userid).execute() )  
       items   = (reports.getItems(): java.util.List[Report])
     } yield 
       items.toList.map(toAvailableReport(_))
   
-  def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): \/[Throwable, Unit] = { 
+  def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): DartM[Unit]= { 
     for {
-      report    <- \/.fromTryCatchNonFatal(reportApi.reports().get(userid, rid).execute())
-      criteria  <- \/.fromTryCatchNonFatal(
+      report    <- ftry(reportApi.reports().get(userid, rid).execute())
+      criteria  <- ftry( 
                     report.getCriteria().setDateRange(new DateRange().setStartDate(toGoogleDate(startDate)).setEndDate(toGoogleDate(endDate)))
                   )
       _         = report.setCriteria(criteria)
-      _         = \/.fromTryCatchNonFatal(reportApi.reports().update(userid, rid, report).execute())
+      _         <- ftry(reportApi.reports().update(userid, rid, report).execute())
     } yield
       ()
   }
-      
-  
   
   def toGoogleDate(d: DateTime): com.google.api.client.util.DateTime = 
     new com.google.api.client.util.DateTime(d.toString())  
 
-  def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): \/[Throwable, Long] = 
+  def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): DartM[Long] = 
     for {
-      file <- \/.fromTryCatchNonFatal(reportApi.reports().run(userid, rid).setSynchronous(false).execute())
+      file <- ftry(reportApi.reports().run(userid, rid).setSynchronous(false).execute())
     } yield { 
       file.getId()
     }
 
-  def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): \/[Throwable, DownloadedReport] = 
+  def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): DartM[DownloadedReport] = 
     for {
-      filehandle  <- \/.fromTryCatchNonFatal(reportApi.files().get(reportid, fid))
-      file        <- \/.fromTryCatchNonFatal(filehandle.execute())
+      filehandle  <- ftry(reportApi.files().get(reportid, fid))
+      file        <- ftry(filehandle.execute())
       is          <- if (file.getStatus != "REPORT_AVAILABLE") 
-                      new Exception("Report " + reportid + "is not available").left[InputStream] 
+                      ("Report " + reportid + "is not available".toJazelError).liftJazelError[InputStream]
                     else
-                      \/.fromTryCatchNonFatal(filehandle.executeMediaAsInputStream()) 
+                      ftry(filehandle.executeMediaAsInputStream()) 
     } yield {
       val reportData = scala.io.Source.fromInputStream(is).mkString  
       DownloadedReport(reportid,reportData)
@@ -100,16 +103,15 @@ object Dart {
     new DateTime(r.getCriteria().getDateRange().getStartDate().toString),
     new DateTime(r.getCriteria().getDateRange().getEndDate()))
   
-  def test() = 
+  def test() =
     for {
-      dfa <- DartAuth.unsafeGetReporting()
+      dfa <- EitherT( Future { DartAuth.unsafeGetReporting().leftMap(_.toJazelError) } )
       _   <- updateDartReport(dfa,1297324,15641682, new DateTime().minusWeeks(1),new DateTime())
       id  <- runDartReport(dfa,1297324, 15641682) 
       downloadedReport <- downloadReport(dfa, 15641682, id)
     } yield {
       print("process the report here?")
     }
-
 }
 
 
