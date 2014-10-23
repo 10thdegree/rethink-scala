@@ -36,7 +36,8 @@ object Dart {
   import bravo.core.util.Util._
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
-  
+  import org.joda.time.format.DateTimeFormat
+
   def listReports(clientId: Int): Free[DartRequest, List[AvailableReport]]=  ???// Free.Suspend(
 
   def getReport(clientId: Int, reportId: Int, startDate: DateTime, endDate: DateTime): Free[DartRequest, DownloadedReport] = ???// Free.Suspend(
@@ -54,6 +55,9 @@ object Dart {
 
   type DartM[A] = EitherT[Future, JazelError, A]
 
+  //val formatter = new SimpleDateFormat("yyyy-MM-dd")
+  val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+  
   def viewDartReports(reportApi: Dfareporting, userid: Int, rid: Int ): DartM[List[AvailableReport]] = 
     for {
       reports <- ftry( reportApi.reports().list(userid).execute() )  
@@ -64,6 +68,7 @@ object Dart {
   def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): DartM[Unit]= { 
     for {
       report    <- ftry(reportApi.reports().get(userid, rid).execute())
+      _         = println("startDate = " + startDate.toString() + " END DATE = " + endDate.toString())
       criteria  <- ftry( 
                     report.getCriteria().setDateRange(new DateRange().setStartDate(toGoogleDate(startDate)).setEndDate(toGoogleDate(endDate)))
                   )
@@ -72,9 +77,11 @@ object Dart {
     } yield
       ()
   }
-  
-  def toGoogleDate(d: DateTime): com.google.api.client.util.DateTime = 
-    new com.google.api.client.util.DateTime(d.toString())  
+ 
+  def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime = { 
+    val d = new com.google.api.client.util.DateTime(dt.toString(formatter))  //(d.toDate()) 
+    d
+  }
 
   def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): DartM[Long] = 
     for {
@@ -107,8 +114,8 @@ object Dart {
     for {
       dfa <- EitherT( Future { DartAuth.unsafeGetReporting().leftMap(_.toJazelError) } )
       _   <- updateDartReport(dfa,1297324,15641682, new DateTime().minusWeeks(1),new DateTime())
-      id  <- runDartReport(dfa,1297324, 15641682) 
-      downloadedReport <- downloadReport(dfa, 15641682, id)
+     id  <- runDartReport(dfa,1297324, 15641682) 
+     downloadedReport <- downloadReport(dfa, 15641682, id)
     } yield {
       print("process the report here?")
     }
