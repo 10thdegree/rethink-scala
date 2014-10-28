@@ -1,10 +1,12 @@
-package bravo.core.util
+package bravo.core
 
 object Util {
   import scalaz._
   import Scalaz._
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
+  
+  type BravoM[A] = EitherT[Future, JazelError, A]
   
   case class JazelError(ex: Option[Throwable], msg: String)
 
@@ -16,10 +18,19 @@ object Util {
   case class ThrowableErrorOps(t: Throwable) {
     def toJazelError: JazelError = JazelError(t.some, t.getMessage()) //dumb, I think we should use a different structure
   }
+  
+  case class FutureEither[A](ft: Future[\/[JazelError,A]]) {
+    def toBravoM: BravoM[A] = EitherT(ft)
+  }
 
+  case class EitherF[A](e: \/[JazelError,A]) {
+    def toBravoM: BravoM[A] = EitherT( scala.concurrent.Future.successful(e) )
+  }
+
+  implicit def toFutureEither[A](ft: Future[\/[JazelError, A]]): FutureEither[A] = FutureEither(ft)
   implicit def toError(s: String): StringErrorOps = StringErrorOps(s)
   implicit def toError(t: Throwable): ThrowableErrorOps = ThrowableErrorOps(t)
-
+  implicit def toEitherF[A](e: \/[JazelError,A]) = EitherF(e)
   //Future try
   def ftry[A](f:  => A): EitherT[Future, JazelError, A] = futuretry(f, None) 
   

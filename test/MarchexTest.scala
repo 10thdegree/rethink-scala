@@ -46,11 +46,7 @@ object MarchexDataGenerator {
    ringdur <- arbitrary[Int]
   } yield CallLog(acct, assign, callid, callstart, callstatus, callend, name, 
                   number, cmpid, disp, forward, groupid, inboundExt, inbound, keyword, rating, recorded, ringdur)
-
-
 }
-
-
 
 object server extends Properties("Bravo API tests") {
   import bravo.test.api.MarchexDataGenerator._

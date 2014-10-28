@@ -30,6 +30,8 @@ lazy val testingDeps = Seq(
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"
 )
 
+initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.future;import bravo.core.Util._"
+
 lazy val otherDeps = Seq(
   //scalaz
   "org.scalaz" % "scalaz-core_2.11" % "7.1.0",

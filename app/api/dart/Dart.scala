@@ -4,63 +4,51 @@ import scalaz._
 import scalaz.Free._
 import Scalaz._
 import org.joda.time.DateTime
-
-sealed trait DartReportData {
-  def reportid: Long
-}
-case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
-
-case class DownloadedReport(reportid: Long, data: String) extends DartReportData
-
-
-object DartFree {
-  sealed trait DartRequest[A,B] 
-
-  case class ListReports[B](clientId: Int, f: (List[AvailableReport]) => B) extends DartRequest[List[AvailableReport],B]
-
-  case class GetReport[B](clientId: Int, reportId: Int, startDate: DateTime, endDate: DateTime, f: (DownloadedReport) => B) extends DartRequest[DownloadedReport,B]
-
-  implicit def dartRequestFunctor[A]: Functor[({type l[a] = DartRequest[A,a]})#l] = new Functor[({ type l[a] = DartRequest[A,a]})#l] {
-    def map[B,C](dr: DartRequest[A,B])(f: B => C): DartRequest[A,C] = 
-     dr match {
-        case lr: ListReports[B] => lr.copy(f = (l) => f(lr.f(l)))
-        case gr: GetReport[B] => gr.copy(f = (r) => f(gr.f(r)))
-      }
-  }
-}
-
+import scala.concurrent.{Future,Promise}
+import scala.concurrent.ExecutionContext.Implicits.global
+import bravo.core.Util._
 /*
 Instead of polling for specific reports, we hsould just havea a queue of reports waiting to be fulfilled, get all the file handles, and then check them all at once? or no?
 //THOUGHTS:
 */
 
 object Dart {
+  import com.google.api.services.dfareporting.Dfareporting
+  import scala.annotation.tailrec
+  import bravo.api.dart.Data._
+ 
+  def testDartReport(dartApi: DartInternalAPI) = 
+    getReport(1297324, 15641682, new DateTime().minusWeeks(1), new DateTime())(dartApi)
 
-
-
-}
-
-trait DartInternalAPI {
-  import com.google.api.services.dfareporting.{Dfareporting, DfareportingScopes} 
-  import com.google.api.services.dfareporting.model._
-  import bravo.core.util.Util._
-  import scala.concurrent.Future
-  import org.joda.time.format.DateTimeFormat
-
-  private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+  def getReport(clientId: Int, reportId: Int, startDate: DateTime, endDate: DateTime)(dartApi: DartInternalAPI): BravoM[DownloadedReport] = 
+    for {
+      dfa <- DartAuth.unsafeGetReporting()
+      _   =  println("got a dfa, " + dfa )
+      _   <- dartApi.updateDartReport(dfa, clientId, reportId, startDate, endDate)
+      _    = println("UPDATED the report")
+      id  <- dartApi.runDartReport(dfa, clientId, reportId)
+      _   = println("updated the report!")
+      rep <- fulfillReport(dfa, reportId, id, 5, dartApi)
+    } yield {
+      rep
+    }
   
-  type DartM[A] = EitherT[Future, JazelError, A]
-
-  def viewDartReports(r: Dfareporting, userid: Int): DartM[List[AvailableReport]]
-
-  def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): DartM[Unit]
-
-  def runDartReport(r: Dfareporting, userid: Int, rid: Long): DartM[Long]
-
-  def downloadReport(r: Dfareporting, rid: Long, fid: Long): DartM[DownloadedReport]
-
-  protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
-    new com.google.api.client.util.DateTime(dt.toString(formatter)) 
+  private def fulfillReport(dfa: Dfareporting, reportId: Long, fileId: Long, delayMultiplier: Int, dartApi: DartInternalAPI): BravoM[DownloadedReport] = {
+    //not tailrec but we're not going that deep
+    def rec(attempts: Int): BravoM[DownloadedReport] =  
+      dartApi.downloadReport(dfa, reportId, fileId).run.flatMap(e => e match {
+        case -\/(err) if (attempts < 5) =>
+          val sleeptime = attempts*delayMultiplier*1000
+          println("Ok we are sleeping for " + sleeptime + " err =" + err)
+          Thread.sleep(sleeptime)
+          println("done sleeping")
+          rec(attempts+1).run
+        case _ => 
+          println("OK we have an result " + e)
+          Future { e }
+      }).toBravoM
+    rec(1)
+  }
 }
 
 object LiveDart extends DartInternalAPI {
@@ -68,20 +56,18 @@ object LiveDart extends DartInternalAPI {
   import scala.collection.JavaConversions._
   import com.google.api.services.dfareporting.model._
   import java.io.InputStream
-  import bravo.core.util.Util._
-  import scala.concurrent.Future
-  import scala.concurrent.ExecutionContext.Implicits.global
   import org.joda.time.format.DateTimeFormat
-
- 
-  override def viewDartReports(reportApi: Dfareporting, userid: Int): DartM[List[AvailableReport]] = 
+  import bravo.api.dart.Data._
+  import bravo.api.dart._ 
+  
+  override def viewDartReports(reportApi: Dfareporting, userid: Int): BravoM[List[AvailableReport]] = 
     for {
       reports <- ftry( reportApi.reports().list(userid).execute() )  
       items   = (reports.getItems(): java.util.List[Report])
     } yield 
       items.toList.map(toAvailableReport(_))
   
-  override def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): DartM[Unit]= { 
+  override def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): BravoM[Unit]= { 
     for {
       report    <- ftry(reportApi.reports().get(userid, rid).execute())
       criteria  <- ftry( 
@@ -94,14 +80,14 @@ object LiveDart extends DartInternalAPI {
   }
  
   
-  override def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): DartM[Long] = 
+  override def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): BravoM[Long] = 
     for {
       file <- ftry(reportApi.reports().run(userid, rid).setSynchronous(false).execute())
     } yield { 
       file.getId()
     }
 
-  override def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): DartM[DownloadedReport] = 
+  override def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): BravoM[DownloadedReport] = 
     for {
       filehandle  <- ftry(reportApi.files().get(reportid, fid))
       file        <- ftry(filehandle.execute())
@@ -120,10 +106,11 @@ object LiveDart extends DartInternalAPI {
     r.getFileName(),
     new DateTime(r.getCriteria().getDateRange().getStartDate().toString),
     new DateTime(r.getCriteria().getDateRange().getEndDate()))
-  
+ 
+  /*
   def test() =
     for {
-      dfa <- EitherT( Future { DartAuth.unsafeGetReporting().leftMap(_.toJazelError) } )
+      dfa <- DartAuth.unsafeGetReporting()
       _   <- updateDartReport(dfa,1297324,15641682, new DateTime().minusWeeks(1),new DateTime())
      id  <- runDartReport(dfa,1297324, 15641682)
      _    = Thread.sleep(2000)
@@ -132,6 +119,6 @@ object LiveDart extends DartInternalAPI {
       println("id = " + id)
       print("process the report here?")
     }
+    */
 }
-
 
