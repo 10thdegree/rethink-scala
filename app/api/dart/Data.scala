@@ -11,6 +11,8 @@ trait DartInternalAPI {
 
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 
+  def getDartAuth: BravoM[Dfareporting]
+  
   def viewDartReports(r: Dfareporting, userid: Int): BravoM[List[AvailableReport]]
 
   def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[Unit]

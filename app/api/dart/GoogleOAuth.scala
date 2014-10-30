@@ -26,42 +26,43 @@ object DartAuth {
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
   
-  def unsafeGetReporting(): BravoM[Dfareporting] = 
-    getCredentialService("/users/vmarquez/Bravo-44871094176f.p12","399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com","bravo@10thdegree.com")
+  //def unsafeGetReporting(): BravoM[Dfareporting] = 
+  //  getCredentialService("/users/vmarquez/Bravo-44871094176f.p12","399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com","bravo@10thdegree.com")
+  
   /** Authorizes the installed application to access user's protected data.*/
 
   //Generic Google Authorization.  
-  def getCredential(filePath: String, accountId: String, userAccount: String): BravoM[(HttpTransport, JsonFactory, Credential)] = EitherT(Future {
-    val jsonFactory = JacksonFactory.getDefaultInstance()
-    val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
-      try {// Service account credential.
-        val credential =
-          new GoogleCredential.Builder()
-            .setTransport(transport)
-            .setJsonFactory(jsonFactory)
-            .setServiceAccountId(accountId)
-            .setServiceAccountScopes(List(DfareportingScopes.DFAREPORTING))
-            .setServiceAccountPrivateKeyFromP12File(new java.io.File(filePath))
-            // Set the user you are impersonating (this can be yourself).
-            .setServiceAccountUser(userAccount)
-            .build()
-          (transport, jsonFactory, credential).right[JazelError]
-      } catch {
-        case ex: Throwable => ex.toJazelError.left[(HttpTransport, JsonFactory, Credential)]
-      }
-  })
+  def getCredential: BravoM[(HttpTransport, JsonFactory, Credential)] = ((c: Config) => {
+      val jsonFactory = JacksonFactory.getDefaultInstance()
+      val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
+        try {
+          val credential =
+            new GoogleCredential.Builder()
+              .setTransport(transport)
+              .setJsonFactory(jsonFactory)
+              .setServiceAccountId(c.accountId)
+              .setServiceAccountScopes(List(DfareportingScopes.DFAREPORTING))
+              .setServiceAccountPrivateKeyFromP12File(new java.io.File(c.filePath))
+              // Set the user you are impersonating (this can be yourself).
+              .setServiceAccountUser(c.userAccount)
+              .build()
+            (transport, jsonFactory, credential).right[JazelError]
+        } catch {
+          case ex: Throwable => ex.toJazelError.left[(HttpTransport, JsonFactory, Credential)]
+        }
+  }).toBravoM
 
   //specific to Dart reporting service
-  def getCredentialService(filePath: String, accountId: String, userAccount: String): BravoM[Dfareporting] = 
-    getCredential(filePath, accountId, userAccount).flatMap(t => { 
+  def getCredentialService: BravoM[Dfareporting] = 
+    getCredential.flatMap(t => { 
       val (transport, jsonFactory, c) = t
       if (c.refreshToken())
         (new Dfareporting(transport, jsonFactory, c).right[JazelError]).toBravoM
       else 
-        (("Error with refreshTOken for the credential info = " + accountId).toJazelError.left[Dfareporting]).toBravoM
+        (("Error with refreshTOken for the credential" ).toJazelError.left[Dfareporting]).toBravoM
     })
   
-
+  /*
   def GoogleInstalledAppAuth(clientid: String, secret: String, user: String): \/[Exception, Credential] = {
     try {
       val scopes = List("https://www.googleapis.com/auth/dfareporting")
@@ -79,5 +80,5 @@ object DartAuth {
     } catch {
       case ex: Exception => ex.left[Credential]
     }
-  }
+  }*/
 }
