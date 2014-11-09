@@ -64,7 +64,7 @@ object DartCSVParsingTest extends Properties("Dart Parsing Test") {
 
   implicit def sampleReports: Arbitrary[List[SDartReport]] =   //Arbitrary(Gen.containerOf[List,SDartReport](sampleReportGen)) 
     Arbitrary(for {
-      numb <- Gen.choose(0,10000)
+      numb <- Gen.choose(0,1000)
       li   <- Gen.containerOfN[List,SDartReport](numb, sampleReportGen) //(numb, sampleReportGen)
     } yield 
       li)
