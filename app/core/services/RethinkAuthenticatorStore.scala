@@ -4,7 +4,8 @@ import core.dataBrokers.{Connection, CoreBroker}
 import core.models.{Authenticators, User}
 import org.joda.time.DateTime
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticator}
-
+import scalaz._
+import Scalaz._
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
@@ -21,6 +22,14 @@ object RethinkAuthenticatorStore {
         case Right(x) => if(x.size == 0) None else Some(x(0))
         case Left(x) => None
       }
+      val authGive = for {
+        x     <- auth
+        user  <- coreBroker.usersTable.get(x.user.id.get.toString).run.fold(err => None, u => u.some)
+      } yield 
+        new CookieAuthenticator[User](x.authId,user,
+                new DateTime(x.expirationDate),new DateTime(x.lastUsed),new DateTime(x.creationDate),this)
+
+      /*
       val authGive = auth match {
         case Some(x) => {
           coreBroker.usersTable.get(x.user.id.get.toString).run match {
@@ -32,7 +41,7 @@ object RethinkAuthenticatorStore {
           }
         }
         case None => None
-      }
+      }*/
       Future.successful(authGive)
     }
 

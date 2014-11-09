@@ -6,10 +6,11 @@ object Util {
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
   import bravo.api.dart._ 
+  
   /*
   *  Kleisli is the equivalent of Function1, so this 
   *  reprsents a computation of type 
-  *  (Config) => Future { \/[JazelError, A] }
+  *  (Config) => Future[\/[JazelError, A]] 
   *  Kleisli is useful for threading a 'config' (Di) 
   *  through multiple methods chained together moandically
   */
@@ -25,7 +26,7 @@ object Util {
     val filePath: String
     val accountId: String
     val userAccount: String
-    val clientId: String
+    val clientId: Int 
  }
   /*
   * For wrapping external APIs
@@ -47,15 +48,7 @@ object Util {
     EitherT[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError, A]( 
         Kleisli(f) 
     )
-
-
-  /*
-  def liftBravoM[A](f: Config => \/[JazelError, A]): BravoM[A] = 
-    EitherT[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError, A]( 
-      Kleisli( (c: Config) => Future { 
-        f(c) 
-      } ))
-  */
+  
   /*
   * Lifting to BravoM and related  
   * converions

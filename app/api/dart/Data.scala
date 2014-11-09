@@ -38,7 +38,6 @@ object Data {
 
   case class GoogleAuthCred(filepath: String, accountId: String,  userAccount: String)
 }
-  //case 
 
 //NOT CURRENTLY USED
 /*

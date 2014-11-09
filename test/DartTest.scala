@@ -1,4 +1,5 @@
-import bravo.api.marchex._
+import bravo.api
+
 import org.joda.time._
 import com.google.api.services.dfareporting.Dfareporting
 import bravo.api.dart.Data._
@@ -15,10 +16,11 @@ import org.scalacheck.Prop._
 import org.scalacheck._    
 import Gen._               
 import Arbitrary.arbitrary 
-object DartTest extends Properties("Dart API test") {
+
+object DartAPITest extends Properties("Dart API test") {
   
   property("nonblocking test") = forAll { (i:Int) =>
-   val reportCall = Dart.getReport(233, 444, new DateTime(), new DateTime())
+   val reportCall = Dart.getReport(444, new DateTime(), new DateTime())
    val future = reportCall.run.run(config)
    val result = Await.result(future, scala.concurrent.duration.Duration(1, SECONDS) )
    true
@@ -29,7 +31,7 @@ object DartTest extends Properties("Dart API test") {
     val  filePath = ""
     val accountId = ""
     val userAccount = ""
-    val clientId = ""
+    val clientId = 0
   }
 
   def internal():DartInternalAPI = new DartInternalAPI {
@@ -38,21 +40,13 @@ object DartTest extends Properties("Dart API test") {
 
     def viewDartReports(r: Dfareporting, userid: Int): BravoM[List[AvailableReport]] = ???
 
-    def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[Unit] = Monad[BravoM].point(())//(Future { ().right[JazelError] }).toBravoM
+    def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[Unit] = Monad[BravoM].point(())
 
     def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[Long] = Monad[BravoM].point(1L)
 
-    def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DownloadedReport] = Monad[BravoM].point(DownloadedReport(1, "blah")) //(Future { DownloadedReport(1, "BLAH").right[JazelError] }).toBravoM
+    def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DownloadedReport] = Monad[BravoM].point(DownloadedReport(1, "blah")) 
   
   }
-  
-
-
-
 
 }
-/*
-  private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
-
-  */
 

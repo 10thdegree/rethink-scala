@@ -4,7 +4,6 @@ import scalaz._
 import scalaz.Free._
 import Scalaz._
 import org.joda.time.DateTime
-import scala.concurrent.{Future,Promise}
 import scala.concurrent.ExecutionContext.Implicits.global
 import bravo.core.Util._
 /*
@@ -16,18 +15,28 @@ object Dart {
   import com.google.api.services.dfareporting.Dfareporting
   import scala.annotation.tailrec
   import bravo.api.dart.Data._
+  import scala.concurrent.{Future,Await}
   
-  def testDartReport(dartApi: DartInternalAPI) = 
-    getReport(1297324, 15641682, new DateTime().minusWeeks(1), new DateTime())
-
-  def getReport(clientId: Int, reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
+  def prodTest(): \/[JazelError,DownloadedReport] = {
+    import scala.concurrent.duration._
+    val prodConfig = new Config {
+      val api = LiveDart 
+      val filePath = "/users/vmarquez/Bravo-44871094176f.p12"
+      val accountId = "399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com"
+      val userAccount = "bravo@10thdegree.com"
+      val clientId =  1297324
+    }
+    
+    val reportCall = Dart.getReport(15641682, new DateTime().minusWeeks(1), new DateTime())
+    val future = reportCall.run.run(prodConfig)
+    Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))
+  }
+   
+  def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
     for {
       dfa <- c.api.getDartAuth
-      _   =  println("got a dfa, " + dfa )
-      _   <- c.api.updateDartReport(dfa, clientId, reportId, startDate, endDate)
-      _    = println("UPDATED the report")
-      id  <- c.api.runDartReport(dfa, clientId, reportId)
-      _   = println("updated the report!")
+      _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
+      id  <- c.api.runDartReport(dfa, c.clientId, reportId)
       rep <- fulfillReport(dfa, reportId, id, 5)
     } yield {
       rep
@@ -44,13 +53,12 @@ object Dart {
           println("done sleeping")
           rec(attempts+1).run
         case _ => 
-          println("OK we have an result " + e)
           e.toBravoM.run
       }).run.toBravoM
     rec(1)
     }).toBravoM
-  
 }
+
 
 object LiveDart extends DartInternalAPI {
   import com.google.api.services.dfareporting.{Dfareporting, DfareportingScopes} 
@@ -109,18 +117,6 @@ object LiveDart extends DartInternalAPI {
     r.getFileName(),
     new DateTime(r.getCriteria().getDateRange().getStartDate().toString),
     new DateTime(r.getCriteria().getDateRange().getEndDate()))
- /*
-  def test() =
-    for {
-      dfa <- DartAuth.unsafeGetReporting()
-      _   <- updateDartReport(dfa,1297324,15641682, new DateTime().minusWeeks(1),new DateTime())
-     id  <- runDartReport(dfa,1297324, 15641682)
-     _    = Thread.sleep(2000)
-     downloadedReport <- downloadReport(dfa, 15641682, id)
-    } yield {
-      println("id = " + id)
-      print("process the report here?")
-    }
-  */
+ 
 }
 
