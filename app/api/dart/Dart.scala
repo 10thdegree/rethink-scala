@@ -19,6 +19,7 @@ object Dart {
   
   def prodTest(): \/[JazelError,DownloadedReport] = {
     import scala.concurrent.duration._
+    import org.joda.time.format._
     val prodConfig = new Config {
       val api = LiveDart 
       val filePath = "/users/vmarquez/Bravo-44871094176f.p12"
@@ -26,10 +27,21 @@ object Dart {
       val userAccount = "bravo@10thdegree.com"
       val clientId =  1297324
     }
-    
-    val reportCall = Dart.getReport(15641682, new DateTime().minusWeeks(1), new DateTime())
+    //r4YUcruz 3981403 //3843876 //16372298 
+    val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
+    val reportCall = Dart.getReport(16372298, frmt.parseDateTime("2014-10-01"), frmt.parseDateTime("2014-10-31"))
+    //val reportCall = Dart.getReport(16372298, new DateTime().minusWeeks(1), new DateTime())
+    //val reportCall = Dart.getReport(15641682, new DateTime().minusWeeks(1), new DateTime())
     val future = reportCall.run.run(prodConfig)
     Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))
+  }
+
+  def saveProdTest(filename:String): Unit = {
+    import java.nio.file.{Paths, Files}
+    import java.nio.charset.StandardCharsets
+    val report = prodTest().fold(err => "ERROR", _.data) 
+    val onlyreport = ReportParser.findTable(report.split("\\r?\\n").toList,"")
+    Files.write(Paths.get(filename), onlyreport.getBytes(StandardCharsets.UTF_8))
   }
    
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
@@ -46,7 +58,7 @@ object Dart {
     //not tailrec but we're not going that deep
     def rec(attempts: Int): BravoM[DownloadedReport] =  
       c.api.downloadReport(dfa, reportId, fileId).run.flatMap(e => e match {
-        case -\/(err) if (attempts < 5) =>
+        case -\/(err) if (attempts < 8) =>
           val sleeptime = attempts*delayMultiplier*1000
           println("Ok we are sleeping for " + sleeptime + " err =" + err)
           Thread.sleep(sleeptime)
