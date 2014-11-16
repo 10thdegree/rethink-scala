@@ -1,3 +1,5 @@
+package bravo.test.api
+
 import bravo.api
 
 import org.joda.time._
@@ -32,6 +34,9 @@ object DartAPITest extends Properties("Dart API test") {
     val accountId = ""
     val userAccount = ""
     val clientId = 0
+    val marchexuser = "" 
+    val marchexpass = ""
+    val marchexurl = ""
   }
 
   def internal():DartInternalAPI = new DartInternalAPI {

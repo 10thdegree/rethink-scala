@@ -18,7 +18,9 @@ object Util {
 
   case class JazelError(ex: Option[Throwable], msg: String) 
 
-  trait Config extends GoogleConfig {
+  //This is not so modular. we should think about how to define the individual configs in each module, then combime them
+  //at the instantiation site.  
+  trait Config extends GoogleConfig with MarchexConfig {
     val api: DartInternalAPI
   }
   
@@ -27,7 +29,14 @@ object Util {
     val accountId: String
     val userAccount: String
     val clientId: Int 
- }
+  }
+
+  trait MarchexConfig {
+    val marchexurl: String 
+    val marchexuser: String
+    val marchexpass: String
+
+  }  
   /*
   * For wrapping external APIs
   * and executing them asynchronously 
@@ -57,10 +66,14 @@ object Util {
     def toJazelError: JazelError =  JazelError(None, s)
   }
 
-  case class ThrowableErrorOps(t: Throwable) {
+  case class EThrowableErrorOps[A](t: \/[Throwable,A]) {
+    def mapJazelError: \/[JazelError,A] = t.leftMap(e => JazelError(e.some, e.getMessage())) //dumb, I think we should use a different structure
+  }
+ 
+ case class ThrowableErrorOps(t: Throwable) {
     def toJazelError: JazelError = JazelError(t.some, t.getMessage()) //dumb, I think we should use a different structure
   }
-
+  
   case class KleisliHolder[A](f: (Config) => \/[JazelError,A]) {
     def toBravoM: BravoM[A] = liftBravoM(c => Future { f(c) }) 
   }
@@ -75,16 +88,21 @@ object Util {
 
   //TODO: scalaz may have a GENERIC way of lifting shit to the right monadic context, need to research
   case class EitherHolder[A](e: \/[JazelError,A]) {
-    def toBravoM: BravoM[A] = liftBravoM(c => Future { e })
+    def toBravoM: BravoM[A] = liftBravoM(c => Monad[Future].point(e))
+  }
+
+  case class KleisliAHolder[A](f: (Config) => A) {
+    def toBravoM: BravoM[A] = fctry(f) 
   }
   
   implicit def toKFH[A](f: Config => Future[\/[JazelError,A]]) = KleisliFHolder(f)
   implicit def toKH[A](f: Config => \/[JazelError,A]) = KleisliHolder(f)
   implicit def toKH[A](f: Config => BravoM[A]) = KleisliBHolder(f)
   implicit def toError(s: String): StringErrorOps = StringErrorOps(s)
+  implicit def toError[A](t: \/[Throwable,A]): EThrowableErrorOps[A] = EThrowableErrorOps(t)
   implicit def toError(t: Throwable): ThrowableErrorOps = ThrowableErrorOps(t)
   implicit def toBM[A](et: \/[JazelError,A]) = EitherHolder(et) 
-  
+  implicit def toKH[A](f: Config => A) = KleisliAHolder(f)
   /*
   * General typeclass declarations so we can abstract over BravoM and Future 
   */

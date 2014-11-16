@@ -7,8 +7,7 @@ import org.joda.time.DateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 import bravo.core.Util._
 /*
-Instead of polling for specific reports, we hsould just havea a queue of reports waiting to be fulfilled, get all the file handles, and then check them all at once? or no?
-//THOUGHTS:
+Instead of polling for specific reports, we should just havea a queue of reports waiting to be fulfilled, get all the file handles, and then check them all at once? or no?
 */
 
 object Dart {
@@ -20,13 +19,18 @@ object Dart {
   def prodTest(): \/[JazelError,DownloadedReport] = {
     import scala.concurrent.duration._
     import org.joda.time.format._
+
     val prodConfig = new Config {
       val api = LiveDart 
       val filePath = "/users/vmarquez/Bravo-44871094176f.p12"
       val accountId = "399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com"
       val userAccount = "bravo@10thdegree.com"
       val clientId =  1297324
+      val marchexpass = ""
+      val marchexurl = ""
+      val marchexuser = ""
     }
+    
     //r4YUcruz 3981403 //3843876 //16372298 
     val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
     val reportCall = Dart.getReport(16372298, frmt.parseDateTime("2014-10-01"), frmt.parseDateTime("2014-10-31"))
