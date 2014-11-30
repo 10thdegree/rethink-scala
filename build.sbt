@@ -31,7 +31,7 @@ lazy val testingDeps = Seq(
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"
 )
 
-initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.future;import bravo.core.Util._; scala.reflect.runtime.universe.reify"
+initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify"
 
 lazy val otherDeps = Seq(
   //scalaz

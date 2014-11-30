@@ -43,7 +43,7 @@ object Dart {
     Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))
   }
 
-  def prodActivitiesTest(): \/[JazelError, List[String]] = {
+  def prodActivitiesTest(): \/[JazelError, Activities] = {
     import scala.concurrent.duration._
     val result = 
       for {
@@ -63,6 +63,7 @@ object Dart {
     val onlyreport = ReportParser.findTable(report.split("\\r?\\n").toList,"")
     Files.write(Paths.get(filename), onlyreport.getBytes(StandardCharsets.UTF_8))
   }
+
      
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
     for {
@@ -99,8 +100,7 @@ object LiveDart extends DartInternalAPI {
   import java.io.InputStream
   import org.joda.time.format.DateTimeFormat
   import bravo.api.dart.Data._
-  import bravo.api.dart._
-  import java.util.ArrayList
+  import bravo.api.dart._ 
  
   def getDartAuth: BravoM[Dfareporting] = DartAuth.getCredentialService
 
@@ -116,12 +116,11 @@ object LiveDart extends DartInternalAPI {
     for {
       report <- fctry(c => reportApi.reports().get(c.clientId, rid).execute())
       activities = report.getCriteria().getActivities()
-      names <-  if (activities.containsKey("metricNames")) {
-                  Monad[BravoM].point(activities.get("metricNames").asInstanceOf[ArrayList[Object]].toList.map(_.toString()))
-                } else 
-                  ("Cannot find metriNames in activities for report " + rid).toJazelError.left[List[String]].toBravoM
     } yield {
-      names
+      if (activities.containsKey("metricNames"))
+        activities.get("metricNames")
+      else 
+        List[String]()
     }
 
   override def viewDartReports(reportApi: Dfareporting, userid: Int): BravoM[List[AvailableReport]] = 
