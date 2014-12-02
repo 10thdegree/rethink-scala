@@ -18,7 +18,10 @@ lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
                 "com.google.api-client" % "google-api-client-java6" % "1.19.0",
                 "com.google.api-client" % "google-api-client-extensions" % "1.6.0-beta",
                 "com.google.oauth-client" % "google-oauth-client-jetty" % "1.19.0",
-                 "com.github.tototoshi" %% "scala-csv" % "1.0.0")
+                "com.github.tototoshi" %% "scala-csv" % "1.0.0",
+                "com.google.apis" % "google-api-services-doubleclicksearch" % "v2-rev37-1.19.0")
+
+
 
 lazy val angularDeps = Seq(// Angular-js
   "org.webjars" % "angularjs" % "1.2.16",
@@ -31,7 +34,7 @@ lazy val testingDeps = Seq(
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"
 )
 
-initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify"
+initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}"
 
 lazy val otherDeps = Seq(
   //scalaz

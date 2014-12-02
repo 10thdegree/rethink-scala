@@ -1,7 +1,6 @@
 package bravo.api.dart
 
 import scalaz._
-import scalaz.Free._
 import Scalaz._
 import org.joda.time.DateTime
 import scala.concurrent.ExecutionContext.Implicits.global
