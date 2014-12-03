@@ -37,7 +37,7 @@ object DartAuth {
               .setTransport(transport)
               .setJsonFactory(jsonFactory)
               .setServiceAccountId(c.accountId)
-              .setServiceAccountScopes(List(DfareportingScopes.DFAREPORTING))
+              .setServiceAccountScopes(List(DoubleclicksearchScopes.DOUBLECLICKSEARCH, DfareportingScopes.DFAREPORTING))
               .setServiceAccountPrivateKeyFromP12File(new java.io.File(c.filePath))
               // Set the user you are impersonating (this can be yourself).
               .setServiceAccountUser(c.userAccount)
@@ -46,6 +46,19 @@ object DartAuth {
         } catch {
           case ex: Throwable => ex.toJazelError.left[(HttpTransport, JsonFactory, Credential)]
         }
+  }).toBravoM
+  
+  
+  def getSimpleCredential: BravoM[(HttpTransport, JsonFactory, GoogleCredential)] = ((c: Config) => {
+      val jsonFactory: JsonFactory = JacksonFactory.getDefaultInstance()
+      val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
+      val credential = new GoogleCredential.Builder()
+        .setJsonFactory(jsonFactory)
+        .setTransport(transport)
+        .setClientSecrets("399851814004-fgpilom3s4tgudlmu0epc5lo4c7g5h1n.apps.googleusercontent.com","A05cGDoZrgxjwUlXmiXBu9RI") 
+        .build()
+        .setRefreshToken("1/4I_k8pTHCUC0Rh0lsfn3swHGz7cH0AD9Agj2AwqWgkAMEudVrK5jSpoR30zcRFq6");
+        (transport, jsonFactory, credential)
   }).toBravoM
 
   //specific to Dart reporting service
@@ -63,17 +76,47 @@ object DartAuth {
       tup <- getCredential
     } yield
       new Doubleclicksearch(tup._1, tup._2, tup._3) 
-
-  def installedAppSearch: BravoM[Doubleclicksearch] =
+  
+  def refreshSearch: BravoM[Doubleclicksearch] = {
     for {
-      tup <- installedAppAuth("399851814004-rm3l4j2ai82teji78941j1livmnfeibl.apps.googleusercontent.com", "eeuW1E7zAs1n2FT-FZevRMaX", "")
+      tup <- getSimpleCredential 
     } yield
-      new Doubleclicksearch(tup._1, tup._2, tup._3) 
+      new Doubleclicksearch.Builder(tup._1, tup._2, tup._3).setApplicationName("bravoM").build()
+  }
 
+  def installedAppSearch: BravoM[Doubleclicksearch] = {
+    val csecret = "A05cGDoZrgxjwUlXmiXBu9RI"
+    for {
+      tup <- installedAppAuth("399851814004-rm3l4j2ai82teji78941j1livmnfeibl.apps.googleusercontent.com", csecret, "rashton@10thdegree.com")
+    } yield {
+      new Doubleclicksearch.Builder(tup._1, tup._2, tup._3).setApplicationName("BravoUp").build()
+    }
+  }
 
-  //TODO: pass in a constructor so we can get different APIs 
+  /*
+private static Credential generateCredentialInteractively(
+    JsonFactory jsonFactory,
+        NetHttpTransport transport) throws Exception {
+          GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
+                jsonFactory, new InputStreamReader(
+                          Doubleclicksearch.class.getResourceAsStream("/client_secrets.json")));
+                            FileCredentialStoreJava7 credentialStore = new FileCredentialStoreJava7(
+                                  new File(System.getProperty("user.home"), ".credentials/doubleclicksearch.json"),
+                                        jsonFactory);
+                                          GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                                                transport, jsonFactory, clientSecrets, Arrays.asList(SCOPES))
+                                                          .setCredentialStore(credentialStore)
+                                                                    .setAccessType("offline")
+                                                                              .build();
+                                                                                return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user");
+                                                                                }
+
+  */
+  
+    //TODO: pass in a constructor so we can get different APIs 
   def installedAppAuth[A](clientid: String, secret: String, user: String): BravoM[(HttpTransport, JsonFactory, Credential)] = fctry( (c:Config) => { 
-      val scopes = List("https://www.googleapis.com/auth/dfareporting")
+      println("HERE")
+      val scopes = List("https://www.googleapis.com/auth/doubleclicksearch", "https://www.googleapis.com/auth/dfareporting")
       val dataStoreDir = new java.io.File("temp/")
       val storeFactory = new FileDataStoreFactory(dataStoreDir)
       val jsonFactory = JacksonFactory.getDefaultInstance()
@@ -82,6 +125,7 @@ object DartAuth {
                                                                                     // set up authorization code flow
       val flow: GoogleAuthorizationCodeFlow = new GoogleAuthorizationCodeFlow.Builder(transport, jsonFactory, clientid, secret, scopes)
         .setDataStoreFactory(storeFactory)
+        .setAccessType("offline")
         .build()
       (transport, jsonFactory, new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize(user))
     })
