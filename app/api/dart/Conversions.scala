@@ -11,10 +11,13 @@ import com.github.tototoshi.csv._
 import java.math._
 import scala.concurrent.duration._
 import scala.concurrent.Await
+import scala.io.Source
 
 object Conversions {
+  val keywordIDColumn = "leadaggid (string)"
 
-  //762360694414-rfjpd5rkopfjnme19ppscnd7i1652jg5@developer.gserviceaccount.com email
+  val keywordSearchColum = "Paid Search Keyword ID"
+
   val conversionConfig = new Config {
     val api = LiveDart 
     val filePath = "/users/vmarquez/API Project-d15a2d4cf8d4.p12"
@@ -25,46 +28,81 @@ object Conversions {
     val marchexurl = ""
     val marchexuser = ""
   }
-
-  val agencyId = 20500000000000142L
   
+  def readReport(filename: String) =
+    ReportParser.parse(scala.io.Source.fromFile(filename).mkString)
+/*
+"conversionId":""
+"conversionTimestamp":""
+"segmentationType":""
+"agencyId":""
+"advertiserId":""
+"engineAccountId":""
+"campaignId":""
+"adGroupId":""
+"criterionId":""
+"adId":""
+"state":""
+"type":""
+"quantityMillis":""
+"segmentationName":""
+
+*/
   case class ConversionRow(
-    date: DateTime,
+    conversionTimestamp: DateTime,
+    advertiserId: Long,
+    agencyId: Long,
     engineId: Long,
     adGroupId: String, 
     campaignId: Long,
-    keywordId: String, 
+    keywordId: Long, 
     adId: Long,
     identifier: String)
 
-  
   val frmt = DateTimeFormat.forPattern("yyyyMdd")
   
-  //todo: log lefts that failed parsing
-  def getConversionRows(filename: String): List[ConversionRow] = 
-   CSVReader.open(filename).allWithHeaders.map(toConversionRow(_).toOption).flatten
-
+  def getLeadIdentifiers(filename: String): ISet[String] = 
+    ISet.fromList(CSVReader.open(filename).allWithHeaders.map(_(keywordIDColumn)))
+  
   def btry[A](f: => A) =
     \/.fromTryCatchNonFatal( f ).leftMap(ex => ex.toString)
+
+  def intersect(set: ISet[String], rows: List[ConversionRow]): List[ConversionRow] =
+    rows.filter(r => set.contains(r.keywordId.toString))
+   
+  //is it worth sorting?
   
   def toConversionRow(m: Map[String,String]): \/[String,ConversionRow] = 
     for {
-      date <- m.get("Date").toRightDisjunction("no date").map(new DateTime(_))
+      date <- m.get("Date").toRightDisjunction("no date").flatMap(d => btry(new DateTime(d)))
       egId <- m.get("Paid Search Engine Account ID").toRightDisjunction("no engineId").flatMap(l => btry(l.toLong))
       cId  <- m.get("Campaign ID").toRightDisjunction("no compaignId").flatMap(l => btry(l.toLong))
-      adId <- m.get("Ad ID").toRightDisjunction("no ad id").flatMap(l => btry(l.toLong))
+      advertId <- m.get("Paid Search Advertiser ID").toRightDisjunction("no advertiserID").flatMap(l => btry(l.toLong))
+      adId <- m.get("Paid Search Ad ID").toRightDisjunction("no ad id").flatMap(l => btry(l.toLong))
+      keyId <- m.get("Paid Search Keyword ID").toRightDisjunction("can't find paid keyword searchId").flatMap(l => btry(l.toLong))
       id   <- m.get("leadaggid (string)").toRightDisjunction("no conversion id")
+      adgrp <- m.get("Paid Search Ad Group ID").toRightDisjunction("no PaidSearchAdGroup ID")
+      agId  <- m.get("Paid Search Agency ID").toRightDisjunction("no paid agency id").flatMap(l => btry(l.toLong)) 
     } yield {
-      ConversionRow(date, egId, m.get("Paid Search Ad Group ID").getOrElse(""), cId, "",adId, id)
+      ConversionRow(conversionTimestamp = date,
+        advertiserId = advertId,
+        agencyId = agId,
+        engineId = egId,
+        adGroupId = adgrp,
+        campaignId = cId,
+        keywordId = keyId,
+        adId = adId,
+        identifier = "")
     }
-  
+    
   def getLDConversions(i: Int) = 
-    Await.result(getConversions(700000001007061L, new DateTime("2014-11-01"), new DateTime("2014-12-01")).run(conversionConfig), Duration(i, SECONDS))
+    Await.result(getConversions(700000001007058L, new DateTime("2014-11-01"), new DateTime("2014-12-01")).run(conversionConfig), Duration(i, SECONDS))
 
   def getConversions(engineAccountId: Long, start: DateTime, end: DateTime): BravoM[ConversionList] = {
     val startInt = start.toString(frmt).substring(0,8).toInt
     val endInt = end.toString(frmt).substring(0,8).toInt
     val advertiserId = 21700000001003599L
+    val agencyId = 20500000000000142L
     //val advertiserId = 4371744L
     println("startInt = " + startInt)
     println("endInt = " + endInt)
@@ -78,11 +116,19 @@ object Conversions {
     }
   }
 
+  def testSingle(): \/[JazelError, ConversionList] = {
+    val report = Conversions.readReport("/users/vmarquez/ConversionTest/LoanDepotFullData.csv")
+    val oneConversion = List(report.map(r => toConversionRow(r).toOption).flatten.head)
+    val bravom = uploadInBatches(oneConversion)
+    Await.result(bravom.run(conversionConfig), Duration(60, SECONDS))  
+  }
+
+
+
   def uploadInBatches(l: List[ConversionRow]): BravoM[ConversionList] = {
     import scala.collection.JavaConversions._
     val crows = l.map(toDartConversions(_))
     val clist = new ConversionList().setConversion(crows)    
-
     for {
       dcsearch <- DartAuth.refreshSearch
       results  <-ftry(dcsearch.conversion().insert(clist).execute())
@@ -90,14 +136,30 @@ object Conversions {
       results
   }
 
+
+/*
+"type": "ACTION",
+   "quantityMillis": "100",
+      "segmentationType": "FLOODLIGHT",
+         "segmentationName": "Test"
+         */
   def toDartConversions(cr: ConversionRow): Conversion = {
-     new Conversion()
+     println("cr = " + cr.toString)
+     val c = new Conversion()
       .setEngineAccountId(cr.engineId)
-      .setAgencyId(agencyId)
+      .setAgencyId(cr.agencyId)
       .setCampaignId(cr.campaignId)
       .setAdId(cr.adId)
-      .setConversionTimestamp(BigInteger.valueOf(cr.date.getMillis()))
+      .setConversionTimestamp(BigInteger.valueOf(cr.conversionTimestamp.getMillis()))
       .setConversionId(cr.identifier)
+      .setCriterionId(cr.keywordId)
+      .setSegmentationType("FLOODLIGHT")
+      .setSegmentationName("Test")
+      .setQuantityMillis(100)
+      .setType("ACTION")
+      .setConversionId("test124567890")
+      println(c.toString)
+      c
   }
 
 }
