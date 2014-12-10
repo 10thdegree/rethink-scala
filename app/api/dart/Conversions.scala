@@ -31,23 +31,7 @@ object Conversions {
   
   def readReport(filename: String) =
     ReportParser.parse(scala.io.Source.fromFile(filename).mkString)
-/*
-"conversionId":""
-"conversionTimestamp":""
-"segmentationType":""
-"agencyId":""
-"advertiserId":""
-"engineAccountId":""
-"campaignId":""
-"adGroupId":""
-"criterionId":""
-"adId":""
-"state":""
-"type":""
-"quantityMillis":""
-"segmentationName":""
 
-*/
   case class ConversionRow(
     conversionTimestamp: DateTime,
     advertiserId: Long,
@@ -68,7 +52,7 @@ object Conversions {
     \/.fromTryCatchNonFatal( f ).leftMap(ex => ex.toString)
 
   def intersect(set: ISet[String], rows: List[ConversionRow]): List[ConversionRow] =
-    rows.filter(r => set.contains(r.keywordId.toString))
+    rows.filter(r => set.contains(r.identifier.toString))
    
   //is it worth sorting?
   
@@ -92,7 +76,7 @@ object Conversions {
         campaignId = cId,
         keywordId = keyId,
         adId = adId,
-        identifier = "")
+        identifier = id)
     }
     
   def getLDConversions(i: Int) = 
@@ -104,11 +88,8 @@ object Conversions {
     val advertiserId = 21700000001003599L
     val agencyId = 20500000000000142L
     //val advertiserId = 4371744L
-    println("startInt = " + startInt)
-    println("endInt = " + endInt)
     for {
       dcsearch <- DartAuth.refreshSearch
-      _         = println(" \n \n \n \n ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \n \n \n ")
       conversionCmd = dcsearch.conversion().get(agencyId, advertiserId, engineAccountId, endInt, 1000, startInt, 0)
       clist    <- ftry(conversionCmd.execute())
     } yield {
@@ -123,8 +104,6 @@ object Conversions {
     Await.result(bravom.run(conversionConfig), Duration(60, SECONDS))  
   }
 
-
-
   def uploadInBatches(l: List[ConversionRow]): BravoM[ConversionList] = {
     import scala.collection.JavaConversions._
     val crows = l.map(toDartConversions(_))
@@ -136,15 +115,7 @@ object Conversions {
       results
   }
 
-
-/*
-"type": "ACTION",
-   "quantityMillis": "100",
-      "segmentationType": "FLOODLIGHT",
-         "segmentationName": "Test"
-         */
   def toDartConversions(cr: ConversionRow): Conversion = {
-     println("cr = " + cr.toString)
      val c = new Conversion()
       .setEngineAccountId(cr.engineId)
       .setAgencyId(cr.agencyId)
@@ -154,11 +125,10 @@ object Conversions {
       .setConversionId(cr.identifier)
       .setCriterionId(cr.keywordId)
       .setSegmentationType("FLOODLIGHT")
-      .setSegmentationName("Test")
-      .setQuantityMillis(100)
+      .setSegmentationName("Origination") //fixme: we need to pull this from the report
+      .setQuantityMillis(1000)
       .setType("ACTION")
-      .setConversionId("test124567890")
-      println(c.toString)
+      .setConversionId(cr.identifier)       
       c
   }
 
