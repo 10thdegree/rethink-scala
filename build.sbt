@@ -4,7 +4,7 @@ version := "1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.1"
+scalaVersion := "2.11.4"
 
 resolvers ++= Seq(
   "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
@@ -34,7 +34,7 @@ lazy val testingDeps = Seq(
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"
 )
 
-initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}"
+initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
 
 lazy val otherDeps = Seq(
   //scalaz
