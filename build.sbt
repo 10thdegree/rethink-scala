@@ -13,7 +13,12 @@ resolvers ++= Seq(
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 
 lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
-                "org.apache.xmlrpc" % "xmlrpc-server" % "3.1.3")
+                "org.apache.xmlrpc" % "xmlrpc-server" % "3.1.3",
+                "com.google.apis" % "google-api-services-dfareporting" % "v1.3-rev27-1.19.0",
+                "com.google.api-client" % "google-api-client-java6" % "1.19.0",
+                "com.google.api-client" % "google-api-client-extensions" % "1.6.0-beta",
+                "com.google.oauth-client" % "google-oauth-client-jetty" % "1.19.0",
+                 "com.github.tototoshi" %% "scala-csv" % "1.0.0")
 
 lazy val angularDeps = Seq(// Angular-js
   "org.webjars" % "angularjs" % "1.2.16",
@@ -25,6 +30,8 @@ lazy val angularDeps = Seq(// Angular-js
 lazy val testingDeps = Seq(
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"
 )
+
+initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify"
 
 lazy val otherDeps = Seq(
   //scalaz
@@ -61,7 +68,7 @@ lazy val otherDeps = Seq(
   // "joda-time" % "joda-time" % "2.3",
   // "org.joda" % "joda-convert" % "1.5",
   // "com.github.tototoshi" %% "slick-joda-mapper" % "1.2.0-SNAPSHOT"
-  //
+  //v
   // Rules Engine
   "org.codehaus.groovy" % "groovy-jsr223" % "2.3.6",
   //"org.jruby" % "jruby-complete" % "1.7.13"

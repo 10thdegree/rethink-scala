@@ -10,11 +10,14 @@ import Arbitrary.arbitrary
 import bravo.api.marchex._
 import org.joda.time._
 import java.util.Date
+import scala.concurrent.{Future,Await}
+import scala.concurrent.duration._
 import org.apache.xmlrpc.server.XmlRpcServer
 import org.apache.xmlrpc.server.XmlRpcServerConfigImpl
 import org.apache.xmlrpc.webserver.WebServer
 import org.apache.xmlrpc.server.PropertyHandlerMapping
 import scala.collection.JavaConversions._
+import bravo.core.Util._
 
 object MarchexDataGenerator {
  
@@ -46,11 +49,7 @@ object MarchexDataGenerator {
    ringdur <- arbitrary[Int]
   } yield CallLog(acct, assign, callid, callstart, callstatus, callend, name, 
                   number, cmpid, disp, forward, groupid, inboundExt, inbound, keyword, rating, recorded, ringdur)
-
-
 }
-
-
 
 object server extends Properties("Bravo API tests") {
   import bravo.test.api.MarchexDataGenerator._
@@ -76,13 +75,24 @@ object server extends Properties("Bravo API tests") {
     Gen.containerOfN[List,CallLog](10,callLogGen).sample.foreach(cl => {
       callLogs = cl
     })
-    val credentials = MarchexCredentials("http://localhost:"+port.toString +"/", "asdf", "asdf")
+    //val credentials = MarchexCredentials("http://localhost:"+port.toString +"/", "asdf", "asdf")
+    val config = new Config {
+      val marchexuser = "asdf"
+      val marchexurl = "http://localhost:"+port.toString +"/"
+      val marchexpass = "asdf"
+      val filePath = ""
+      val accountId = ""
+      val clientId = 0
+      val userAccount = ""
+      val api = DartAPITest.internal()
+    }
     val dt = DateTime.now()
-    val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)(credentials)
+
+    val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)
     ws.shutdown()
-    result.fold(error => false, logs => result == logs)
-    //"blah" == "blah"
+    val future = result.run.run(config)   
+    val either = Await.result(future, scala.concurrent.duration.Duration(3, SECONDS) )
+    either.fold(l => false, r => true)
   }
 }
-
 
