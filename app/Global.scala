@@ -10,6 +10,8 @@ import securesocial.core.{BasicProfile, RuntimeEnvironment}
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticatorBuilder, HttpHeaderAuthenticatorBuilder}
 import securesocial.core.services.AuthenticatorService
 
+import scala.util.Try
+
 /**
  * Set up the Guice injector and provide the mechanism for return objects from the dependency graph.
  */
