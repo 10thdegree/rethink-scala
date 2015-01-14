@@ -77,5 +77,5 @@ lazy val otherDeps = Seq(
   "org.specs2" % "specs2_2.11" % "2.4"
 )
 
-libraryDependencies := (apiDeps ++ otherDeps ++ angularDeps ++ testingDeps)
+libraryDependencies ++= (apiDeps ++ otherDeps ++ angularDeps ++ testingDeps)
 
