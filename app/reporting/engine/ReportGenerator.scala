@@ -4,7 +4,8 @@ import java.util.UUID
 
 import com.google.inject.Inject
 import org.joda.time.DateTime
-import reporting.models.DataSources.{DataSource, DataSourceType}
+import reporting.models.ds.DataSource.{NestedRow, DataSourceFetcher, DataSourceAggregator}
+import reporting.models.ds.{DataSource, DataSourceType}
 import reporting.models.{Field, Report}
 
 import scala.concurrent.{Await, Future, ExecutionContext}
@@ -27,41 +28,30 @@ case class ReportDisplay()
 
 //(reportInstance: ReportInstance, rows: DataSource.Row)
 
-class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFinder) {
+object Pivot {
 
-  import scalaz._, Scalaz._
+  //
+  case class Row(rows: List[DataSource.Row], children: List[Pivot.Row])
+
+}
+
+class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFinder) {
 
   import scala.concurrent.duration._
 
   def getReport(report: Report)(start: DateTime, end: DateTime)(implicit ec: ExecutionContext): ReportDisplay = {
 
     // Get a list of futures for each data source
-    val dsRowsF: Seq[Future[(DataSource, Seq[DataSource.Row])]] = for {
+    val dses = for {
       dsBinding <- report.dsBindings
       ds <- dsFinder(report.accountId)(dsBinding.dataSourceId).toList
-      data = ds.dataForRange(start, end) // applies filters and merges rows by keyselectors
-    } yield data.map(ds -> _)
+    } yield ds
 
-    // Get a single future for all of them, and await the result
-    val dsRows = Await
-      .result(dsRowsF.toList.sequence[Future, (DataSource, Seq[DataSource.Row])], 2.minutes)
-      .flatMap({ case (key, list) => list.map(i => key -> i)})
-
-    // Group the results by date, with a map of data sources to rows
-    import Joda._
-    val rows: Seq[(DateTime, Map[DataSource, DataSource.Row])] =
-      dsRows.groupBy(_._2.date).toSeq
-        .sortBy(x => x._1)
-        .map({ case (date, tuples) => date -> tuples.toMap})
-
-    // TODO: Merge DSes for each date, if attributes collide, sum them or error.
-    // TODO: We also need to create a hierarchy based on overlapping partial keys for each row.
-    // TODO: Rows with partially matched keys need to pull the dependant field for proportionally distributing the values
-    //   across all the rows that contain a matching partial key.
-    val mergedRows = rows.map({ case (date, dses) => date -> dses.head._2})
-    //val mergedRows = rows.map(_ -> _.head._2)
+    // Get the future
+    val dsF = new DataSourceFetcher(dses: _*).forDateRange(start, end)
 
     val allFields = fieldFinder.byTemplate(report.templateId)
+    val allFieldsLookup = allFields.map(f => f.id.get -> f).toMap
     val compiler = new FormulaCompiler(allFields.map(_.label): _*)
     val compiledFields = allFields.map(f => f -> f.formula.map(compiler.apply))
     val labeledTerms = compiledFields.map({ case (field, term) => field.label -> term}).toMap
@@ -71,30 +61,59 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
     val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
     val labeledBindings = allFields.map(f => f.label -> f.id.map(id => bindings(id))).toMap
 
+    // TODO: Rows with partially matched keys need to pull the dependant field for proportionally distributing the values
+    // Await the result
+    val rowsByDate = DataSourceAggregator
+      .groupByDate(Await.result(dsF, 2.minutes): _*)
+      .map({case (date, rows) => date -> DataSourceAggregator.nestAndCoalesce(rows: _*)})
+
     // Do K iterations over all rows, where K = groupedLabels.length
     // Each of K groups separates dependencies, so we must process A before B where B depends on A.
-    val cxt = new FormulaEvaluator.EvaluationCxt[DataSource.Row](FormulaEvaluator.Report(start, end))
-    for {
-      (group, groupIdx) <- groupedLabels.zipWithIndex
-      (date, row) <- mergedRows
-    } {
-      val groupTerms = group.map { label =>
-        val term = labeledTerms(label) orElse {
-          // TODO: each row should ideally know how to map a label to its internal ds attribute name
-          labeledBindings(label).map(b => AST.Constant(row(b.dataSourceAttribute).toString.toDouble))
-        }
-        label -> term
+    val cxt = new FormulaEvaluator.EvaluationCxt[DataSource.NestedRow](FormulaEvaluator.Report(start, end))
+
+    def termFromBinding(nrow: NestedRow)(label: String) =
+      labeledBindings(label).map({ b =>
+        val nrow2 = (for {
+          id <- b.dependantFieldId
+          f <- allFieldsLookup.get(id)
+          fb <- labeledBindings.get(f.label)
+          b2 = fb.map(_.dataSourceAttribute)
+          nrow2 = nrow.distributeDown(b.dataSourceAttribute, b2)
+          nrow3 = nrow2.distributeUp(b.dataSourceAttribute)
+        } yield nrow3) getOrElse nrow
+        nrow -> AST.Constant(nrow2(b.dataSourceAttribute).toDouble)
+        // TODO: We need to persist state of nrow2 for remainder of this comprehension
+      })
+
+    // 1. Take first group (binded fields) and fill context
+    // 2. Take second group (distributed fields) if present, and distribute values
+    // 3. Process remaining groups
+    //val st = StateT[List, NestedRow String]()
+    val mergedRows = for {
+      (group, groupIdx) <- groupedLabels.zipWithIndex // Columns
+      (date, nrows) <- rowsByDate // Sets of rows by date
+      nrow <- nrows // Rows; NOTE: each nrow may have many children! Must map over those below
+    } yield {
+      // XXX: The below is gross; we need to either:
+      //      (1) move the transformation logic out of NestedRow and into RowCtx, or
+      //      (2) use a state monad so that as we mutate the NestedRow we can propagate those changes.
+      val (nrow2, groupTerms) = group.foldLeft((NestedRow, Vector.empty[(String, Option[AST.Term])])) { (accum, label) =>
+        val Some((nrow2, term)) = labeledTerms(label).map(accum._1 -> _) orElse termFromBinding(accum._1)(label)
+        (nrow2, accum._2 :+ (label -> Some(term)))
       }
-      FormulaEvaluator.eval(row, date, groupTerms)(cxt)
+      for (row <- nrow.terminals) yield {
+        FormulaEvaluator.eval(row, date, groupTerms.toList)(cxt)
+        row
+      }
     }
     // cxt should have all the values at the end of this
-    val resultRows = mergedRows.map({ case (date, row) => cxt.row(row, date)})
+    val cxtRows = mergedRows.flatten.map({ case (date, row) => cxt.row(row, date)})
 
     // If we need footer values, we can pull them out of cxt here.
     // TODO: must compile footer formulae first, then eval them here
     // var footerVals = allFields.map(f => f.footerFormula.map(ff => FormulaEvaluator.eval(footerTerms(f.label)))))
 
-    // TODO: Make a return object encapsulating the result rows
+    // TODO: Make a return object encapsulating the resultant rows (cxtRows)
     null
   }
 }

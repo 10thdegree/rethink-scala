@@ -280,7 +280,7 @@ object FormulaCompiler {
 
   def sort(terms: LabeledTerm*)(implicit tl: TermLookup) = insertSort(terms.toList)(termOrdering)
 
-  def segment(terms: LabeledTerm*)(implicit tl: TermLookup) = {
+  def segment(terms: LabeledTerm*)(implicit tl: TermLookup): List[List[(String, Option[AST.Term])]] = {
     case class State(groups: List[List[LabeledTerm]] = List())
     def toLookup(list: List[LabeledTerm]) = list.toMap.withDefaultValue(None)
     def hasDependency(cur: List[LabeledTerm])(t: LabeledTerm) = {

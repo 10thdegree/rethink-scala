@@ -1,16 +1,20 @@
 package reporting.models
 
 //import DataSources.Row
+
 import java.util.UUID
 
 import com.rethinkscala.Document
 
 // XXX: DELETE ME
 trait Permission {}
+
 trait Account {}
 
 object FooterTypes {
+
   case class FooterType(name: String)
+
   val IncludesAllData = FooterType("all_data")
   val IncludesFilteredData = FooterType("filtered_data")
 }
@@ -40,8 +44,9 @@ case class View(id: Option[UUID],
   extends Joins4[Template, Field, Permission, Chart] with Document
 
 case class FieldBinding(fieldId: UUID,
-                   dataSourceId: UUID,
-                   dataSourceAttribute: String) extends Document
+                        dataSourceId: UUID,
+                        dataSourceAttribute: String,
+                        dependantFieldId: Option[UUID]) extends Document
 
 case class DataSourceBinding(dataSourceId: UUID) extends Document
 
