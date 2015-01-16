@@ -104,6 +104,7 @@ object LiveDart extends DartInternalAPI {
  
   def getDartAuth: BravoM[Dfareporting] = DartAuth.getCredentialService
 
+  //FIXME: we need a fctry without a c =>, too confusing otherwise
   def runDartReport(reportApi: Dfareporting, userid: Int, rid: Long): BravoM[Long] = 
     for {
       file <- fctry(c => reportApi.reports().run(userid, rid).setSynchronous(false).execute())
