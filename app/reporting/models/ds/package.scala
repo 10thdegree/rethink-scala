@@ -15,7 +15,13 @@ package object ds {
   // e.g. regex(attrs["foo"], "^.*-(.*?)$", "$1") + attrs["bar"]
   // Something like this is necessary because multiple attributes
   // may need to be combined to create partial keys
-  case class KeySelector(expression: String)
+  trait KeySelector {
+    def select(attrs: Map[String,String]): Option[String]
+  }
+
+  case class RegexKeySelector(expression: String) extends KeySelector {
+    def select(attrs: Map[String, String]) = ???
+  }
 
   // How to map date attribute values to actual dates.
   case class DateSelector(attributeName: String /* e.g. "DATE" */ ,

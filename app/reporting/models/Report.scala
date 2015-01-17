@@ -9,7 +9,7 @@ import com.rethinkscala.Document
 // XXX: DELETE ME
 trait Permission {}
 
-trait Account {}
+case class Account(id: Option[UUID], name: String)
 
 object FooterTypes {
 
@@ -22,8 +22,8 @@ object FooterTypes {
 case class Field(id: Option[UUID],
                  label: String,
                  formula: Option[String], // NOTE: bindable fields don't have formulae
-                 footerFormula: Option[String],
-                 footerType: FooterTypes.FooterType) extends Document
+                 footerFormula: Option[String] = None,
+                 footerType: FooterTypes.FooterType = FooterTypes.IncludesAllData) extends Document
 
 case class Template(id: Option[UUID], label: String, fieldIds: List[UUID])
   extends Document
@@ -45,8 +45,8 @@ case class View(id: Option[UUID],
 
 case class FieldBinding(fieldId: UUID,
                         dataSourceId: UUID,
-                        dataSourceAttribute: String,
-                        dependantFieldId: Option[UUID]) extends Document
+                        dataSourceAttribute: String, // What about activities??
+                        dependantFieldId: Option[UUID] = None) extends Document
 
 case class DataSourceBinding(dataSourceId: UUID) extends Document
 
