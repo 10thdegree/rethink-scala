@@ -15,7 +15,7 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
   import scala.concurrent.duration._
 
-  def getReport(ds: DataSource)(start: DateTime, end: DateTime)(implicit ec: ExecutionContext) = {
+  def getReport(ds: DataSource, dsRows: Seq[DataSource.Row])(start: DateTime, end: DateTime)(implicit ec: ExecutionContext) = {
      val dsF = new DataSourceFetcher(ds).forDateRange(start, end)
     //val dsRows = ds.dataForRange(start, end)
 
@@ -32,8 +32,8 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
     // Await the result
     val rowsByDate = DataSourceAggregator
-      .groupByDate(Await.result(dsF, 2.minutes): _*)
-      //.groupByDate((ds -> dsRows))
+      //.groupByDate(Await.result(dsF, 2.minutes): _*)
+      .groupByDate(ds -> dsRows)
       .map({case (date, rows) => date -> DataSourceAggregator.nestAndCoalesce(rows: _*)})
 
     // Do K iterations over all rows, where K = groupedLabels.length

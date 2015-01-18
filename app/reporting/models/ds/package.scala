@@ -1,8 +1,10 @@
 package reporting.models
 
+import java.text.DateFormat
 import java.util.UUID
 
 import org.joda.time.DateTime
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatterBuilder, DateTimeFormatter}
 import reporting.engine.Joda
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -25,7 +27,8 @@ package object ds {
 
   // How to map date attribute values to actual dates.
   case class DateSelector(attributeName: String /* e.g. "DATE" */ ,
-                          dateFormat: String /* e.g. mm/dd/YYYY */)
+                          dateFormat: String /* e.g. mm/dd/YYYY */) {
+  }
 
   sealed case class DataSourceType(label: String)
 
@@ -93,16 +96,24 @@ package object ds {
       def apply(attr: String): BigDecimal = attributes(attr)
 
       def get(attr: String): Option[BigDecimal] = attributes.get(attr)
+
+      def +(other: Row): Row
     }
 
     case class BasicRow(keys: List[String],
                         date: DateTime,
-                        attributes: Attributes = Attributes()) extends Row
+                        attributes: Attributes = Attributes()) extends Row {
+      def +(other: Row) = {
+        BasicRow(keys, date, attributes + other.attributes)
+      }
+    }
 
     case class NestedRow(keys: List[String],
                          dateRange: (DateTime, DateTime), // TODO: Handle nested structures with various ranges
                          attributes: Attributes = Attributes(),
                          children: List[NestedRow] = Nil) extends Row {
+
+      def +(other: Row) = ???
 
       // Takes values at higher nodes and distributes them down to leaf nodes
       def distributeDown(attr: String, dependantAttr: Option[String] = None, value: Option[BigDecimal] = None): NestedRow =
@@ -212,6 +223,40 @@ package object ds {
         val nested = DataSource.NestedRow.nest(rows.toList)
         val coalesced = DataSource.NestedRow.coalesce(nested)
         coalesced
+      }
+
+      // Merge values for any rows that have matching keys/dates
+      def flattenByKeys(rows: DataSource.Row*) = {
+        rows
+          .groupBy(r => r.keys -> r.date)
+          .map({ case (key, subrows) => subrows.reduce(_ + _)})
+      }
+    }
+
+    class DataSourceRowFactory(ds: DataSource) {
+
+      // Convert the map of values to DataSource.Rows, and merge duplicate keys' values
+      // TODO: Currently expects all values to be either String or BigDecimal already
+      def process(rows: Map[String, Any]*): List[Row] = {
+        DataSourceAggregator.flattenByKeys(rows.map(convertRow):_*).toList
+      }
+
+      def convertRow(data: Map[String, Any]): Row = {
+        val strData = data
+          .filter({case (k,v) => v.isInstanceOf[String]})
+          .map({case (k,v) => k -> v.asInstanceOf[String]})
+        val numericData = data
+          .filter({case (k,v) => v.isInstanceOf[BigDecimal]})
+          .map({case (k,v) => k -> v.asInstanceOf[BigDecimal]})
+        val dtf = DateTimeFormat.forPattern(ds.dateSelector.dateFormat)
+        val date = DateTime.parse(data(ds.dateSelector.attributeName).toString, dtf)
+
+        BasicRow(
+          // TODO: Use Options instead of nulls for missing partial keys
+          keys = ds.keySelectors.map(_.select(strData)).map(_.orNull),
+          date = date,
+          attributes = Attributes(numericData)
+        )
       }
     }
 
