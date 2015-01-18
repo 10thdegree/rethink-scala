@@ -21,17 +21,18 @@ object Application extends Controller {
     Logger.error("BLah")
     Ok("noargs")
   }
-  
+
+  //18158200 Trident Report 
   def test(rid: Int, startDate: String, endDate: String) = Action.async {
     Logger.error("WHAT??? rid = " + rid)
     //validate dates
 
     val config = Dart.prodConfig
-    val sdate = "2015-01-01"
-    val edate = "2015-01-30"
+    //val sdate = "2015-01-01"
+    //val edate = "2015-01-30"
 
     val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
-    val report = Dart.getReport(rid, frmt.parseDateTime(sdate), frmt.parseDateTime(edate))   
+    val report = Dart.getReport(rid, frmt.parseDateTime(startDate), frmt.parseDateTime(endDate))   
     val parsedReport = report
       .map(dr => ReportParser.parse(dr.data))
       .map(li => Json.toJson(li))// we should wrap this
