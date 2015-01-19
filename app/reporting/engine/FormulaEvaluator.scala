@@ -106,7 +106,7 @@ object FormulaEvaluator {
 
   import reporting.engine.AST._
 
-  case class Result(value: BigDecimal, format: Option[String]) {
+  class Result(val value: BigDecimal, val format: Option[String]) {
     def toDouble: Double = value.toDouble
 
     def toLong: Long = value.toLong
@@ -123,7 +123,22 @@ object FormulaEvaluator {
 
     def *(that: Result) = new Result(this.value * that.value, this.format orElse that.format)
 
-    def /(that: Result) = new Result(this.value / that.value, this.format orElse that.format)
+    def /(that: Result) = try {
+      new Result(this.value / that.value, this.format orElse that.format)
+    } catch {
+      case c: java.lang.ArithmeticException => NoResult
+    }
+  }
+
+  // Can't really extend a case class.
+  case object NoResult extends Result(0, None) {
+    override def +(that: Result) = NoResult
+
+    override def -(that: Result) = NoResult
+
+    override def *(that: Result) = NoResult
+
+    override def /(that: Result) = NoResult
   }
 
   object Result {
@@ -155,7 +170,7 @@ object FormulaEvaluator {
     // Global functions
     case t@WholeNumber(n) => Result(eval(n).toDouble)
     case t@FractionalNumber(n) => eval(n)
-    case t@Format(n, fmt) => eval(n).copy(format = Some(fmt))
+    // TODO (add copy back): case t@Format(n, fmt) => eval(n).copy(format = Some(fmt))
     case Sum(n) => Result(cxt.sum(n.label))
     // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
     case Max(left, right) => Result(eval(left).value.max(eval(right).value)) // loses format

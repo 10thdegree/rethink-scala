@@ -285,7 +285,7 @@ package object ds {
               .toList
           }
 
-          def apply(rows: BasicRow*): List[BasicRow] = flattenByKeysAndDate(rows:_*)
+          def apply(rows: BasicRow*): List[BasicRow] = flattenByKeys(rows:_*)
         }
       }
     }
@@ -302,6 +302,20 @@ package object ds {
         dsa.aggregate(rows.map(convertRow):_*).toList
       }
 
+      // Converts all fields to BigDecimal, and leaves the rest as Strings.
+      def convertValues(fields: Set[String])(rows: Map[String, String]*): List[Map[String, Any]] = {
+        def safe0(v:String) = if (v == null || v.isEmpty) "0" else v
+
+        def convertMap(row: Map[String, String]) = {
+          //play.Logger.debug("R: " + row)
+          for {
+            (k,v) <- row
+            cv = if (fields.contains(k)) BigDecimal(safe0(v)) else v
+          } yield k -> cv
+        }
+        rows.map(convertMap).toList
+      }
+
       def apply = process _
 
       def convertRow(data: Map[String, Any]): BasicRow = {
@@ -316,7 +330,7 @@ package object ds {
 
         BasicRow(
           // TODO: Use Options instead of nulls for missing partial keys
-          keys = ds.keySelectors.map(_.select(strData)).map(_.orNull),
+          keys = ds.keySelectors.map(_.select(strData)).map(_.orNull),//getOrElse(strData("Paid Search Campaign"))),
           date = date,
           attributes = Attributes(numericData)
         )

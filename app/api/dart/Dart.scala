@@ -18,7 +18,7 @@ object Dart {
 
   val prodConfig = new Config {
     val api = LiveDart 
-    val filePath = "/users/vmarquez/Bravo-44871094176f.p12"
+    val filePath = "conf/Bravo-44871094176f.p12"
     val accountId = "399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com"
     val userAccount = "bravo@10thdegree.com"
     val clientId =  1297324

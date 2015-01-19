@@ -3,24 +3,29 @@ package reporting.engine
 import org.joda.time.DateTime
 import reporting.models.ds.DataSource
 import DataSource.{BasicRow, Attributes}
-import reporting.models.{Field, Report}
+import reporting.models.{FieldBinding, Field, Report}
 
 class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
   import DataSource.DataSourceAggregators.implicits._
 
+  val allFields = fields
+  val allFieldsLookup = allFields.map(f => f.id.get -> f).toMap
+  val compiler = new FormulaCompiler(allFields.map(_.label): _*)
+  val compiledFields = allFields.map(f => f -> f.formula.map(compiler.apply))
+  val labeledTerms = compiledFields.map({ case (field, term) => field.label -> term}).toMap
+  val labeledFields = compiledFields.map({ case (field, term) => field.label -> field}).toMap
+  val groupedTerms = FormulaCompiler.segment(labeledTerms.toList: _*)(labeledTerms)
+  val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
+  val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
+  val labeledBindings = allFields.map(f => f.label -> bindings.get(f.id.get)).toMap
+
+  lazy val requiredFieldBindings: List[(String, FieldBinding)] = labeledBindings
+      .map({case (k,vo) => vo.map(k -> _) })
+      .flatten
+      .toList
+
   def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime) = {
-    val allFields = fields
-    val allFieldsLookup = allFields.map(f => f.id.get -> f).toMap
-    val compiler = new FormulaCompiler(allFields.map(_.label): _*)
-    val compiledFields = allFields.map(f => f -> f.formula.map(compiler.apply))
-    val labeledTerms = compiledFields.map({ case (field, term) => field.label -> term}).toMap
-    val labeledFields = compiledFields.map({ case (field, term) => field.label -> field}).toMap
-    val groupedTerms = FormulaCompiler.segment(labeledTerms.toList: _*)(labeledTerms)
-    val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
-    val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
-    val labeledBindings = allFields.map(f => f.label -> bindings.get(f.id.get)).toMap
-    val lbindings = report.fieldBindings.map(b => bindings(b.fieldId) -> b).toMap
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
     val rowsByDate = dsa
       .groupByDate(ds -> dsRows)
