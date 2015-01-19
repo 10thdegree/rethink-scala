@@ -7,6 +7,8 @@ import reporting.models.{Field, Report}
 
 class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
+  import DataSource.DataSourceAggregators.implicits._
+
   def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime) = {
     val allFields = fields
     val allFieldsLookup = allFields.map(f => f.id.get -> f).toMap

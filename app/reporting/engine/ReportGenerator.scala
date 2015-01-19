@@ -1,13 +1,22 @@
 package reporting.engine
 
+
+
+
+import org.joda.time.DateTime
+
+object Joda {
+  implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isBefore _)
+}
+
+/*
+
 import java.util.UUID
 
 import com.google.inject.Inject
-import org.joda.time.DateTime
 import reporting.models.ds.DataSource.{NestedRow, DataSourceFetcher, DataSourceAggregator}
 import reporting.models.ds.{DataSource, DataSourceType}
 import reporting.models.{Field, Report}
-
 import scala.concurrent.{Await, Future, ExecutionContext}
 
 trait DataSourceFinder {
@@ -18,10 +27,6 @@ trait FieldFinder {
   def apply(accountId: UUID)(fieldId: UUID): Option[Field]
 
   def byTemplate(templateId: UUID): List[Field]
-}
-
-object Joda {
-  implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isBefore _)
 }
 
 case class ReportDisplay()
@@ -38,6 +43,7 @@ object Pivot {
 class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFinder) {
 
   import scala.concurrent.duration._
+  import DataSource.DataSourceAggregators.implicits._
 
   def getReport(report: Report)(start: DateTime, end: DateTime)(implicit ec: ExecutionContext): ReportDisplay = {
 
@@ -122,3 +128,5 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
     null
   }
 }
+
+*/

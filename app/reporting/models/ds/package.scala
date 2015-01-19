@@ -60,10 +60,11 @@ package object ds {
 
   object DataSource {
 
-    implicit def AttributesSemigroup = new Semigroup[Attributes] {
-      def append(a1: Attributes, a2: Attributes) = {
+    implicit def AttributesSemigroup: Semigroup[Attributes] = new Semigroup[Attributes] {
+      def append(a1: Attributes, a2: => Attributes): Attributes = {
         import scalaz.Scalaz.ToSemigroupOps
-        Attributes(a1.map |+| a2.map)
+        import scalaz._, Scalaz._
+        Attributes.fromMap(a1.map |+| a2.map)
       }
     }
 
@@ -81,9 +82,9 @@ package object ds {
     }
 
     object Attributes {
-      def apply(m: Map[String, BigDecimal]) = new Attributes(m)
+      def fromMap(m: Map[String, BigDecimal]): Attributes = new Attributes(m)
 
-      def apply(vs: (String, BigDecimal)*) = new Attributes(Map(vs: _*))
+      def fromList(vs: (String, BigDecimal)*): Attributes = new Attributes(Map(vs: _*))
     }
 
     trait Row {
@@ -120,18 +121,18 @@ package object ds {
         (this.children, attributes.get(attr), value, dependantAttr) match {
           // End of the line, do we have a value?
           case (Nil, _, None, _) => this
-          case (Nil, _, Some(nv), _) => this.copy(attributes = attributes + Attributes(attr -> nv))
+          case (Nil, _, Some(nv), _) => this.copy(attributes = attributes + Attributes.fromList(attr -> nv))
 
           // Continue: distribute by dependant attribute
           case (_, None, Some(nv), Some(d)) =>
             this.copy(
-              attributes = attributes + Attributes(attr -> nv),
+              attributes = attributes + Attributes.fromList(attr -> nv),
               children = children.map(c => c.distributeDown(attr, dependantAttr, Some(nv / c(d)))))
 
           // Continue: even distribution
           case (_, None, Some(nv), None) =>
             this.copy(
-              attributes = attributes + Attributes(attr -> nv),
+              attributes = attributes + Attributes.fromList(attr -> nv),
               children = children.map(_.distributeDown(attr, dependantAttr, Some(nv / children.size))))
 
           // Start: distribute by dependant attribute
@@ -156,7 +157,7 @@ package object ds {
             val nchildren = children.map(_.distributeUp(attr))
             val sum = nchildren.map(_(attr)).sum
             this.copy(
-              attributes = attributes + Attributes(attr -> sum),
+              attributes = attributes + Attributes.fromList(attr -> sum),
               children = nchildren)
         }
       }
@@ -190,6 +191,7 @@ package object ds {
     /**
      * Responsible for returning a future of a list of datasources.
      */
+    /*
     class DataSourceFetcher[T <: DataSource.Row](dataSources: DataSource*) {
       def forDateRange(start: DateTime, end: DateTime): Future[List[(DataSource, Seq[T])]] = {
         import scalaz._, Scalaz._
@@ -203,7 +205,7 @@ package object ds {
         // Get a single future for all of them, and return that
         dsRowsF.toList.sequence[Future, (DataSource, Seq[T])]
       }
-    }
+    }*/
 
     trait DataSourceAggregator[T <: Row] {
       //      def groupByDate(dses: Seq[DataSource.Row]): Map[DateTime, Seq[DataSource.Row]] = dses.groupBy(_.date)
@@ -226,41 +228,47 @@ package object ds {
 
     object DataSourceAggregators {
       def get[T <: Row](implicit dsa: DataSourceAggregator[T]) = dsa
-    }
 
-    object DataSourceAggregatorNestedRows extends DataSourceAggregator[NestedRow] {
-      def nestAndCoalesce(rows: NestedRow*) = {
-        val nested = DataSource.NestedRow.nest(rows.toList)
-        val coalesced = DataSource.NestedRow.coalesce(nested)
-        coalesced
+      object implicits {
+        implicit object DataSourceAggregatorNestedRows extends DataSourceAggregator[NestedRow] {
+          def nestAndCoalesce(rows: NestedRow*): List[NestedRow] = {
+            val nested = DataSource.NestedRow.nest(rows.toList)
+            val coalesced = DataSource.NestedRow.coalesce(nested)
+            coalesced
+          }
+
+          def apply(rows: NestedRow*) = nestAndCoalesce(rows:_*)
+        }
+
+        implicit object DataSourceAggregatorBasicRows extends DataSourceAggregator[BasicRow] {
+          // Merge values for any rows that have matching keys/dates
+          def flattenByKeys(rows: BasicRow*) = {
+            rows
+              .groupBy(r => r.keys -> r.date)
+              .map({ case (key, subrows) => subrows.reduce(_ + _)})
+              .toList
+          }
+
+          def apply(rows: BasicRow*) = flattenByKeys(rows:_*)
+        }
       }
-
-      def apply(rows: NestedRow*) = nestAndCoalesce(rows:_*)
     }
 
-    object DataSourceAggregatorBasicRows extends DataSourceAggregator[BasicRow] {
-      // Merge values for any rows that have matching keys/dates
-      def flattenByKeys(rows: BasicRow*) = {
-        rows
-          .groupBy(r => r.keys -> r.date)
-          .map({ case (key, subrows) => subrows.reduce(_ + _)})
-          .toList
-      }
-
-      def apply(rows: BasicRow*) = flattenByKeys(rows:_*)
-    }
 
     class DataSourceRowFactory(ds: DataSource) {
 
+      import DataSourceAggregators.implicits._
+      val dsa = DataSourceAggregators.get[BasicRow]
+
       // Convert the map of values to DataSource.Rows, and merge duplicate keys' values
       // TODO: Currently expects all values to be either String or BigDecimal already
-      def process(rows: Map[String, Any]*): List[Row] = {
-        DataSourceAggregator.flattenByKeys(rows.map(convertRow):_*).toList
+      def process(rows: Map[String, Any]*): List[BasicRow] = {
+        dsa.aggregate(rows.map(convertRow):_*).toList
       }
 
       def apply = process _
 
-      def convertRow(data: Map[String, Any]): Row = {
+      def convertRow(data: Map[String, Any]): BasicRow = {
         val strData = data
           .filter({case (k,v) => v.isInstanceOf[String]})
           .map({case (k,v) => k -> v.asInstanceOf[String]})
@@ -282,7 +290,6 @@ package object ds {
     object NestedRow {
 
       import reporting.models.ds.DataSource.RowOrderings._
-      import reporting.models.ds.DataSource.{Row, NestedRow}
 
       // XXX: Currently ignores date; expects all BasicRows to have same date!
       def nest(cs: List[Row]): List[NestedRow] = {
