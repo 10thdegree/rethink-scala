@@ -22,8 +22,13 @@ object Application extends Controller {
     Ok("noargs")
   }
 
+ 
+  def reportGrid(rid: Int, startDate: String, endDate: String) = Action {
+    Ok(reporting.views.html.reportgrid(startDate, endDate, rid))
+  }
+  
   //18158200 Trident Report 
-  def test(rid: Int, startDate: String, endDate: String) = Action.async {
+  def reportData(rid: Int, startDate: String, endDate: String) = Action.async {
     Logger.error("WHAT??? rid = " + rid)
     //validate dates
 

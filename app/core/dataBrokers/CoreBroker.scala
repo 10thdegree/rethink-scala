@@ -4,6 +4,8 @@ import com.rethinkscala.net._
 import core.models._
 import com.rethinkscala.ast.Table
 import com.rethinkscala._
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class CoreBroker(implicit connection: BlockingConnection) {
 
@@ -47,21 +49,23 @@ object Setup {
   implicit val c = Connection.connection
   val coreBroker = new CoreBroker
 
-  def setupDB = true
+  def setupDB = false //TODO: make this an environment variable? 
 
   def initial = {
     if (setupDB) {
-      import com.rethinkscala.Blocking._
-      coreBroker.db.create.run
-      coreBroker.usersTable.create.run
-      coreBroker.accountsTable.create.run
-      coreBroker.permissionsTable.create.run
-      coreBroker.tokensTable.create.run
-      coreBroker.authenticatorsTable.create.run
-      coreBroker.authenticatorsTable.indexCreate("authId").run
-      getCorePermissions(BasicPermissions).map(x => {
-        coreBroker.permissionsTable.insert(x._2).run
-      })
+      Future {
+        import com.rethinkscala.Blocking._
+        coreBroker.db.create.run
+        coreBroker.usersTable.create.run
+        coreBroker.accountsTable.create.run
+        coreBroker.permissionsTable.create.run
+        coreBroker.tokensTable.create.run
+        coreBroker.authenticatorsTable.create.run
+        coreBroker.authenticatorsTable.indexCreate("authId").run
+        getCorePermissions(BasicPermissions).map(x => {
+          coreBroker.permissionsTable.insert(x._2).run
+        })
+      }
     }
   }
 

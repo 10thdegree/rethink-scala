@@ -7,6 +7,7 @@ GET     /                           reporting.controllers.Application.index
 
 GET     /assets/*file               reporting.controllers.Assets.at(path="/public/reporting", file)
 
-GET     /test                       reporting.controllers.Application.test(rid: Int, startDate: String, endDate: String)
+GET     /reportData                       reporting.controllers.Application.reportData(rid: Int, startDate: String, endDate: String)
 
-GET     /noargs                     reporting.controllers.Application.noargs
+
+GET     /reportGrid                       reporting.controllers.Application.reportGrid(rid: Int, startDate: String, endDate: String)
