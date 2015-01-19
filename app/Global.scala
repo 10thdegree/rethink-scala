@@ -9,7 +9,7 @@ import play.api.GlobalSettings
 import securesocial.core.{BasicProfile, RuntimeEnvironment}
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticatorBuilder, HttpHeaderAuthenticatorBuilder}
 import securesocial.core.services.AuthenticatorService
-
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
 /**
