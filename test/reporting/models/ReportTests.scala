@@ -1,12 +1,10 @@
 package reporting.models
 
 import java.util.UUID
-import javax.xml.crypto.KeySelectorException
 
 import org.joda.time.DateTime
 import reporting.engine.SimpleReportGenerator
-import reporting.models.ds.{DateSelector, dart, DataSources}
-import DataSources.DataSource
+import reporting.models.ds.{DateSelector, dart}
 
 import scala.util.Random
 
@@ -26,7 +24,9 @@ object TUIReportHelper {
 
   def sampleRawRow() = Map(
     "Search Campaign Name" -> "Brand",
-    "Date" -> "2014-01-01",
+    "Date" -> "2014-01-01") ++ sampleNumericRow()
+
+  def sampleNumericRow() = Map(
     "Paid Search Cost" -> BigDecimal(201.03),
     "Paid Search Impressions" -> BigDecimal(6000),
     "Paid Search Clicks" -> BigDecimal(20),
@@ -35,7 +35,7 @@ object TUIReportHelper {
     "TUI Apply Online : Step 0 - New Application: Paid Search Actions" -> BigDecimal(1)
   )
 
-  def sampleAttributes = ds.DataSource.Attributes()
+  def sampleAttributes = ds.DataSource.Attributes.fromMap(sampleNumericRow())
 
   def sampleData = List(
     BasicRow(List("Brand"), DateTime.parse("2014-01-01"), sampleAttributes),
@@ -44,12 +44,14 @@ object TUIReportHelper {
     BasicRow(List("Content"), DateTime.parse("2014-01-02"), sampleAttributes)
   )
 
+  import ds.DataSource
+
   case class ReportObjects(
                           account: Account,
                           fields: List[Field],
                           template: Template,
                           view: View,
-                          ds: ds.DataSource,
+                          ds: DataSource,
                           fieldBindings: List[FieldBinding],
                           report: Report)
 

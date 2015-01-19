@@ -19,7 +19,8 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
     val groupedTerms = FormulaCompiler.segment(labeledTerms.toList: _*)(labeledTerms)
     val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
     val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
-    val labeledBindings = allFields.map(f => f.label -> f.id.map(id => bindings(id))).toMap
+    val labeledBindings = allFields.map(f => f.label -> bindings.get(f.id.get)).toMap
+    val lbindings = report.fieldBindings.map(b => bindings(b.fieldId) -> b).toMap
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
     val rowsByDate = dsa
       .groupByDate(ds -> dsRows)
