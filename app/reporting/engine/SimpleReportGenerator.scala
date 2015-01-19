@@ -1,24 +1,13 @@
 package reporting.engine
 
-import java.util.UUID
-
-import com.google.inject.Inject
 import org.joda.time.DateTime
-import reporting.models.ds.DataSource.{NestedRow, DataSourceFetcher, DataSourceAggregator}
-import reporting.models.ds.{DataSource, DataSourceType}
+import reporting.models.ds.DataSource
+import DataSource.{BasicRow, Attributes}
 import reporting.models.{Field, Report}
-
-import scala.concurrent.ExecutionContext
-import scala.concurrent.{Await, Future, ExecutionContext}
 
 class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
-  import scala.concurrent.duration._
-
-  def getReport(ds: DataSource, dsRows: Seq[DataSource.Row])(start: DateTime, end: DateTime)(implicit ec: ExecutionContext) = {
-     val dsF = new DataSourceFetcher(ds).forDateRange(start, end)
-    //val dsRows = ds.dataForRange(start, end)
-
+  def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime) = {
     val allFields = fields
     val allFieldsLookup = allFields.map(f => f.id.get -> f).toMap
     val compiler = new FormulaCompiler(allFields.map(_.label): _*)
@@ -29,19 +18,47 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
     val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
     val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
     val labeledBindings = allFields.map(f => f.label -> f.id.map(id => bindings(id))).toMap
-
-    // Await the result
-    val rowsByDate = DataSourceAggregator
-      //.groupByDate(Await.result(dsF, 2.minutes): _*)
+    val dsa = DataSource.DataSourceAggregators.get[BasicRow]
+    val rowsByDate = dsa
       .groupByDate(ds -> dsRows)
-      .map({case (date, rows) => date -> DataSourceAggregator.nestAndCoalesce(rows: _*)})
+      .map({case (date, rows) => date -> dsa.aggregate(rows: _*)})
 
     // Do K iterations over all rows, where K = groupedLabels.length
     // Each of K groups separates dependencies, so we must process A before B where B depends on A.
-    val cxt = new FormulaEvaluator.EvaluationCxt[DataSource.NestedRow](FormulaEvaluator.Report(start, end))
+    val cxt = new FormulaEvaluator.EvaluationCxt[BasicRow](FormulaEvaluator.Report(start, end))
 
-    // TODO: Run over groups of fields, processing rows.
+    def termFromBinding(nrow: BasicRow)(label: String) =
+      for (b <- labeledBindings(label)) yield {
+        nrow -> AST.Constant(nrow(b.dataSourceAttribute).toDouble)
+      }
+
+    val evals = for {
+      (group, groupIdx) <- groupedLabels.zipWithIndex // Columns
+      (date, rows) <- rowsByDate // Sets of rows by date
+      row <- rows
+    } yield {
+      val initial = Vector.empty[(String, Option[AST.Term])]
+      val groupTerms = group.foldLeft(initial) { (accum, label) =>
+        val Some(term) = {
+          labeledTerms(label) // Bound field (formula)
+        } orElse {
+          termFromBinding(row)(label).map(_._2) // Derived field (data)
+        }
+        accum :+ (label -> Some(term))
+      }
+      FormulaEvaluator.eval[BasicRow](row, date, groupTerms.toList)(cxt)
+    }
+
     // TODO: Compute footers
-    // TODO: Return result
+
+    // Extract the map of values from each row
+    for {
+      (row, computed) <- cxt.allRows.toList
+      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> BigDecimal(vv) })
+    } yield  DisplayReport.Row(row.keys, row.date, fields = attrs)
   }
+}
+
+object DisplayReport {
+  case class Row(keys: List[String], date: DateTime, fields: Map[Field, BigDecimal])
 }

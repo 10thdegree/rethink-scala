@@ -48,7 +48,7 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
     } yield ds
 
     // Get the future
-    val dsF = new DataSourceFetcher(dses: _*).forDateRange(start, end)
+    val dsF = new DataSourceFetcher[NestedRow](dses: _*).forDateRange(start, end)
 
     val allFields = fieldFinder.byTemplate(report.templateId)
     val allFieldsLookup = allFields.map(f => f.id.get -> f).toMap
@@ -60,12 +60,12 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
     val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
     val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
     val labeledBindings = allFields.map(f => f.label -> f.id.map(id => bindings(id))).toMap
-
+    val dsa = DataSource.DataSourceAggregators.get[NestedRow]
     // TODO: Rows with partially matched keys need to pull the dependant field for proportionally distributing the values
     // Await the result
-    val rowsByDate = DataSourceAggregator
+    val rowsByDate = dsa
       .groupByDate(Await.result(dsF, 2.minutes): _*)
-      .map({case (date, rows) => date -> DataSourceAggregator.nestAndCoalesce(rows: _*)})
+      .map({case (date, rows) => date -> dsa.aggregate(rows: _*)})
 
     // Do K iterations over all rows, where K = groupedLabels.length
     // Each of K groups separates dependencies, so we must process A before B where B depends on A.
@@ -97,8 +97,13 @@ class ReportGenerator @Inject()(dsFinder: DataSourceFinder, fieldFinder: FieldFi
       // XXX: The below is gross; we need to either:
       //      (1) move the transformation logic out of NestedRow and into RowCtx, or
       //      (2) use a state monad so that as we mutate the NestedRow we can propagate those changes.
-      val (nrow2, groupTerms) = group.foldLeft((NestedRow, Vector.empty[(String, Option[AST.Term])])) { (accum, label) =>
-        val Some((nrow2, term)) = labeledTerms(label).map(accum._1 -> _) orElse termFromBinding(accum._1)(label)
+      val initial = Vector.empty[(String, Option[AST.Term])]
+      val (nrow2, groupTerms) = group.foldLeft((NestedRow, initial)) { (accum, label) =>
+        val Some((nrow2, term)) = {
+          labeledTerms(label).map(accum._1 -> _) // Bound field (formula)
+        } orElse {
+          termFromBinding(accum._1)(label) // Derived field (data)
+        }
         (nrow2, accum._2 :+ (label -> Some(term)))
       }
       for (row <- nrow.terminals) yield {

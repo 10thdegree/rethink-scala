@@ -190,25 +190,25 @@ package object ds {
     /**
      * Responsible for returning a future of a list of datasources.
      */
-    class DataSourceFetcher(dataSources: DataSource*) {
-      def forDateRange(start: DateTime, end: DateTime): Future[List[(DataSource, Seq[DataSource.Row])]] = {
+    class DataSourceFetcher[T <: DataSource.Row](dataSources: DataSource*) {
+      def forDateRange(start: DateTime, end: DateTime): Future[List[(DataSource, Seq[T])]] = {
         import scalaz._, Scalaz._
 
         // Get a list of futures for each DataSource
-        val dsRowsF: Seq[Future[(DataSource, Seq[DataSource.Row])]] = for {
+        val dsRowsF: Seq[Future[(DataSource, Seq[T])]] = for {
           ds <- dataSources
-          data = ds.dataForRange(start, end) // applies filters and merges rows by keyselectors
+          data = ds.dataForRange(start, end).asInstanceOf[Future[Seq[T]]] // applies filters and merges rows by keyselectors
         } yield data.map(ds -> _)
 
         // Get a single future for all of them, and return that
-        dsRowsF.toList.sequence[Future, (DataSource, Seq[DataSource.Row])]
+        dsRowsF.toList.sequence[Future, (DataSource, Seq[T])]
       }
     }
 
-    object DataSourceAggregator {
+    trait DataSourceAggregator[T <: Row] {
       //      def groupByDate(dses: Seq[DataSource.Row]): Map[DateTime, Seq[DataSource.Row]] = dses.groupBy(_.date)
 
-      def groupByDate(dses: (DataSource, Seq[DataSource.Row])*): Seq[(DateTime, Seq[DataSource.Row])] = {
+      def groupByDate(dses: (DataSource, Seq[T])*): Seq[(DateTime, Seq[T])] = {
         import Joda._
         //        import scalaz.Scalaz.ToSemigroupOps
         //        val maps = dses.map(_._2.groupBy(_.date)).toList
@@ -219,18 +219,35 @@ package object ds {
         rows
       }
 
-      def nestAndCoalesce(rows: DataSource.Row*) = {
+      def apply(rows: T*): List[T]
+
+      def aggregate(rows: T*) = apply(rows:_*)
+    }
+
+    object DataSourceAggregators {
+      def get[T <: Row](implicit dsa: DataSourceAggregator[T]) = dsa
+    }
+
+    object DataSourceAggregatorNestedRows extends DataSourceAggregator[NestedRow] {
+      def nestAndCoalesce(rows: NestedRow*) = {
         val nested = DataSource.NestedRow.nest(rows.toList)
         val coalesced = DataSource.NestedRow.coalesce(nested)
         coalesced
       }
 
+      def apply(rows: NestedRow*) = nestAndCoalesce(rows:_*)
+    }
+
+    object DataSourceAggregatorBasicRows extends DataSourceAggregator[BasicRow] {
       // Merge values for any rows that have matching keys/dates
-      def flattenByKeys(rows: DataSource.Row*) = {
+      def flattenByKeys(rows: BasicRow*) = {
         rows
           .groupBy(r => r.keys -> r.date)
           .map({ case (key, subrows) => subrows.reduce(_ + _)})
+          .toList
       }
+
+      def apply(rows: BasicRow*) = flattenByKeys(rows:_*)
     }
 
     class DataSourceRowFactory(ds: DataSource) {
@@ -240,6 +257,8 @@ package object ds {
       def process(rows: Map[String, Any]*): List[Row] = {
         DataSourceAggregator.flattenByKeys(rows.map(convertRow):_*).toList
       }
+
+      def apply = process _
 
       def convertRow(data: Map[String, Any]): Row = {
         val strData = data

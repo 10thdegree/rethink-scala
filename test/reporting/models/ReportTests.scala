@@ -20,6 +20,8 @@ object TUIReportHelper {
 
   import scalaz._, Scalaz._
 
+  import ds.DataSource.BasicRow
+
   def randUUID = UUID.randomUUID().some
 
   def sampleRawRow() = Map(
@@ -35,8 +37,11 @@ object TUIReportHelper {
 
   def sampleAttributes = ds.DataSource.Attributes()
 
-  def sampleData = List[ds.DataSource.Row](
-    ds.DataSource.BasicRow(List("Brand"), DateTime.parse("2014-01-01"), sampleAttributes)
+  def sampleData = List(
+    BasicRow(List("Brand"), DateTime.parse("2014-01-01"), sampleAttributes),
+    BasicRow(List("Content"), DateTime.parse("2014-01-01"), sampleAttributes),
+    BasicRow(List("Brand"), DateTime.parse("2014-01-02"), sampleAttributes),
+    BasicRow(List("Content"), DateTime.parse("2014-01-02"), sampleAttributes)
   )
 
   case class ReportObjects(
@@ -179,6 +184,10 @@ class ReportTests extends Specification with org.specs2.matcher.ThrownExpectatio
 
   "ReportGenerator" should {
 
+    "convert maps to properly aggregated data source rows" >> {
+      success
+    }
+
     "generate a report with expected values" >> {
       val ro = TUIReportHelper.TUISearchPerformanceRO()
       val gen = new SimpleReportGenerator(ro.report, ro.fields)
@@ -188,10 +197,14 @@ class ReportTests extends Specification with org.specs2.matcher.ThrownExpectatio
 
       // TODO: Transform row data into DataSource.Rows (apply date/key selectors)
       //val dsf = new ds.DataSource.DataSourceRowFactory(ro.ds)
-      val data = TUIReportHelper.sampleData//dsf.process(TUIReportHelper.sampleRawRow())
+      val data = TUIReportHelper.sampleData//dsf(TUIReportHelper.sampleRawRow())
       val res = gen.getReport(ro.ds, data)(start, end)
 
       // TODO: confirm output matches expected
+
+      println(res)
+
+      success
     }
   }
 }

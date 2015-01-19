@@ -24,7 +24,6 @@ object FormulaEvaluator {
 
       def values: Map[String, Double]
     }
-
   }
 
   class EvaluationCxt[R](val report: Report) {
@@ -169,8 +168,8 @@ object FormulaEvaluator {
   }
 
   def eval[R](row: R, date: DateTime, orderedTerms: List[LabeledTerm])(implicit cxt: EvaluationCxt[R]): Map[String, Double] = {
+    implicit val rcxt = cxt.row(row, date)
     (for ((name, termO) <- orderedTerms; term <- termO) yield {
-      implicit val rcxt = cxt.row(row, date)
       val res = eval(term)
       rcxt(name) = res.toDouble // TODO: Should keep Result() instead of converting to Double
       name -> res.toDouble
