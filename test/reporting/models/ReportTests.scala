@@ -23,7 +23,7 @@ object TUIReportHelper {
   def randUUID = UUID.randomUUID().some
 
   def sampleRawRow() = Map(
-    "Search Campaign Name" -> "Brand",
+    "Paid Search Campaign" -> "Brand",
     "Date" -> "2014-01-01") ++ sampleNumericRow()
 
   def sampleNumericRow() = Map(
@@ -39,9 +39,10 @@ object TUIReportHelper {
 
   def sampleData = List(
     BasicRow(List("Brand"), DateTime.parse("2014-01-01"), sampleAttributes),
+    BasicRow(List("Brand"), DateTime.parse("2014-01-01"), sampleAttributes),
     BasicRow(List("Content"), DateTime.parse("2014-01-01"), sampleAttributes),
-    BasicRow(List("Brand"), DateTime.parse("2014-01-02"), sampleAttributes),
-    BasicRow(List("Content"), DateTime.parse("2014-01-02"), sampleAttributes)
+    BasicRow(List("Brand"), DateTime.parse("2014-01-31"), sampleAttributes),
+    BasicRow(List("Content"), DateTime.parse("2014-01-31"), sampleAttributes)
   )
 
   import ds.DataSource
@@ -53,7 +54,10 @@ object TUIReportHelper {
                           view: View,
                           ds: DataSource,
                           fieldBindings: List[FieldBinding],
-                          report: Report)
+                          report: Report) {
+
+    val fieldsLookup = fields.map(f => f.label -> f).toMap
+  }
 
   def TUISearchPerformanceRO() = {
 
@@ -187,24 +191,84 @@ class ReportTests extends Specification with org.specs2.matcher.ThrownExpectatio
   "ReportGenerator" should {
 
     "convert maps to properly aggregated data source rows" >> {
+
+      val ro = TUIReportHelper.TUISearchPerformanceRO()
+      val rows = for (i <- 0 to 10) yield TUIReportHelper.sampleRawRow()
+
+      import ds.DataSource.DataSourceAggregators.implicits._
+      val dsf = new ds.DataSource.DataSourceRowFactory(ro.ds)
+      val dsa = ds.DataSource.DataSourceAggregators.get[ds.DataSource.BasicRow]
+
+      val brows = dsf.process(rows:_*)
+      val cost = (rows(0)("Paid Search Cost").asInstanceOf[BigDecimal] * rows.length)
+
+      brows.length === 1
+      brows(0).attributes("Paid Search Cost") === cost
+
       success
     }
 
-    "generate a report with expected values" >> {
+    "generate a report with unique (keys and date) having expected values" >> {
       val ro = TUIReportHelper.TUISearchPerformanceRO()
       val gen = new SimpleReportGenerator(ro.report, ro.fields)
 
       val start = DateTime.parse("2014-01-01")
       val end = DateTime.parse("2014-01-31")
 
-      // TODO: Transform row data into DataSource.Rows (apply date/key selectors)
-      //val dsf = new ds.DataSource.DataSourceRowFactory(ro.ds)
-      val data = TUIReportHelper.sampleData//dsf(TUIReportHelper.sampleRawRow())
+      import ds.DataSource.DataSourceAggregators.implicits._
+      val dsf = new ds.DataSource.DataSourceRowFactory(ro.ds)
+      val dsa = ds.DataSource.DataSourceAggregators.get[ds.DataSource.BasicRow]
+      val data = dsa.flattenByKeysAndDate(TUIReportHelper.sampleData:_*)//dsf(TUIReportHelper.sampleRawRow())
       val res = gen.getReport(ro.ds, data)(start, end)
 
-      // TODO: confirm output matches expected
+      val bydate = res
+        .groupBy(r => r.date)
+        .map({case (k, vs) => k -> vs.groupBy(r => r.keys).toMap })
+        .toMap
 
-      println(res)
+      res.length === 4
+
+      bydate(start)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === 402.06
+      bydate(end)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === 201.03
+
+      /*for { r <- res } {
+        val key = r.keys.mkString("(", ",", ")")
+        val date = r.date
+        val fields = r.fields.map(f => f._1.label -> f._2)
+        println(s"$key, $date, $fields")
+      }*/
+
+      success
+    }
+
+    "generate a report with unique keys having expected values" >> {
+      val ro = TUIReportHelper.TUISearchPerformanceRO()
+      val gen = new SimpleReportGenerator(ro.report, ro.fields)
+
+      val start = DateTime.parse("2014-01-01")
+      val end = DateTime.parse("2014-01-31")
+
+      import ds.DataSource.DataSourceAggregators.implicits._
+      val dsf = new ds.DataSource.DataSourceRowFactory(ro.ds)
+      val dsa = ds.DataSource.DataSourceAggregators.get[ds.DataSource.BasicRow]
+      val data = dsa.flattenByKeys(TUIReportHelper.sampleData:_*)//dsf(TUIReportHelper.sampleRawRow())
+      val res = gen.getReport(ro.ds, data)(start, end)
+
+      val bykeys = res
+        .groupBy(r => r.keys)
+        .toMap
+
+      res.length === 2
+
+      bykeys(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === 603.09
+      bykeys(List("Content"))(0).fields(ro.fieldsLookup("TotalSpend")) === 402.06
+
+      /*for { r <- res } {
+        val key = r.keys.mkString("(", ",", ")")
+        val date = r.date
+        val fields = r.fields.map(f => f._1.label -> f._2)
+        println(s"$key, $date, $fields")
+      }*/
 
       success
     }

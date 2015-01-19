@@ -88,6 +88,8 @@ package object ds {
     }
 
     trait Row {
+      type R <: Row
+
       def keys: List[String]
 
       def date: DateTime
@@ -98,13 +100,16 @@ package object ds {
 
       def get(attr: String): Option[BigDecimal] = attributes.get(attr)
 
-      def +(other: Row): Row
+      def +(other: Row): R
     }
 
     case class BasicRow(keys: List[String],
                         date: DateTime,
                         attributes: Attributes = Attributes()) extends Row {
-      def +(other: Row) = {
+
+      type R = BasicRow
+
+      def +(other: Row): R = {
         BasicRow(keys, date, attributes + other.attributes)
       }
     }
@@ -113,6 +118,8 @@ package object ds {
                          dateRange: (DateTime, DateTime), // TODO: Handle nested structures with various ranges
                          attributes: Attributes = Attributes(),
                          children: List[NestedRow] = Nil) extends Row {
+
+      type R = NestedRow
 
       def +(other: Row) = ???
 
@@ -221,6 +228,10 @@ package object ds {
         rows
       }
 
+      def flattenByKeys(rows: T*): List[T]
+
+      def flattenByKeysAndDate(rows: T*): List[T]
+
       def apply(rows: T*): List[T]
 
       def aggregate(rows: T*) = apply(rows:_*)
@@ -237,19 +248,44 @@ package object ds {
             coalesced
           }
 
-          def apply(rows: NestedRow*) = nestAndCoalesce(rows:_*)
-        }
+          // Merge all values for unique keys (so dates get merged together)
+          def flattenByKeys(rows: NestedRow*) = {
+            rows
+              .groupBy(r => r.keys)
+              .map({ case (key, subrows) => subrows.reduce(_ + _)})
+              .toList
+          }
 
-        implicit object DataSourceAggregatorBasicRows extends DataSourceAggregator[BasicRow] {
           // Merge values for any rows that have matching keys/dates
-          def flattenByKeys(rows: BasicRow*) = {
+          def flattenByKeysAndDate(rows: NestedRow*) = {
             rows
               .groupBy(r => r.keys -> r.date)
               .map({ case (key, subrows) => subrows.reduce(_ + _)})
               .toList
           }
 
-          def apply(rows: BasicRow*) = flattenByKeys(rows:_*)
+          def apply(rows: NestedRow*) = nestAndCoalesce(rows:_*)
+        }
+
+        implicit object DataSourceAggregatorBasicRows extends DataSourceAggregator[BasicRow] {
+
+          // Merge all values for unique keys (so dates get merged together)
+          def flattenByKeys(rows: BasicRow*) = {
+            rows
+              .groupBy(r => r.keys)
+              .map({ case (key, subrows) => subrows.reduce(_ + _)})
+              .toList
+          }
+
+          // Merge values for any rows that have matching keys/dates
+          def flattenByKeysAndDate(rows: BasicRow*) = {
+            rows
+              .groupBy(r => r.keys -> r.date)
+              .map({ case (key, subrows) => subrows.reduce(_ + _)})
+              .toList
+          }
+
+          def apply(rows: BasicRow*): List[BasicRow] = flattenByKeysAndDate(rows:_*)
         }
       }
     }

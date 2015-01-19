@@ -58,10 +58,21 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
     for {
       (row, computed) <- cxt.allRows.toList
       attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> BigDecimal(vv) })
-    } yield  DisplayReport.Row(row.keys, row.date, fields = attrs)
+    } yield GeneratedReport.Row(row.keys, row.date, fields = attrs)
   }
 }
 
-object DisplayReport {
+object GeneratedReport {
   case class Row(keys: List[String], date: DateTime, fields: Map[Field, BigDecimal])
+
+  object implicits {
+    import scalaz._, Scalaz._
+    implicit def RowSemigroup: Semigroup[Row] = new Semigroup[Row] {
+      def append(a1: Row, a2: => Row): Row = {
+        import scalaz.Scalaz.ToSemigroupOps
+        import scalaz._, Scalaz._
+        Row(a1.keys, a1.date, a1.fields |+| a2.fields)
+      }
+    }
+  }
 }
