@@ -7,6 +7,6 @@ GET     /                           reporting.controllers.Application.index
 
 GET     /assets/*file               reporting.controllers.Assets.at(path="/public/reporting", file)
 
-GET     /reportData                       reporting.controllers.Application.reportData(startDate: String, endDate: String)
+GET     /reportData                 reporting.controllers.TuiReportController.reportData(startDate: String, endDate: String)
 
-GET     /reportGrid                       reporting.controllers.Application.reportGrid(startDate: String, endDate: String)
+GET     /reportGrid                 reporting.controllers.TuiReportController.reportGrid(startDate: String, endDate: String)

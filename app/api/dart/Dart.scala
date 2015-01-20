@@ -69,7 +69,7 @@ object Dart {
       dfa <- c.api.getDartAuth
       _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
       id  <- c.api.runDartReport(dfa, c.clientId, reportId)
-      rep <- fulfillReport(dfa, reportId, id, 5)
+      rep <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
     } yield {
       rep
     }).toBravoM
@@ -79,10 +79,8 @@ object Dart {
     def rec(attempts: Int): BravoM[DownloadedReport] =  
       c.api.downloadReport(dfa, reportId, fileId).run.flatMap(e => e match {
         case -\/(err) if (attempts < 8) =>
-          val sleeptime = attempts*delayMultiplier*1000
-          println("Ok we are sleeping for " + sleeptime + " err =" + err)
-          Thread.sleep(sleeptime)
-          println("done sleeping")
+          val sleeptime = 1000 + (Math.pow(2,attempts)*100) //exponential backoff
+          Thread.sleep(sleeptime.toLong)
           rec(attempts+1).run
         case _ => 
           e.toBravoM.run
