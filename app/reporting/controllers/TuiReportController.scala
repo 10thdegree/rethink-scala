@@ -37,11 +37,11 @@ object TuiReportController extends Controller {
   class ReportDataActor(out: ActorRef) extends Actor {
     def receive = {
       case msg: String =>
-        //out ! Await.result(reportAsync("2015-01-01", "2015-01-02").map(_.fold(err => err,json => json)), scala.concurrent.duration.Duration(30, SECONDS))      
         Logger.debug("blah");
-        
-        //Future { out ! "I received your message: " + msg }
-        reportAsync("2015-01-01", "2015-01-02").map(_.fold(err => err,json => json.toString)).foreach(json => {
+        val json = Json.parse(msg)
+        val startDate = (json \ "startDate").as[String]
+        val endDate = (json \ "endDate").as[String] //TODO: option, then for comp, handle errors etc.
+        reportAsync(startDate, endDate).map(_.fold(err => err,json => json.toString)).foreach(json => {
         Logger.debug("ok sending back to the ws")
         try {
           out ! json
