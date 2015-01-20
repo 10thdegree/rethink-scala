@@ -127,6 +127,8 @@ object FormulaEvaluator {
       new Result(this.value.rounded, format)
     }
 
+    def withFormat(format2: String): Result = new Result(value, Some(format2))
+
     val dfOpt = format.map(f => new java.text.DecimalFormat(f))
 
     def formatted = dfOpt.map(_.format(value)).getOrElse(value.rounded.toString())
@@ -149,6 +151,8 @@ object FormulaEvaluator {
   case object NoResult extends Result(0, None) {
 
     override def formatted = "N/A"
+
+    override def withFormat(format2: String): Result = this
 
     override def +(that: Result) = NoResult
 
@@ -243,9 +247,9 @@ object FormulaEvaluator {
     case Month.Sum(n) => Result(cxt.monthlySum(rcxt)(n.label))
     // case MonthlyAvg(n) => cxt.monthlySum(n.label) / cxt.monthlyCount(n.label)
     // Global functions
-    case t@WholeNumber(n) => Result(eval(n).rounded, Some(Result.Formats.WholeNumber))
-    case t@FractionalNumber(n) => Result(eval(n).asFractional, Some(Result.Formats.FractionalNumber))
-    case t@Format(n, fmt) => Result(eval(n), Some(fmt))
+    case t@WholeNumber(n) => eval(n).rounded.withFormat(Result.Formats.WholeNumber)
+    case t@FractionalNumber(n) => eval(n).asFractional.withFormat(Result.Formats.FractionalNumber)
+    case t@Format(n, fmt) => eval(n).withFormat(fmt)
     case Sum(n) => cxt.sum(n.label)
     // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
     case Max(left, right) => Result(eval(left).value.max(eval(right).value)) // loses format
