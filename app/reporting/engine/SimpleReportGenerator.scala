@@ -62,13 +62,13 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
     // Extract the map of values from each row
     for {
       (row, computed) <- cxt.allRows.toList
-      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> BigDecimal(vv) })
+      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> vv.formatted })
     } yield GeneratedReport.Row(row.keys, row.date, fields = attrs)
   }
 }
 
 object GeneratedReport {
-  case class Row(keys: List[String], date: DateTime, fields: Map[Field, BigDecimal])
+  case class Row(keys: List[String], date: DateTime, fields: Map[Field, String])
 
   object implicits {
     import scalaz._, Scalaz._

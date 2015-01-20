@@ -1,6 +1,7 @@
 package reporting.engine
 
 import org.joda.time.DateTime
+import reporting.engine.FormulaEvaluator.EvaluationCxt
 
 import scala.util.Random
 
@@ -8,7 +9,7 @@ import org.specs2.mutable._
 import org.specs2.runner._
 import org.junit.runner._
 
-object ReportGeneratorTests {
+object FormulaEvaluatorTests {
 
   import scalaz._, Scalaz._
 
@@ -36,12 +37,12 @@ object ReportGeneratorTests {
 }
 
 
-import ReportGeneratorTests._
+import FormulaEvaluatorTests._
 
 @RunWith(classOf[JUnitRunner])
-class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownExpectations {
+class FormulaEvaluatorTests extends Specification with org.specs2.matcher.ThrownExpectations {
 
-  "ReportGenerator" should {
+  "FormulaEvaluator" should {
 
     "order dependencies for labeled terms" >> {
 
@@ -120,11 +121,11 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
     "evaluate compiled ASTs to produce values" >> {
 
       val formulae = Map(
-        "foo" -> Some("4"),
+        "foo" -> Some("4.5"),
         "bar" -> None,
         "fooBar" -> Some("foo + bar"))
       val formulaeAst = Map(
-        "foo" -> Some(AST.Constant(4)),
+        "foo" -> Some(AST.Constant(4.5)),
         "bar" -> None,
         "fooBar" -> Some(AST.Add(AST.Variable("foo"), AST.Variable("bar"))))
 
@@ -144,8 +145,8 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
       )
 
       val rowResults = List(
-        Map("foo" -> 4.0, "bar" -> 5.0, "fooBar" -> 9.0),
-        Map("foo" -> 4.0, "bar" -> 10.0, "fooBar" -> 14.0)
+        Map("foo" -> "4.5", "bar" -> "5", "fooBar" -> "9.5"),
+        Map("foo" -> "4.5", "bar" -> "10", "fooBar" -> "14.5")
       )
 
       implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))
@@ -153,11 +154,12 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
       for ((r, idx) <- rows.zipWithIndex) {
         val terms = for ((key, astOpt) <- asts) yield key -> astOpt.orElse(Some(AST.Constant(r.values(key))))
         val res = FormulaEvaluator.eval(r, r.date, terms.toList)
-        res === rowResults(idx)
+        EvaluationCxt.formattedRowValues(res) === rowResults(idx)
       }
 
       for (((k, r), idx) <- cxt.allRows.zipWithIndex) {
-        r.values === rowResults(rows.indexOf(k))
+        val stringed = r.formattedValues
+        stringed === rowResults(rows.indexOf(k))
       }
 
       success
@@ -195,9 +197,9 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
       )
 
       val rowResults = List(
-        Map("foo" -> 4.0, "bar" -> 5.0, "fooBar" -> 9.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 15.0, "fooBarMax" -> 5.0, "fooBarMax2" -> 29.0),
-        Map("foo" -> 4.0, "bar" -> 2.0, "fooBar" -> 6.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 15.0, "fooBarMax" -> 4.0, "fooBarMax2" -> 29.0),
-        Map("foo" -> 4.0, "bar" -> 10.0, "fooBar" -> 14.0, "fooBarSum" -> 29.0, "fooBarMonthSum" -> 14.0, "fooBarMax" -> 10.0, "fooBarMax2" -> 29.0)
+        Map("foo" -> "4", "bar" -> "5", "fooBar" -> "9", "fooBarSum" -> "29", "fooBarMonthSum" -> "15", "fooBarMax" -> "5", "fooBarMax2" -> "29"),
+        Map("foo" -> "4", "bar" -> "2", "fooBar" -> "6", "fooBarSum" -> "29", "fooBarMonthSum" -> "15", "fooBarMax" -> "4", "fooBarMax2" -> "29"),
+        Map("foo" -> "4", "bar" -> "10", "fooBar" -> "14", "fooBarSum" -> "29", "fooBarMonthSum" -> "14", "fooBarMax" -> "10", "fooBarMax2" -> "29")
       )
 
       val labeledTerms = for ((key, formulaOpt) <- formulae) yield key -> formulaOpt.map(fc.apply)
@@ -216,7 +218,7 @@ class ReportGeneratorTests extends Specification with org.specs2.matcher.ThrownE
       }
 
       for (((k, r), idx) <- cxt.allRows.zipWithIndex) {
-        r.values === rowResults(rows.indexOf(k))
+        r.formattedValues === rowResults(rows.indexOf(k))
       }
 
       success

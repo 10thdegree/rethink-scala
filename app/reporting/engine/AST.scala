@@ -338,6 +338,8 @@ class FormulaCompiler(varNames: String*) {
       case n: Long => new AST.Constant(n)
       case n: Float => new AST.Constant(n)
       case n: Double => new AST.Constant(n)
+      case n: scala.math.BigDecimal => new AST.Constant(n)
+      case n: java.math.BigDecimal => new AST.Constant(BigDecimal(n))
       case n => throw new ClassCastException(s"${n.getClass} is not supported as the result of an expression.")
     }
   } catch {

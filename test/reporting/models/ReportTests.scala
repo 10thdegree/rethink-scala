@@ -58,8 +58,8 @@ class ReportTests extends Specification with org.specs2.matcher.ThrownExpectatio
 
       res.length === 4
 
-      bydate(start)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === 402.06
-      bydate(end)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === 201.03
+      bydate(start)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === "402.06"
+      bydate(end)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === "201.03"
 
       /*for { r <- res } {
         val key = r.keys.mkString("(", ",", ")")

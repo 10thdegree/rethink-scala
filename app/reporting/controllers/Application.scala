@@ -70,7 +70,7 @@ object Application extends Controller {
       )((row: GeneratedReport.Row) => (
       row.keys.mkString("-"),
       //row.date.toString("yyyy-MM-dd"),
-      row.fields.map({case (k,v) => k.label -> v.toString })))
+      row.fields.map({case (k,v) => k.label -> v })))
 
     val report = Dart.getReport(ro.ds.queryId.toInt, start, end)
     val parsedReport = report
