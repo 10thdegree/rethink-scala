@@ -30,11 +30,23 @@
         $scope.gridOptions = {
           enableSorting: true
         };
+        
+      var ws = new WebSocket("ws://localhost:9000/reporting/socket/reportDataRequest");
+     
+      ws.onopen = function() {  
+        console.log("Socket has been opened!");  
+        ws.send("{ startDate:2015-01-01,endDate:2015-01-02}"); 
+      };
 
-      //$http.get('https://cdn.rawgit.com/angular-ui/ui-grid.info/gh-pages/data/100.json')
-      $http.get("/reporting/reportData?startDate=@startDate&endDate=@endDate")
-        .success(function(data) {
-          var flattened = data.map(function(e){
+      ws.onmessage = jsonDataLoaded;
+     
+      function gotAnAlert(alertdata) {
+        alert(alertdata.data);
+      };
+ 
+      function jsonDataLoaded(data) {
+          console.log("data back");
+          var flattened = JSON.parse(data.data).map(function(e) {
             var object = angular.extend({},{'Key': e.key}, e.values);
             return object;
         });
@@ -88,13 +100,13 @@
                 }
             });
 
-      });
-
+      };
+ 
         function tellAngular() {
             console.log("tellAngular call");
              //angular.element(document.getElementsByClassName('grid')[0]).css('height', window.innerHeight + 'px');
              angular.element(document.getElementsByClassName('grid')[0]).css('width', window.innerWidth + 'px');
-        }
+        };
 
         //first call of tellAngular when the dom is loaded
         document.addEventListener("DOMContentLoaded", tellAngular, false);
@@ -106,3 +118,5 @@
     </script>
   </body>
 </html>
+
+ 

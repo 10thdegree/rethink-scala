@@ -12,15 +12,54 @@ import bravo.api.dart._
 import org.joda.time.format.DateTimeFormat
 import bravo.core.Util._
 import play.api.libs.json._
-
+import play.api.Play.current
+import scalaz.\/
+import akka.pattern.pipe
+import scala.concurrent.Await
+import scala.concurrent.duration._
 object TuiReportController extends Controller {
   
   def reportGrid(startDate: String, endDate: String) = Action {
     Ok(reporting.views.html.reportgrid(startDate, endDate))
   }
 
+
+  def socket = WebSocket.acceptWithActor[String, String] { request => out =>
+    ReportDataActor.props(out)
+  }
+
+  import akka.actor._
+
+  object ReportDataActor {
+    def props(out: ActorRef) = Props(new ReportDataActor(out))
+  }
+
+  class ReportDataActor(out: ActorRef) extends Actor {
+    def receive = {
+      case msg: String =>
+        //out ! Await.result(reportAsync("2015-01-01", "2015-01-02").map(_.fold(err => err,json => json)), scala.concurrent.duration.Duration(30, SECONDS))      
+        Logger.debug("blah");
+        
+        //Future { out ! "I received your message: " + msg }
+        reportAsync("2015-01-01", "2015-01-02").map(_.fold(err => err,json => json.toString)).foreach(json => {
+        Logger.debug("ok sending back to the ws")
+        try {
+          out ! json
+          } catch {
+            case ex: Exception => Logger.error(ex.toString)
+          }
+        })
+    }
+  }
+
   //18158200 Trident Report 
-  def reportData(startDate: String, endDate: String) = Action.async {
+  def reportDataRequest(startDate: String, endDate: String) = Action.async { 
+    val parsedReport = reportAsync(startDate, endDate)
+    val futureResult = parsedReport.map(_.fold(errmsg => InternalServerError("ERROR: " + errmsg), r => Ok(r)))
+    futureResult
+  }
+
+  def reportAsync(startDate: String, endDate: String): Future[\/[String, JsValue]] = {
     val config = Dart.prodConfig
     val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
     val start = frmt.parseDateTime(startDate)
@@ -68,10 +107,9 @@ object TuiReportController extends Controller {
       .map(li => Json.toJson(li))
       .run.run(config) 
       
-    val futureResult = parsedReport.map(_.fold(l => InternalServerError("ERROR: " + l.msg), r => Ok(r)))
-    futureResult
+    //val futureResult = parsedReport.map(_.fold(l => InternalServerError("ERROR: " + l.msg), r => Ok(r)))
+    parsedReport.map(_.leftMap(err => err.msg)) //we could return the transformer stack, but we want to see both erorr/not error so i think this is better?
   }
 
 }
 
-// vim: set ts=4 sw=4 et:
