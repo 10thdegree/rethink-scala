@@ -35,13 +35,11 @@ object TuiReportController extends Controller {
     val requiredAttributes = gen.requiredFieldBindings.map(_._2.dataSourceAttribute).toSet
 
     def convertResult(rows:List[Map[String,String]]) = {
-      // XXX(dk): Last row has invalid data of "---" for all fields.
-      val rows_ = rows.dropRight(1)
       //Logger.debug("==> " + requiredAttributes)
       //Logger.debug("=!> " + rows_(0).keys)
       //Logger.debug("=+> " + requiredAttributes.filter(rows_(0).keys.toList.contains))
       Logger.debug(rows.map(_("Paid Search Campaign")).toSet.mkString("\n"))
-      val converted = dsf.convertValues(requiredAttributes)(rows_ :_*)
+      val converted = dsf.convertValues(requiredAttributes)(rows :_*)
       val dsRows = dsf.process(converted:_*)
       val res = gen.getReport(ro.ds, dsRows)(start, end) //does this need start/end? we feed in the data?
       res

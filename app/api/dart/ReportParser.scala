@@ -20,7 +20,10 @@ object ReportParser {
   def findTable(rows: List[String], s: String): String = 
      rows match {
       case x :: xs if (x.contains(field)) => 
-        xs.mkString("\n")
+        (xs.lastOption match {
+          case Some(l) if (l.contains("Grand Total")) => xs.dropRight(1)
+          case _ => xs
+        }).mkString("\n")
       case x :: xs => findTable(xs, s)
       case Nil => s
     }
