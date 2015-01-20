@@ -60,7 +60,7 @@ lazy val otherDeps = Seq(
   //
   // D3.js
   "org.webjars" % "d3js" % "3.4.4-1",
-  "org.webjars" % "c3" % "0.4.9" exclude("org.webjars", "d3js"),
+  "org.webjars" % "c3" % "0.4.9", // exclude("org.webjars", "d3js"),
   // Google-charts (simpler than D3 but less flexible)
   //"org.webjars" % "angular-google-chart" % "0.0.8",
   //
