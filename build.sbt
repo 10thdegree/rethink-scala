@@ -46,20 +46,21 @@ lazy val otherDeps = Seq(
   "javax.inject" % "javax.inject" % "1",
   "net.codingwell" % "scala-guice_2.11" % "4.0.0-beta4",
   // See: http://www.webjars.org
-  "org.webjars" %% "webjars-play" % "2.3.0",
+  "org.webjars" %% "webjars-play" % "2.3.0-2",
   //"org.webjars" % "requirejs" % "2.1.11-1",
   //"org.webjars" % "react" % "0.10.0",
   "org.webjars" % "jquery" % "2.1.0-2",
   //
   //
   // Bootstrap
-  "org.webjars" % "bootstrap" % "3.1.1",
+  "org.webjars" % "bootstrap" % "3.1.1-2",
   //
   // Play Stylus
   //"com.typesafe.sbt" % "sbt-stylus" % "1.0.0",
   //
   // D3.js
-  //"org.webjars" % "d3js" % "3.4.4-1",
+  "org.webjars" % "d3js" % "3.4.4-1",
+  "org.webjars" % "c3" % "0.4.9" exclude("org.webjars", "d3js"),
   // Google-charts (simpler than D3 but less flexible)
   //"org.webjars" % "angular-google-chart" % "0.0.8",
   //
