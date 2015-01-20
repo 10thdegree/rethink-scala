@@ -25,7 +25,7 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
       .flatten
       .toList
 
-  def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime) = {
+  def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime): List[GeneratedReport.Row] = {
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
     val rowsByDate = dsa
       .groupByDate(ds -> dsRows)
