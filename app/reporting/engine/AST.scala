@@ -229,6 +229,10 @@ object AST {
 
     def currency(term: Term) = Format(term, CurrencyFormat)
 
+    val PercentageFormat = "#%"
+
+    def percentage(term: Term) = Format(term, PercentageFormat)
+
     def sum(term: Term): Sum = Sum(term)
 
     // TODO: Autogenerate this from the above
@@ -243,6 +247,10 @@ object AST {
 
       val currency = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
         def apply(arg: AST.Term): AST.Term = AST.Functions.currency(arg)
+      }
+
+      val percentage = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
+        def apply(arg: AST.Term): AST.Term = AST.Functions.percentage(arg)
       }
 
       val max = new Function2[AST.Term, AST.Term, AST.Term] with GroovyInterop.Closure2[AST.Term, AST.Term, AST.Term] {
@@ -314,8 +322,9 @@ class FormulaCompiler(varNames: String*) {
     // TODO: Use reflection to automatically generate this
     import AST.Functions.{functions => funcs}
     b.put("sum", funcs.sum)
-    b.put("format", funcs.format)
+    b.put("reformat", funcs.format)
     b.put("currency", funcs.currency)
+    b.put("percentage", funcs.percentage)
     b.put("max", funcs.max)
     b.put("round", funcs.round)
     b.put("fractional", funcs.round)

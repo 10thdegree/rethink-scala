@@ -78,17 +78,17 @@ object TUIReportHelper {
       Field(randUUID, "TotalSpend", "Spend".some), // Should include fees!
       Field(randUUID, "Impressions", None),
       Field(randUUID, "Clicks", None, None),
-      Field(randUUID, "CTR", "Clicks / Impressions".some),
-      Field(randUUID, "CPC", "Clicks / Spend".some),
+      Field(randUUID, "CTR", "percentage(Clicks / Impressions)".some),
+      Field(randUUID, "CPC", "currency(TotalSpend / Clicks)".some),
       //Field(randUUID, "AvgPosition", None),
       Field(randUUID, "Contact", None),
       Field(randUUID, "Inquiries", None),
       Field(randUUID, "Apps", None),
       Field(randUUID, "Calls", "0".some),
       Field(randUUID, "TotalLeads", "Contact + Inquiries + Apps + Calls".some),
-      Field(randUUID, "CPL", "TotalLeads / Spend".some),
+      Field(randUUID, "CPL", "currency(TotalSpend / TotalLeads)".some),
       // What is SSC??
-      Field(randUUID, "SSC", "TotalLeads / Clicks".some)
+      Field(randUUID, "SSC", "percentage(TotalLeads / Clicks)".some)
     )
     val fieldsLookup = fields.map(f => f.label -> f).toMap
 
