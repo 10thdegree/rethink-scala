@@ -1,35 +1,46 @@
-var app = angular.module('app', ['ngTouch', 'ui.grid', 'ui.grid.resizeColumns']);
+var app = angular.module('app', ['ngTouch', 'smart-table']);
 
 app.controller('ReportView', ['$scope', '$http', '$timeout', function ($scope, $http, $timeout) {
-    $scope.gridOptions = {
-        enableSorting: true
-    };
-
     $scope.range = {
         start: $("#startDate").val(),
         end: $("#endDate").val()
     };
+
+    $scope.columns = [];
+
+    $scope.rows = [];
+
+    $scope.reportTitle = "Report for " + $scope.range.start + " to " + $scope.range.end;
 
     $scope.getReport = getReport;
 
     function tellAngular() {
         console.log("tellAngular call");
         //angular.element(document.getElementsByClassName('grid')[0]).css('height', window.innerHeight + 'px');
-        angular.element(document.getElementsByClassName('grid')[0]).css('width', window.innerWidth + 'px');
+        //angular.element(document.getElementsByClassName('grid')[0]).css('width', window.innerWidth + 'px');
     }
 
     //first call of tellAngular when the dom is loaded
-    document.addEventListener("DOMContentLoaded", tellAngular, false);
+    //document.addEventListener("DOMContentLoaded", tellAngular, false);
 
     //calling tellAngular on resize event
-    window.onresize = tellAngular;
+    //window.onresize = tellAngular;
 
     $timeout(function() { $scope.getReport($scope); }, 1);
-
 }]);
+
+function ColumnDesc(name, display, sort) {
+    this.name = name;
+    this.display = display;
+    this.sort = sort;
+    return this;
+}
 
 
 function getReport ($scope) {
+
+    $("#reportLoading").show();
+    $("#report").hide();
 
     var ws = new WebSocket("ws://localhost:9000/reporting/socket/reportDataRequest");
 
@@ -46,13 +57,24 @@ function getReport ($scope) {
 
     function jsonDataLoaded(data) {
         console.log("data back");
+
+        $("#reportLoading").hide();
+        $("#report").show();
+
         var flattened = JSON.parse(data.data).map(function (e) {
             var object = angular.extend({}, {'Key': e.key}, e.values);
             return object;
         });
 
-        $scope.gridOptions.data = flattened;
-        angular.element(document.getElementsByClassName('grid')[0]).css('height', '100%');
+        var cols = Object.keys(flattened[0]).map(function (e) {
+            return new ColumnDesc(e, e, e);
+        });
+
+        $scope.columns = cols;
+
+        $scope.rows = flattened;
+
+        $scope.$apply();
 
         var piechartData = flattened.map(function (e) {
             return [e["Key"], parseInt(e["Impressions"])];

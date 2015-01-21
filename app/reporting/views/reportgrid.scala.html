@@ -6,8 +6,9 @@
         <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular.js"></script>
         <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular-touch.js"></script>
         <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular-animate.js"></script>
+        <link rel="stylesheet" type="text/css" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap.css"))">
         <link rel="stylesheet" type="text/css" href="@routes.WebJarAssets.at(WebJarAssets.locate("c3.css"))">
-        <script src="@reporting.controllers.routes.Assets.at("javascripts/ui-grid.js")"></script>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("smart-table.min.js"))"></script>
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("d3.min.js"))"></script>
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("c3.min.js"))"></script>
         <link rel="stylesheet" type="text/css" href="@reporting.controllers.routes.Assets.at("stylesheets/ui-grid.css")">
@@ -17,13 +18,43 @@
             <input type="hidden" id="startDate" name="startDate" value="@startDate"/>
             <input type="hidden" id="endDate" name="endDate" value="@endDate"/>
         </form>
+        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ng-grid-flexible-height.js")"></script>
         <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/reportgrid.js")"></script>
-        <div ng-controller="ReportView">
-            <div>
-                <div id="piechart" style="width : 48% ; display : inline-block"></div>
-                <div id="barchart" style="width : 48% ; display : inline-block">Cost per Visitor</div>
+        <div ng-controller="ReportView" style="padding-left: 10px; padding-right: 10px">
+            <div id="reportLoading" style="text-align: center; padding-top: 20px">
+                Loading Report...
+                <br/>
+                <img src="@reporting.controllers.routes.Assets.at("images/ajax-loader.gif")"/>
             </div>
-            <div ui-grid="gridOptions" class="grid" ui-grid-resize-columns></div>
+            <div id="report" style="display: none">
+                <div style="text-align: center"><h2>{{reportTitle}}</h2></div>
+                <div>
+                    <div id="piechart" style="width : 48% ; display : inline-block"></div>
+                    <div id="barchart" style="width : 48% ; display : inline-block"></div>
+                </div>
+                <table st-table="rowCollection" st-safe-src="rows" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th ng-repeat="col in columns" st-sort="{{col.name}}">{{col.display}}</th>
+                        </tr>
+                        <tr>
+                            <th ng-repeat="col in columns" ng-visible="col.name == 'Key'">
+                                <input st-search="'{{col.search}}'" placeholder="{{col.display}}" class="input-sm form-control" type="search"/>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="row in rowCollection">
+                            <td ng-repeat="col in columns">{{row[col.name]}}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="{{columns.length}}" class="text-center"> FOOTER HERE </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
     </body>
 </html>
