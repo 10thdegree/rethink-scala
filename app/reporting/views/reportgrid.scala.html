@@ -1,122 +1,29 @@
 @(startDate: String, endDate: String)
 <!doctype html>
 <html ng-app="app">
-  <head>
-    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular.js"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular-touch.js"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular-animate.js"></script>
-    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-    
-    <link rel="stylesheet" type="text/css" href="@routes.WebJarAssets.at(WebJarAssets.locate("c3.css"))">
-    <script src="@reporting.controllers.routes.Assets.at("javascripts/ui-grid.js")"></script>
-    <script src="@routes.WebJarAssets.at(WebJarAssets.locate("d3.min.js"))"></script>
-    <script src="@routes.WebJarAssets.at(WebJarAssets.locate("c3.min.js"))"></script>
-    <link rel="stylesheet" type="text/css" href="@reporting.controllers.routes.Assets.at("stylesheets/ui-grid.css")">
-    <!--<script src="App.js"></script>-->
-  </head>
-  <body>
-    <div ng-controller="MainCtrl">
-      <!--<div id="grid1" ui-grid="gridOptions" class="grid"></div>-->
-        <div>
-            <div id="piechart" style="width: 48%; display: inline-block"></div>
-            <div id="barchart" style="width: 48%; display: inline-block">Cost per Visitor</div>
+    <head>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery.min.js"))"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular.js"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular-touch.js"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular-animate.js"></script>
+        <link rel="stylesheet" type="text/css" href="@routes.WebJarAssets.at(WebJarAssets.locate("c3.css"))">
+        <script src="@reporting.controllers.routes.Assets.at("javascripts/ui-grid.js")"></script>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("d3.min.js"))"></script>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("c3.min.js"))"></script>
+        <link rel="stylesheet" type="text/css" href="@reporting.controllers.routes.Assets.at("stylesheets/ui-grid.css")">
+    </head>
+    <body>
+        <form>
+            <input type="hidden" id="startDate" name="startDate" value="@startDate"/>
+            <input type="hidden" id="endDate" name="endDate" value="@endDate"/>
+        </form>
+        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/reportgrid.js")"></script>
+        <div ng-controller="ReportView">
+            <div>
+                <div id="piechart" style="width : 48% ; display : inline-block"></div>
+                <div id="barchart" style="width : 48% ; display : inline-block">Cost per Visitor</div>
+            </div>
+            <div ui-grid="gridOptions" class="grid" ui-grid-resize-columns></div>
         </div>
-       <div ui-grid="gridOptions" class="grid" ui-grid-resize-columns></div>
-    </div>
-    <script type="text/javascript">
-      var app = angular.module('app', ['ngTouch', 'ui.grid', 'ui.grid.resizeColumns']);
-
-      app.controller('MainCtrl', ['$scope', '$http', function ($scope, $http) {
-        $scope.gridOptions = {
-          enableSorting: true
-        };
-        
-      var ws = new WebSocket("ws://localhost:9000/reporting/socket/reportDataRequest");
-     
-      ws.onopen = function() {  
-        console.log("Socket has been opened!");  
-        ws.send("{ \"startDate\":\"@startDate\",\"endDate\":\"@endDate\"}"); 
-      };
-
-      ws.onmessage = jsonDataLoaded;
-     
-      function gotAnAlert(alertdata) {
-        alert(alertdata.data);
-      };
- 
-      function jsonDataLoaded(data) {
-          console.log("data back");
-          var flattened = JSON.parse(data.data).map(function(e) {
-            var object = angular.extend({},{'Key': e.key}, e.values);
-            return object;
-        });
-
-        $scope.gridOptions.data = flattened;
-        angular.element(document.getElementsByClassName('grid')[0]).css('height', '100%');
-
-        var piechartData = flattened.map(function(e) {
-            return [e["Key"], parseInt(e["Impressions"])];
-        });
-
-        var barchartData = flattened.map(function(e) {
-            var cpc = e["CPC"];
-            if (cpc == "N/A") cpc = 0;
-            else cpc = cpc.substring(1);
-            return [e["Key"], parseFloat(cpc)];
-        });
-
-            var piechart = c3.generate({
-            bindto: "#piechart",
-            data: {
-            columns: piechartData,
-            type: 'donut',
-            onclick: function (d, i) { console.log("onclick", d, i); },
-            onmouseover: function (d, i) { console.log("onmouseover", d, i); },
-            onmouseout: function (d, i) { console.log("onmouseout", d, i); }
-            },
-            donut: {
-            title: "Visitors by Category"
-            },
-                transition: { duration: 1500 },
-            legend: {
-            position: 'inset'
-            },
-            });
-
-            var barchart = c3.generate({
-                bindto: "#barchart",
-                data: {
-                    columns: barchartData,
-                    type: "bar"
-                },
-                legend: { show: false },
-                bar: {
-                    title: "Cost per Visitor"
-                },
-                axis: {
-                    y: {
-                        label: "Cost per Visitor"
-                    }
-                }
-            });
-
-      };
- 
-        function tellAngular() {
-            console.log("tellAngular call");
-             //angular.element(document.getElementsByClassName('grid')[0]).css('height', window.innerHeight + 'px');
-             angular.element(document.getElementsByClassName('grid')[0]).css('width', window.innerWidth + 'px');
-        };
-
-        //first call of tellAngular when the dom is loaded
-        document.addEventListener("DOMContentLoaded", tellAngular, false);
-
-        //calling tellAngular on resize event
-        window.onresize = tellAngular;
-
-        }]);
-    </script>
-  </body>
+    </body>
 </html>
-
- 
