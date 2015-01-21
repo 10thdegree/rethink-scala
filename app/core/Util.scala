@@ -14,7 +14,7 @@ object Util {
   *  Kleisli is useful for threading a 'config' (Di) 
   *  through multiple methods chained together moandically
   */
-  type BravoM[A] = EitherT[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError, A]
+  type BravoM[A] = EitherT[({ type l[a] = StateT[Future, Config, a]})#l, JazelError, A]
 
   case class JazelError(ex: Option[Throwable], msg: String) 
 
@@ -110,18 +110,6 @@ object Util {
   implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError]
   
   implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError]
-
- //private trait EitherTHoist[A] extends Hoist[({type λ[α[_], β] = EitherT[α, A, β]})#λ] {
-
- //private trait EitherTHoist[A] extends Hoist[({type λ[α[_], β] = EitherT[α, A, β]})#λ] {
-
-  // Hoist[F[_[_], _]] extends MonadTrans[F] {
-
-  //implicit def bravoMHoist[A]: Hoist[EitherT[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError, A]] = ???
-  //implicit def bravoMHoist[A]: Hoist[({ type λ[a[_], b] = EitherT[({ type l[c] = Kleisli[Future, Config, c]})#l, JazelError, b]})#λ] = EitherT.eitherTHoist[JazelError]
-
-
-  //implicit def bravoHoist: Hoist[EitherT[({ type l[a] = Klesili[Future, Config, a]})#l,JazelError]] = EitherT.eitherTHoist[({ type l[a] = Kleisli[Future, Config, a]})#l,JazelError]
 
   implicit def FutureMonad: Monad[Future] = new Monad[Future] {
     
