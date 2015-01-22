@@ -75,7 +75,7 @@ object TUIReportHelper {
     val fields = List(
       Field(randUUID, "Spend", None),
       // Spend = [Cost] + ([Clicks]f * [PpcTrackingRate])
-      Field(randUUID, "TotalSpend", "Spend".some), // Should include fees!
+      Field(randUUID, "TotalSpend", "currency(Spend)".some), // Should include fees!
       Field(randUUID, "Impressions", None),
       Field(randUUID, "Clicks", None, None),
       Field(randUUID, "CTR", "percentage(Clicks / Impressions)".some),
@@ -98,7 +98,7 @@ object TUIReportHelper {
       randUUID,
       "General User",
       template.id.get,
-      fields.filterNot(_.label == "TotalSpend").map(_.id).flatten,
+      fields.filterNot(_.label == "Spend").map(_.id).flatten,
       List(),
       List())
 
@@ -172,7 +172,7 @@ object TUIReportHelper {
 
       // SHOULD BE: Step 3 (was step 4)
       new FieldBinding(fieldsLookup("Apps").id.get, dartDs.dsId.get,
-        "TUI Apply Online : Step 0 - New Application: Paid Search Actions")
+        "TUI Counter : Step 3 (was step 4): Paid Search Actions")
       //new FieldBinding(fieldsLookup("Calls").id.get, dartDs.dsId.get, "")
     )
 

@@ -25,6 +25,10 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
       .flatten
       .toList
 
+  def findMissingFieldBindings(foundAttributes: Set[String]): List[(String, FieldBinding)] = {
+    requiredFieldBindings.filterNot(b => foundAttributes.contains(b._2.dataSourceAttribute))
+  }
+
   def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime): List[GeneratedReport.Row] = {
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
     val rowsByDate = dsa
@@ -62,22 +66,24 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
     // Extract the map of values from each row
     for {
       (row, computed) <- cxt.allRows.toList
-      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> vv.formatted })
+      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> GeneratedReport.FieldValue(vv.value, vv.formatted) })
     } yield GeneratedReport.Row(row.keys, row.date, fields = attrs)
   }
 }
 
 object GeneratedReport {
-  case class Row(keys: List[String], date: DateTime, fields: Map[Field, String])
+  case class FieldValue(value: BigDecimal, display: String)
+
+  case class Row(keys: List[String], date: DateTime, fields: Map[Field, FieldValue])
 
   object implicits {
     import scalaz._, Scalaz._
-    implicit def RowSemigroup: Semigroup[Row] = new Semigroup[Row] {
+    /*implicit def RowSemigroup: Semigroup[Row] = new Semigroup[Row] {
       def append(a1: Row, a2: => Row): Row = {
         import scalaz.Scalaz.ToSemigroupOps
         import scalaz._, Scalaz._
         Row(a1.keys, a1.date, a1.fields |+| a2.fields)
       }
-    }
+    }*/
   }
 }

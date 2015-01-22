@@ -85,7 +85,7 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
         "fooBarInt" -> Some("round(fooBar)"),
         "barMoney" -> Some("currency(bar)"),
         "rowDays" -> Some("row.totalDaysInMonth"),
-        "fooBarFormat" -> Some("format(fooBar, \"#,###\")"),
+        "fooBarFormat" -> Some("func.format(fooBar, \"#,###\")"),
         "fooBarMonthSum" -> Some("month.sum(fooBar)"),
         "fooBarMax" -> Some("max(foo, bar)"),
         "fooBarMax2" -> Some("max(fooBarMax, fooBarMonthSum)")

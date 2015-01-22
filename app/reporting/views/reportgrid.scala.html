@@ -35,7 +35,7 @@
                 <table st-table="rowCollection" st-safe-src="rows" class="table table-striped">
                     <thead>
                         <tr>
-                            <th ng-repeat="col in columns" st-sort="{{col.name}}">{{col.display}}</th>
+                            <th ng-repeat="col in columns" st-sort="{{col.name}}.val">{{col.display}}</th>
                         </tr>
                         <tr>
                             <th ng-repeat="col in columns" ng-visible="col.name == 'Key'">
@@ -45,7 +45,7 @@
                     </thead>
                     <tbody>
                         <tr ng-repeat="row in rowCollection">
-                            <td ng-repeat="col in columns">{{row[col.name]}}</td>
+                            <td ng-repeat="col in columns">{{row[col.name].disp}}</td>
                         </tr>
                     </tbody>
                     <tfoot>

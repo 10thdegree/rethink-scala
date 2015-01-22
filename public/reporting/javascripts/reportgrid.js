@@ -56,13 +56,13 @@ function getReport ($scope) {
     }
 
     function jsonDataLoaded(data) {
-        console.log("data back");
+        console.log("Data received, loading table/charts...");
 
         $("#reportLoading").hide();
         $("#report").show();
 
         var flattened = JSON.parse(data.data).map(function (e) {
-            var object = angular.extend({}, {'Key': e.key}, e.values);
+            var object = angular.extend({}, {'Key': { 'val':e.key, 'disp': e.key}}, e.values);
             return object;
         });
 
@@ -77,14 +77,12 @@ function getReport ($scope) {
         $scope.$apply();
 
         var piechartData = flattened.map(function (e) {
-            return [e["Key"], parseInt(e["Impressions"])];
+            return [e["Key"].disp, parseInt(e["Impressions"].val)];
         });
 
         var barchartData = flattened.map(function (e) {
-            var cpc = e["CPC"];
-            if (cpc == "N/A") cpc = 0;
-            else cpc = cpc.substring(1);
-            return [e["Key"], parseFloat(cpc)];
+            var cpc = e["CPC"].val;
+            return [e["Key"].disp, parseFloat(cpc)];
         });
 
         var piechart = c3.generate({
@@ -127,5 +125,7 @@ function getReport ($scope) {
                 }
             }
         });
+
+        console.log("Finished loading table/charts.");
     }
 }

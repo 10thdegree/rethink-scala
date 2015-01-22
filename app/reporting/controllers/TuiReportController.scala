@@ -76,12 +76,22 @@ object TuiReportController extends Controller {
     def convertResult(rows:List[Map[String,String]]) = {
       //Logger.debug("==> " + requiredAttributes)
       //Logger.debug("=!> " + rows_(0).keys)
-      //Logger.debug("=+> " + requiredAttributes.filter(rows_(0).keys.toList.contains))
-      Logger.debug(rows.map(_("Paid Search Campaign")).toSet.mkString("\n"))
-      val converted = dsf.convertValues(requiredAttributes)(rows:_*)
-      val dsRows = dsf.process(converted:_*)
-      val res = gen.getReport(ro.ds, dsRows)(start, end) //does this need start/end? we feed in the data?
-      res
+      Logger.debug("Verifying returned data...")
+      val missingFbs = gen.findMissingFieldBindings(rows(0).keys.toSet)
+      if (missingFbs.nonEmpty) {
+        val missing = missingFbs.map(x => x._1 -> x._2.dataSourceAttribute).map({case (field, attr) => "Field \"%s\" needs attribute \"%s\"".format(field, attr) })
+        Logger.error("Missing required attributes from field bindings: " + missing)
+        List()
+      } else {
+        //Logger.debug(rows.map(_("Paid Search Campaign")).toSet.mkString("\n"))
+        Logger.debug("Converting raw key/value string data...")
+        val converted = dsf.convertValues(requiredAttributes)(rows: _*)
+        val dsRows = dsf.process(converted: _*)
+        Logger.debug("Generating report...")
+        val res = gen.getReport(ro.ds, dsRows)(start, end) //does this need start/end? we feed in the data?
+        Logger.debug(s"Generated report with ${res.size} rows")
+        res
+      }
     }
 
     Logger.debug("WHAT??? qid = " + ro.ds.queryId)
@@ -91,10 +101,16 @@ object TuiReportController extends Controller {
     import reporting.engine.GeneratedReport
 
     //TODO: can we move this to a general JSON helper lib?
+
+    implicit val generatedReportFieldValueWrites: Writes[GeneratedReport.FieldValue] = (
+      (JsPath \ "val").write[BigDecimal] and
+        (JsPath \ "disp").write[String]
+      )((v: GeneratedReport.FieldValue) => (v.value, v.display))
+
     implicit val generatedReportRowWrites: Writes[GeneratedReport.Row] = (
       (JsPath \ "key").write[String] and
         //(JsPath \ "date").write[String] and
-        (JsPath \ "values").write[Map[String, String]]
+        (JsPath \ "values").write[Map[String, GeneratedReport.FieldValue]]
       )((row: GeneratedReport.Row) => (
       row.keys.mkString("-"),
       //row.date.toString("yyyy-MM-dd"),
