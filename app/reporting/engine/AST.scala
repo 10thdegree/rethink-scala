@@ -225,7 +225,7 @@ object AST {
 
     def format(term: Term, format: String) = Format(term, format)
 
-    val CurrencyFormat = "\u00A4#,###.00"
+    val CurrencyFormat = "\u00A4#,##0.00"
 
     def currency(term: Term) = Format(term, CurrencyFormat)
 
