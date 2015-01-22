@@ -1,15 +1,14 @@
 package bravo.api.dart
 
 import scalaz._
-import scalaz.Free._
 import Scalaz._
 import org.joda.time.DateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 import bravo.core.Util._
+
 /*
 Instead of polling for specific reports, we should just havea a queue of reports waiting to be fulfilled, get all the file handles, and then check them all at once? or no?
 */
-
 object Dart {
   import com.google.api.services.dfareporting.Dfareporting
   import scala.annotation.tailrec

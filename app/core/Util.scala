@@ -14,7 +14,11 @@ object Util {
   *  Kleisli is useful for threading a 'config' (Di) 
   *  through multiple methods chained together moandically
   */
-  type BravoM[A] = EitherT[({ type l[a] = StateT[Future, Config, a]})#l, JazelError, A]
+ 
+  type KFuture[A] = Kleisli[Future, Config, A]
+
+  //type BravoM[A] = EitherT[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError, A]
+  type BravoM[A] = EitherT[KFuture, JazelError, A]
 
   case class JazelError(ex: Option[Throwable], msg: String) 
 
@@ -53,9 +57,13 @@ object Util {
       }
     )
 
+
+  case class KleisliFHolder[A](f: (Config) => Future[\/[JazelError,A]]) {
+    def toBravoM: BravoM[A] = liftBravoM(f) 
+  }
   def liftBravoM[A](f: Config => Future[\/[JazelError, A]]): BravoM[A] =
-    EitherT[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError, A]( 
-        Kleisli(f) 
+    EitherT[KFuture, JazelError, A](
+      Kleisli(f) 
     )
   
   /*
@@ -78,10 +86,6 @@ object Util {
     def toBravoM: BravoM[A] = liftBravoM(c => Future { f(c) }) 
   }
 
-  case class KleisliFHolder[A](f: (Config) => Future[\/[JazelError,A]]) {
-    def toBravoM: BravoM[A] = liftBravoM(f) 
-  }
-  
   case class KleisliBHolder[A](f: Config => BravoM[A]) {
     def toBravoM: BravoM[A] = liftBravoM(c => Future { f(c).right[JazelError] }).flatMap(bm => bm)
   }
@@ -94,7 +98,7 @@ object Util {
   case class KleisliAHolder[A](f: (Config) => A) {
     def toBravoM: BravoM[A] = fctry(f) 
   }
-  
+  //implicit def toKBM(f: Kleisli[Confi^g,  
   implicit def toKFH[A](f: Config => Future[\/[JazelError,A]]) = KleisliFHolder(f)
   implicit def toKH[A](f: Config => \/[JazelError,A]) = KleisliHolder(f)
   implicit def toKH[A](f: Config => BravoM[A]) = KleisliBHolder(f)
@@ -107,10 +111,14 @@ object Util {
   * General typeclass declarations so we can abstract over BravoM and Future 
   */
 
-  implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError]
+  //implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError]
   
-  implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError]
+  implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
 
+  implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
+
+  implicit def kfutureMonad: Monad[KFuture] = Kleisli.kleisliMonadReader[Future, Config]
+ 
   implicit def FutureMonad: Monad[Future] = new Monad[Future] {
     
     def point[A](a: => A) = scala.concurrent.Future.successful(a) //we should use the non-threaded future here...
@@ -121,4 +129,31 @@ object Util {
   implicit def FutureFunctor: Functor[Future] = new Functor[Future] {
     def map[A, B](f: Future[A])(map: A => B): Future[B] = f.map(map(_))
   }
+
+  //from scalaz
+  def separateSequence[A, B, F[_], G[_]](g: G[EitherT[F, A, B]])(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): EitherT[F, A, (G[A],G[B])] = 
+    EitherT(G.foldRight(g, F.point((M.empty[A],M.empty[B])))( (a, l) =>
+      for {
+        tup <- l
+        e   <- a.run
+      } yield 
+        e.fold(le => (M.plus(M.point(le),tup._1), tup._2), re => (tup._1, M.plus(M.point(re), tup._2)))
+    ).map(_.right[A])
+   )
+
+  def separateSeqL[F[_], A, B](g: List[EitherT[F, A, B]])(implicit F: Monad[F]): EitherT[F, A, (List[A], List[B])] = 
+    EitherT(g.foldRight(F.point((List[A](), List[B]())))( (a, l) =>
+      for {
+        tup <- l
+        e   <- a.run
+      } yield 
+        e.fold(le => (le :: tup._1, tup._2), re => (tup._1, re :: tup._2))
+    ).map(_.right[A])
+   )
+
+  class FoldableExtensionOps[A, B, F[_], G[_]](value: G[EitherT[F, A, B]]) {
+    def separateSequence(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): EitherT[F, A, (G[A],G[B])] = Util.separateSequence[A, B, F, G](value)
+  }
+  
+  implicit def toFoldableExtensions[A, B, F[_], G[_]](value: G[EitherT[F, A, B]])(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): FoldableExtensionOps[A, B, F, G] = new FoldableExtensionOps(value)
 }
