@@ -1,4 +1,4 @@
-var app = angular.module('app', ['ngTouch', 'smart-table']);
+var app = angular.module('app', ['ngTouch', 'smart-table', 'lrDragNDrop']);
 
 app.controller('ReportView', ['$scope', '$http', '$timeout', function ($scope, $http, $timeout) {
     $scope.range = {
@@ -38,9 +38,7 @@ function ColumnDesc(name, display, sort) {
 
 
 function getReport ($scope) {
-
-    $("#reportLoading").show();
-    $("#report").hide();
+    $scope.isLoading = true;
 
     var ws = new WebSocket("ws://localhost:9000/reporting/socket/reportDataRequest");
 
@@ -58,8 +56,7 @@ function getReport ($scope) {
     function jsonDataLoaded(data) {
         console.log("Data received, loading table/charts...");
 
-        $("#reportLoading").hide();
-        $("#report").show();
+        $scope.isLoading = false;
 
         var flattened = JSON.parse(data.data).map(function (e) {
             var object = angular.extend({}, {'Key': { 'val':e.key, 'disp': e.key}}, e.values);

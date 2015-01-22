@@ -18,15 +18,15 @@
             <input type="hidden" id="startDate" name="startDate" value="@startDate"/>
             <input type="hidden" id="endDate" name="endDate" value="@endDate"/>
         </form>
-        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ng-grid-flexible-height.js")"></script>
+        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/lrDragNDrop.js")"></script>
         <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/reportgrid.js")"></script>
         <div ng-controller="ReportView" style="padding-left: 10px; padding-right: 10px">
-            <div id="reportLoading" style="text-align: center; padding-top: 20px">
+            <div id="reportLoading" style="text-align: center; padding-top: 20px" ng-show="isLoading">
                 Loading Report...
                 <br/>
                 <img src="@reporting.controllers.routes.Assets.at("images/ajax-loader.gif")"/>
             </div>
-            <div id="report" style="display: none">
+            <div id="report" ng-show="! isLoading">
                 <div style="text-align: center"><h2>{{reportTitle}}</h2></div>
                 <div>
                     <div id="piechart" style="width : 48% ; display : inline-block"></div>
@@ -35,7 +35,7 @@
                 <table st-table="rowCollection" st-safe-src="rows" class="table table-striped">
                     <thead>
                         <tr>
-                            <th ng-repeat="col in columns" st-sort="{{col.name}}.val">{{col.display}}</th>
+                            <th ng-repeat="col in columns" lr-drag-src="headers" lr-drop-target="headers" st-sort="{{col.name}}.val">{{col.display}}</th>
                         </tr>
                         <tr>
                             <th ng-repeat="col in columns" ng-visible="col.name == 'Key'">
