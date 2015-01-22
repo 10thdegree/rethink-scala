@@ -24,7 +24,8 @@ lazy val angularDeps = Seq(// Angular-js
   "org.webjars" % "angularjs" % "1.2.16",
   "org.webjars" % "angular-ui" % "0.4.0-2"  exclude("org.webjars", "angularjs"),
   "org.webjars" % "angular-ui-bootstrap" % "0.10.0-1"  exclude("org.webjars", "angularjs"),
-  "org.webjars" % "angular-ui-router" % "0.2.10" exclude("org.webjars", "angularjs")
+  "org.webjars" % "angular-ui-router" % "0.2.10" exclude("org.webjars", "angularjs"),
+  "org.webjars" % "smart-table" % "1.4.8"
 )
 
 lazy val testingDeps = Seq(

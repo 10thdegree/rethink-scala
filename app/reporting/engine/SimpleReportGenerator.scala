@@ -5,6 +5,8 @@ import reporting.models.ds.DataSource
 import DataSource.{BasicRow, Attributes}
 import reporting.models.{FieldBinding, Field, Report}
 
+import scala.collection.SortedMap
+
 class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
   import DataSource.DataSourceAggregators.implicits._
@@ -24,6 +26,10 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
       .map({case (k,vo) => vo.map(k -> _) })
       .flatten
       .toList
+
+  def findMissingFieldBindings(foundAttributes: Set[String]): List[(String, FieldBinding)] = {
+    requiredFieldBindings.filterNot(b => foundAttributes.contains(b._2.dataSourceAttribute))
+  }
 
   def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime): List[GeneratedReport.Row] = {
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
@@ -62,22 +68,32 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
     // Extract the map of values from each row
     for {
       (row, computed) <- cxt.allRows.toList
-      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> vv.formatted })
+      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> GeneratedReport.FieldValue(vv.value, vv.formatted) })
     } yield GeneratedReport.Row(row.keys, row.date, fields = attrs)
   }
 }
 
+case class GeneratedReport(fields: List[Field], rows: List[GeneratedReport.Row])
+
 object GeneratedReport {
-  case class Row(keys: List[String], date: DateTime, fields: Map[Field, String])
+  case class FieldValue(value: BigDecimal, display: String)
+
+  case class Row(keys: List[String], date: DateTime, fields: Map[Field, FieldValue]) {
+
+    def orderedFields(visible: List[Field]) = {
+      val fieldOrder = visible.zipWithIndex.toMap
+      SortedMap[Field, FieldValue](fields.filter(x => visible.contains(x._1)).toSeq:_*)(Ordering.by(f => fieldOrder(f)))
+    }
+  }
 
   object implicits {
     import scalaz._, Scalaz._
-    implicit def RowSemigroup: Semigroup[Row] = new Semigroup[Row] {
+    /*implicit def RowSemigroup: Semigroup[Row] = new Semigroup[Row] {
       def append(a1: Row, a2: => Row): Row = {
         import scalaz.Scalaz.ToSemigroupOps
         import scalaz._, Scalaz._
         Row(a1.keys, a1.date, a1.fields |+| a2.fields)
       }
-    }
+    }*/
   }
 }

@@ -58,8 +58,8 @@ class ReportTests extends Specification with org.specs2.matcher.ThrownExpectatio
 
       res.length === 4
 
-      bydate(start)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === "402.06"
-      bydate(end)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === "201.03"
+      bydate(start)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")).value === 402.06
+      bydate(end)(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")).value === 201.03
 
       /*for { r <- res } {
         val key = r.keys.mkString("(", ",", ")")
@@ -90,8 +90,8 @@ class ReportTests extends Specification with org.specs2.matcher.ThrownExpectatio
 
       res.length === 2
 
-      bykeys(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")) === 603.09
-      bykeys(List("Content"))(0).fields(ro.fieldsLookup("TotalSpend")) === 402.06
+      bykeys(List("Brand"))(0).fields(ro.fieldsLookup("TotalSpend")).value === 603.09
+      bykeys(List("Content"))(0).fields(ro.fieldsLookup("TotalSpend")).value === 402.06
 
       /*for { r <- res } {
         val key = r.keys.mkString("(", ",", ")")

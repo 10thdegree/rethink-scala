@@ -225,7 +225,7 @@ object AST {
 
     def format(term: Term, format: String) = Format(term, format)
 
-    val CurrencyFormat = "\u00A4#,###.00"
+    val CurrencyFormat = "\u00A4#,##0.00"
 
     def currency(term: Term) = Format(term, CurrencyFormat)
 
@@ -322,7 +322,7 @@ class FormulaCompiler(varNames: String*) {
     // TODO: Use reflection to automatically generate this
     import AST.Functions.{functions => funcs}
     b.put("sum", funcs.sum)
-    b.put("reformat", funcs.format)
+    b.put("display", funcs.format)
     b.put("currency", funcs.currency)
     b.put("percentage", funcs.percentage)
     b.put("max", funcs.max)
