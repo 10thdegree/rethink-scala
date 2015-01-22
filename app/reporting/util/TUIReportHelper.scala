@@ -66,6 +66,7 @@ object TUIReportHelper {
                           report: Report) {
 
     val fieldsLookup = fields.map(f => f.label -> f).toMap
+    val fieldsLookupById = fields.map(f => f.id.get -> f).toMap
   }
 
   def TUISearchPerformanceRO() = {

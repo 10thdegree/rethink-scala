@@ -58,14 +58,20 @@ function getReport ($scope) {
 
         $scope.isLoading = false;
 
-        var flattened = JSON.parse(data.data).map(function (e) {
+        var data2 = JSON.parse(data.data);
+        var reportData = data2.rows;
+        var columnData = data2.fields;
+
+        var flattened = reportData.map(function (e) {
             var object = angular.extend({}, {'Key': { 'val':e.key, 'disp': e.key}}, e.values);
             return object;
         });
 
-        var cols = Object.keys(flattened[0]).map(function (e) {
+        var cols = columnData.map(function (e) {
             return new ColumnDesc(e, e, e);
         });
+        cols.unshift(new ColumnDesc("Key", "Key", "Key"));
+        console.log(data2);
 
         $scope.columns = cols;
 

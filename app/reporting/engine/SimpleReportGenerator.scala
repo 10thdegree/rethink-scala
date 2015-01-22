@@ -5,6 +5,8 @@ import reporting.models.ds.DataSource
 import DataSource.{BasicRow, Attributes}
 import reporting.models.{FieldBinding, Field, Report}
 
+import scala.collection.SortedMap
+
 class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
   import DataSource.DataSourceAggregators.implicits._
@@ -71,10 +73,18 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
   }
 }
 
+case class GeneratedReport(fields: List[Field], rows: List[GeneratedReport.Row])
+
 object GeneratedReport {
   case class FieldValue(value: BigDecimal, display: String)
 
-  case class Row(keys: List[String], date: DateTime, fields: Map[Field, FieldValue])
+  case class Row(keys: List[String], date: DateTime, fields: Map[Field, FieldValue]) {
+
+    def orderedFields(visible: List[Field]) = {
+      val fieldOrder = visible.zipWithIndex.toMap
+      SortedMap[Field, FieldValue](fields.filter(x => visible.contains(x._1)).toSeq:_*)(Ordering.by(f => fieldOrder(f)))
+    }
+  }
 
   object implicits {
     import scalaz._, Scalaz._
