@@ -88,7 +88,7 @@ object Conversions {
     
     val f = uploadInBatches(toAdd).run(conversionConfig)
    
-    Await.result(f, Duration(5, MINUTES))
+    Await.result(f, Duration(5, MINUTES))._2
   }
 
   def getLDConversions(i: Int) = 
@@ -101,7 +101,7 @@ object Conversions {
     val agencyId = 20500000000000142L
     //val advertiserId = 4371744L
     for {
-      dcsearch <- DartAuth.refreshSearch
+      dcsearch <- DartAuth.refreshSearch.toBravoM
       conversionCmd = dcsearch.conversion().get(agencyId, advertiserId, engineAccountId, endInt, 1000, startInt, 0)
       clist    <- ftry(conversionCmd.execute())
     } yield {

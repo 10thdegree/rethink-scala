@@ -17,6 +17,7 @@ import scalaz.\/
 import akka.pattern.pipe
 import scala.concurrent.Await
 import scala.concurrent.duration._
+
 object TuiReportController extends Controller {
   
   def reportGrid(startDate: String, endDate: String) = Action {
@@ -129,7 +130,8 @@ object TuiReportController extends Controller {
       .map(dr => ReportParser.parse(dr.data))
       .map(convertResult)
       .map(li => Json.toJson(li))
-      .run.run(config) 
+      .run.run(config)
+      .map(t => t._2) //feed in the cache again 
       
     //val futureResult = parsedReport.map(_.fold(l => InternalServerError("ERROR: " + l.msg), r => Ok(r)))
     parsedReport.map(_.leftMap(err => err.msg)) //we could return the transformer stack, but we want to see both erorr/not error so i think this is better?

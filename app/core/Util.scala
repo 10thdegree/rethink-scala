@@ -17,8 +17,9 @@ object Util {
  
   type KFuture[A] = Kleisli[Future, Config, A]
 
-  //type BravoM[A] = EitherT[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError, A]
-  type BravoM[A] = EitherT[KFuture, JazelError, A]
+  type SFuture[A] = StateT[Future, Config, A]
+
+  type BravoM[A] = EitherT[SFuture, JazelError, A]
 
   case class JazelError(ex: Option[Throwable], msg: String) 
 
@@ -57,14 +58,20 @@ object Util {
       }
     )
 
-
   case class KleisliFHolder[A](f: (Config) => Future[\/[JazelError,A]]) {
     def toBravoM: BravoM[A] = liftBravoM(f) 
   }
+  
   def liftBravoM[A](f: Config => Future[\/[JazelError, A]]): BravoM[A] =
-    EitherT[KFuture, JazelError, A](
-      Kleisli(f) 
+    EitherT[SFuture, JazelError, A](
+       StateT((c => f(c).map(e => (c,e))))
     )
+
+  case class StateHolder[A](s: StateT[Future, Config, \/[JazelError, A]]) {
+    def toBravoM: BravoM[A] = EitherT[SFuture, JazelError, A](s)
+  }
+
+  implicit def toStateHolder[A](s: StateT[Future, Config, \/[JazelError, A]]): BravoM[A] = EitherT[SFuture, JazelError, A](s)
   
   /*
   * Lifting to BravoM and related  
@@ -78,7 +85,7 @@ object Util {
     def mapJazelError: \/[JazelError,A] = t.leftMap(e => JazelError(e.some, e.getMessage())) //dumb, I think we should use a different structure
   }
  
- case class ThrowableErrorOps(t: Throwable) {
+  case class ThrowableErrorOps(t: Throwable) {
     def toJazelError: JazelError = JazelError(t.some, t.getMessage()) //dumb, I think we should use a different structure
   }
   
@@ -107,18 +114,34 @@ object Util {
   implicit def toError(t: Throwable): ThrowableErrorOps = ThrowableErrorOps(t)
   implicit def toBM[A](et: \/[JazelError,A]) = EitherHolder(et) 
   implicit def toKH[A](f: Config => A) = KleisliAHolder(f)
+  
   /*
   * General typeclass declarations so we can abstract over BravoM and Future 
   */
 
   //implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError]
   
-  implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
+  class EKHolder[A](et: EitherT[({ type l[a] = Function1[Config,a]})#l, JazelError, A]) {
+    def toBravoM: BravoM[A] = et
+  }
+  
+  implicit def toEKHolder[A](et: EitherT[({ type l[a] = Function1[Config,a]})#l, JazelError, A]): EKHolder[A] = new EKHolder(et)
+  
+  implicit def toBravoMFromEK[A](et: EitherT[({ type l[a] = Function1[Config,a]})#l, JazelError, A]): BravoM[A] = 
+    liftBravoM((c: Config) => Future { et.run(c) })
+  
+  implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[SFuture, JazelError]
+
+  implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[SFuture, JazelError]
+
+  //implicit def kfutureMonad: Monad[SFuture] = Kleisli.kleisliMonadReader[Future, Config]
+ 
+  /*implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
 
   implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
 
   implicit def kfutureMonad: Monad[KFuture] = Kleisli.kleisliMonadReader[Future, Config]
- 
+ */
   implicit def FutureMonad: Monad[Future] = new Monad[Future] {
     
     def point[A](a: => A) = scala.concurrent.Future.successful(a) //we should use the non-threaded future here...

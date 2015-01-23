@@ -23,11 +23,20 @@ object DartAuth {
   import scala.concurrent.ExecutionContext.Implicits.global
   import com.google.api.services.doubleclicksearch._
   
+  
+  //val mtrans = EitherT.hoist    
+  type EK[F[_],A] = EitherT[({ type l[a] = Function1[Config,a]})#l, JazelError, A]  
+ 
+  type ConfigF[A] = Function1[Config, A]
+  
+  def liftEither[A](f: (Config) => \/[JazelError,A]) = EitherT[ConfigF, JazelError, A](f)
+
+  implicit def eitherWrap[A](e: \/[JazelError,A]): EitherT[ConfigF, JazelError, A] = EitherT[ConfigF, JazelError, A]((c:Config) => e)
+
   /** Authorizes the installed application to access user's protected data.*/
   //Generic Google Authorization.  
-  def getCredential: BravoM[(HttpTransport, JsonFactory, Credential)] = ((c: Config) => {
+  def getCredential: Config => \/[JazelError, (HttpTransport, JsonFactory, Credential)] = (c: Config) => {
       println("IN credentials!")
-      
       val jsonFactory = JacksonFactory.getDefaultInstance()
       val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
         try {
@@ -45,10 +54,10 @@ object DartAuth {
         } catch {
           case ex: Throwable => ex.toJazelError.left[(HttpTransport, JsonFactory, Credential)]
         }
-  }).toBravoM
+  }
   
   
-  def getSimpleCredential: BravoM[(HttpTransport, JsonFactory, GoogleCredential)] = ((c: Config) => {
+  def getSimpleCredential: Config => (HttpTransport, JsonFactory, GoogleCredential) = (c: Config) => {
       val jsonFactory: JsonFactory = JacksonFactory.getDefaultInstance()
       val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
       val credential = new GoogleCredential.Builder()
@@ -58,30 +67,35 @@ object DartAuth {
         .build()
         .setRefreshToken("1/4I_k8pTHCUC0Rh0lsfn3swHGz7cH0AD9Agj2AwqWgkAMEudVrK5jSpoR30zcRFq6");
         (transport, jsonFactory, credential)
-  }).toBravoM
+  }
 
+  //val temp = getCredential.liftM[EK].map(i => { val s: String = i; "HELLO" })
+  val temp = EitherT[({ type l[a] = Function1[Config, a]})#l,JazelError, (HttpTransport, JsonFactory, Credential)](getCredential).map(i => i)
+  
   //specific to Dart reporting service
-  def getCredentialService: BravoM[Dfareporting] = 
-    getCredential.flatMap(t => { 
-      val (transport, jsonFactory, c) = t
-      if (c.refreshToken())
-        (new Dfareporting(transport, jsonFactory, c).right[JazelError]).toBravoM
-      else 
-        (("Error with refreshTOken for the credential" ).toJazelError.left[Dfareporting]).toBravoM
-    })
+  def getCredentialService = 
+    liftEither(getCredential)
+      .flatMap(t => { 
+        val (transport, jsonFactory, c) = t
+        if (c.refreshToken())
+          (new Dfareporting(transport, jsonFactory, c)).right[JazelError]
+        else 
+          ("Error with refreshTOken for the credential" ).toJazelError.left[Dfareporting]
+      })
  
-  def credentialSearch: BravoM[Doubleclicksearch] = 
+  def credentialSearch = 
     for {
-      tup <- getCredential
+      tup <- liftEither(getCredential)
     } yield
       new Doubleclicksearch(tup._1, tup._2, tup._3) 
   
-  def refreshSearch: BravoM[Doubleclicksearch] = {
+  def refreshSearch = {
     for {
-      tup <- getSimpleCredential 
+      tup <- getSimpleCredential
     } yield
-      new Doubleclicksearch.Builder(tup._1, tup._2, tup._3).setApplicationName("bravoM").build()
+      new Doubleclicksearch.Builder(tup._1, tup._2, tup._3).setApplicationName("bravoM").build().right[JazelError]
   }
+
 
   def installedAppSearch: BravoM[Doubleclicksearch] = {
     val csecret = "A05cGDoZrgxjwUlXmiXBu9RI"
@@ -108,5 +122,5 @@ object DartAuth {
       .build()
     (transport, jsonFactory, new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize(user))
     })
-  
+
 }

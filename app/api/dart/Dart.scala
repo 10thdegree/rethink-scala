@@ -39,19 +39,19 @@ object Dart {
     //val reportCall = Dart.getReport(16372298, new DateTime().minusWeeks(1), new DateTime())
     //val reportCall = Dart.getReport(15641682, new DateTime().minusWeeks(1), new DateTime())
     val future = reportCall.run.run(prodConfig)
-    Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))
+    Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))._2
   }
 
   def prodActivitiesTest(): \/[JazelError, List[String]] = {
     import scala.concurrent.duration._
     val result = 
       for {
-        dfa       <- DartAuth.getCredentialService
+        dfa       <- DartAuth.getCredentialService.toBravoM
         activites <- LiveDart.getActivities(dfa, 16372298)
       } yield
         activites
       val future = result.run.run(prodConfig)
-      Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))
+      Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))._2
   }
 
 
@@ -83,7 +83,7 @@ object Dart {
           rec(attempts+1).run
         case _ => 
           e.toBravoM.run
-      }).run.toBravoM
+      }) //.liftM[({ type l[a[_],b] = EitherT[SFuture, JazelError, b]})#l] //.run._2.toBravoM
     rec(1)
     }).toBravoM
 }
