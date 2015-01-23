@@ -14,68 +14,27 @@ object Dart {
   import scala.annotation.tailrec
   import bravo.api.dart.Data._
   import scala.concurrent.{Future,Await}
-
-  val prodConfig = new Config {
-    val api = LiveDart 
-    val filePath = "conf/Bravo-44871094176f.p12"
-    val accountId = "399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com"
-    val userAccount = "bravo@10thdegree.com"
-    val clientId =  1297324
-    val marchexpass = ""
-    val marchexurl = ""
-    val marchexuser = ""
-  }
-
-  import com.google.api.services.dfareporting.model._
-  
-  def prodTest(): \/[JazelError,DownloadedReport] = {
-    import scala.concurrent.duration._
-    import org.joda.time.format._
-    
-    //import  
-    //r4YUcruz 3981403 //3843876 //16372298 
-    val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
-    val reportCall = Dart.getReport(16372298, frmt.parseDateTime("2014-10-01"), frmt.parseDateTime("2014-10-31"))
-    //val reportCall = Dart.getReport(16372298, new DateTime().minusWeeks(1), new DateTime())
-    //val reportCall = Dart.getReport(15641682, new DateTime().minusWeeks(1), new DateTime())
-    val future = reportCall.run.run(prodConfig)
-    Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))._2
-  }
-
-  def prodActivitiesTest(): \/[JazelError, List[String]] = {
-    import scala.concurrent.duration._
-    val result = 
-      for {
-        dfa       <- DartAuth.getCredentialService.toBravoM
-        activites <- LiveDart.getActivities(dfa, 16372298)
-      } yield
-        activites
-      val future = result.run.run(prodConfig)
-      Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))._2
-  }
-
-
-  def saveProdTest(filename:String): Unit = {
-    import java.nio.file.{Paths, Files}
-    import java.nio.charset.StandardCharsets
-    val report = prodTest().fold(err => "ERROR", _.data) 
-    val onlyreport = ReportParser.findTable(report.split("\\r?\\n").toList,"")
-    Files.write(Paths.get(filename), onlyreport.getBytes(StandardCharsets.UTF_8))
-  }
      
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
-    for {
-      dfa <- c.api.getDartAuth
-      _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
-      id  <- c.api.runDartReport(dfa, c.clientId, reportId)
-      rep <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
-    } yield {
-      rep
+    c.cache(reportId.toString, startDate, endDate) match {
+      case h :: tail => 
+        Monad[BravoM].point( DownloadedReport(reportId, h :: tail))        
+      case Nil =>
+        for {
+          dfa <- c.api.getDartAuth
+          _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
+          id  <- c.api.runDartReport(dfa, c.clientId, reportId)
+          rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
+          rep = ReportParser.parse(rs)
+          _   <- put(c.updateCache(reportId.toString, startDate, endDate, rep))
+        } yield {
+          DownloadedReport(reportId,rep)
+        }
     }).toBravoM
- 
-  private def fulfillReport(dfa: Dfareporting, reportId: Long, fileId: Long, delayMultiplier: Int): BravoM[DownloadedReport] = ((c:Config) => {
+    
+  private def fulfillReport(dfa: Dfareporting, reportId: Long, fileId: Long, delayMultiplier: Int): BravoM[String] = ((c:Config) => {
     //not tailrec but we're not going that deep
-    def rec(attempts: Int): BravoM[DownloadedReport] =  
+    def rec(attempts: Int): BravoM[String] =  
       c.api.downloadReport(dfa, reportId, fileId).run.flatMap(e => e match {
         case -\/(err) if (attempts < 8) =>
           val sleeptime = 1000 + (Math.pow(2,attempts)*100) //exponential backoff
@@ -141,7 +100,7 @@ object LiveDart extends DartInternalAPI {
       ()
   ).toBravoM
   
-  override def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): BravoM[DownloadedReport] = ((c:Config) => 
+  override def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): BravoM[String] = ((c:Config) => 
     for {
       filehandle  <- ftry(reportApi.files().get(reportid, fid))
       file        <- ftry(filehandle.execute())
@@ -151,7 +110,7 @@ object LiveDart extends DartInternalAPI {
                       ftry(filehandle.executeMediaAsInputStream()) 
     } yield {
       val reportData = scala.io.Source.fromInputStream(is).mkString  
-      DownloadedReport(reportid,reportData)
+      reportData
     }
   ).toBravoM
 

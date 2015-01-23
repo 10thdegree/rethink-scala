@@ -57,7 +57,7 @@ object Conversions {
 
   val keywordSearchColum = "Paid Search Keyword ID"
   
-    val conversionConfig = new Config {
+    case class ConversionConfig() extends Config {
     val api = LiveDart 
     val filePath = "/users/vmarquez/API Project-d15a2d4cf8d4.p12"
     val accountId = "399851814004-fgpilom3s4tgudlmu0epc5lo4c7g5h1n.apps.googleusercontent.com"
@@ -66,8 +66,11 @@ object Conversions {
     val marchexpass = ""
     val marchexurl = ""
     val marchexuser = ""
+    def cache(id:String, s:DateTime,e: DateTime) = List[Map[String,String]]()
+    def updateCache(id: String, s: DateTime, e: DateTime, d: List[Map[String,String]]) = this
+    val m: Map[String, List[Map[String,String]]] = Map()
   }
-  
+  val conversionConfig = new ConversionConfig()   
   def readReport(filename: String) =
     ReportParser.parse(scala.io.Source.fromFile(filename).mkString)
 

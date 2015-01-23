@@ -15,6 +15,12 @@ object ReportParser {
     val rows = CSVReader.open(r).allWithHeaders()
     rows
   }
+
+  def unparse(l: List[Map[String,String]]): String = {
+    val header = l.headOption.map(_.keys.mkString(","))
+    val body = l.tail.map(m => m.values.mkString(",")).foldLeft("")((a,b) => a + "\\r\\n" + b)
+    header.map(h => h + body).getOrElse("") 
+  }
   
   @tailrec
   def findTable(rows: List[String], s: String): String = 

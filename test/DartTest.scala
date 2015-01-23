@@ -18,6 +18,7 @@ import org.scalacheck.Prop._
 import org.scalacheck._    
 import Gen._               
 import Arbitrary.arbitrary 
+import org.joda.time._
 
 object DartAPITest extends Properties("Dart API test") {
   
@@ -28,16 +29,33 @@ object DartAPITest extends Properties("Dart API test") {
    true
   }
 
-  def config(): Config = new Config {
-    val api = internal()
-    val  filePath = ""
-    val accountId = ""
-    val userAccount = ""
-    val clientId = 0
-    val marchexuser = "" 
-    val marchexpass = ""
-    val marchexurl = ""
+  property("test Cache") = forAll { (i: Int) =>
+    val reportCall = Dart.getReport(1, new DateTime(), new DateTime())
+    val future = reportCall.run.run(config)
+    val result = Await.result(future, scala.concurrent.duration.Duration(1, SECONDS) )
+    result._2.fold(l => false, r => {
+      true
+    })
   }
+
+  case class TestConfig(
+    val api: DartInternalAPI  = internal(),
+    val filePath: String = "",
+    val accountId: String = "",
+    val userAccount: String = "",
+    val clientId: Int = 0,
+    val marchexuser: String = "", 
+    val marchexpass: String = "",
+    val marchexurl: String = "",
+    val m: Map[String, List[Map[String,String]]] = Map[String, List[Map[String,String]]]("1" -> List[Map[String,String]]( Map[String,String]("asdf" -> "blah"))) 
+    ) extends Config {
+      def cache(id: String, s: DateTime, e: DateTime) = m.get(id).getOrElse( List[Map[String,String]]() )
+      def updateCache(id: String, s: DateTime, e: DateTime, d: List[Map[String,String]]): Config = {
+        this.copy(m = (m + ((id) -> d)))
+      }
+  }
+
+  val config = TestConfig()
 
   def internal():DartInternalAPI = new DartInternalAPI {
    
@@ -49,8 +67,13 @@ object DartAPITest extends Properties("Dart API test") {
 
     def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[Long] = Monad[BravoM].point(1L)
 
-    def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DownloadedReport] = Monad[BravoM].point(DownloadedReport(1, "blah")) 
+    def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[String] = Monad[BravoM].point("asdf,blah\\r\\na,b")
   
+  }
+
+  def dartCacheTest() {
+      //Data/
+
   }
 
 }

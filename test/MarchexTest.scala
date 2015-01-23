@@ -76,23 +76,15 @@ object server extends Properties("Bravo API tests") {
       callLogs = cl
     })
     //val credentials = MarchexCredentials("http://localhost:"+port.toString +"/", "asdf", "asdf")
-    val config = new Config {
-      val marchexuser = "asdf"
-      val marchexurl = "http://localhost:"+port.toString +"/"
-      val marchexpass = "asdf"
-      val filePath = ""
-      val accountId = ""
-      val clientId = 0
-      val userAccount = ""
-      val api = DartAPITest.internal()
-    }
+    val config = DartAPITest.TestConfig()
+    
     val dt = DateTime.now()
 
     val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)
     ws.shutdown()
     val future = result.run.run(config)   
     val either = Await.result(future, scala.concurrent.duration.Duration(3, SECONDS) )
-    either.fold(l => false, r => true)
+    either._2.fold(l => false, r => true)
   }
 }
 

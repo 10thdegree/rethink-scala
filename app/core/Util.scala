@@ -6,7 +6,7 @@ object Util {
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
   import bravo.api.dart._ 
-  
+  import org.joda.time._
   /*
   *  Kleisli is the equivalent of Function1, so this 
   *  reprsents a computation of type 
@@ -27,6 +27,9 @@ object Util {
   //at the instantiation site.  
   trait Config extends GoogleConfig with MarchexConfig {
     val api: DartInternalAPI
+    def cache(id: String, s: DateTime,e: DateTime): List[Map[String,String]] // 
+    def updateCache(id: String, s: DateTime, e: DateTime, d: List[Map[String,String]]):  Config
+    val m: Map[String, List[Map[String,String]]]
   }
   
   trait GoogleConfig {
@@ -61,18 +64,21 @@ object Util {
   case class KleisliFHolder[A](f: (Config) => Future[\/[JazelError,A]]) {
     def toBravoM: BravoM[A] = liftBravoM(f) 
   }
-  
-  def liftBravoM[A](f: Config => Future[\/[JazelError, A]]): BravoM[A] =
+ 
+  implicit def toBravoMFromState[A](s: StateT[Future, Config, A]): BravoM[A] =
+    EitherT[SFuture, JazelError, A](s.map(_.right[JazelError]))
+
+  private def liftBravoM[A](f: Config => Future[\/[JazelError, A]]): BravoM[A] =
     EitherT[SFuture, JazelError, A](
        StateT((c => f(c).map(e => (c,e))))
     )
 
-  case class StateHolder[A](s: StateT[Future, Config, \/[JazelError, A]]) {
-    def toBravoM: BravoM[A] = EitherT[SFuture, JazelError, A](s)
-  }
-
   implicit def toStateHolder[A](s: StateT[Future, Config, \/[JazelError, A]]): BravoM[A] = EitherT[SFuture, JazelError, A](s)
-  
+ 
+  implicit def toBravoMFromIdState[A](s: StateT[Id, Config, A]): BravoM[A] = StateT[Future, Config, \/[JazelError, A]](c => Future { 
+      val (c2,b) = s.run(c)
+      (c2, b.right[JazelError]) 
+    } ) 
   /*
   * Lifting to BravoM and related  
   * converions

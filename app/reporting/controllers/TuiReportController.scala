@@ -17,14 +17,18 @@ import scalaz.\/
 import akka.pattern.pipe
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import java.util.concurrent.atomic.AtomicReference
 
 object TuiReportController extends Controller {
   
+  private val cache = new AtomicReference(Map[String,List[Map[String,String]]]())
+  
+
   def reportGrid(startDate: String, endDate: String) = Action {
     Ok(reporting.views.html.reportgrid(startDate, endDate))
   }
 
-
+  /////////// ACTOR STUFF MOVE TO ANOTHER CLASS ///////////////////
   def socket = WebSocket.acceptWithActor[String, String] { request => out =>
     ReportDataActor.props(out)
   }
@@ -52,6 +56,7 @@ object TuiReportController extends Controller {
         })
     }
   }
+  /////////////////END ACTOR STUFF /////////////
 
   //18158200 Trident Report 
   def reportDataRequest(startDate: String, endDate: String) = Action.async { 
@@ -61,7 +66,10 @@ object TuiReportController extends Controller {
   }
 
   def reportAsync(startDate: String, endDate: String): Future[\/[String, JsValue]] = {
-    val config = Dart.prodConfig
+    Logger.error( cache.get.size + " is the cache size") 
+    
+    val config = LiveTest.prodConfig.copy(m = cache.get)
+
     val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
     val start = frmt.parseDateTime(startDate)
     val end = frmt.parseDateTime(endDate)
@@ -127,13 +135,14 @@ object TuiReportController extends Controller {
 
     val report = Dart.getReport(ro.ds.queryId.toInt, start, end)
     val parsedReport = report
-      .map(dr => ReportParser.parse(dr.data))
-      .map(convertResult)
+      .map(dr => convertResult(dr.data))
       .map(li => Json.toJson(li))
       .run.run(config)
-      .map(t => t._2) //feed in the cache again 
+      .map(t => {
+        cache.set(t._1.m)
+        t._2
+      }) //feed in the cache again 
       
-    //val futureResult = parsedReport.map(_.fold(l => InternalServerError("ERROR: " + l.msg), r => Ok(r)))
     parsedReport.map(_.leftMap(err => err.msg)) //we could return the transformer stack, but we want to see both erorr/not error so i think this is better?
   }
 
