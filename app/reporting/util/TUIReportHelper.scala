@@ -32,7 +32,7 @@ object TUIReportHelper {
     "Paid Search Clicks" -> BigDecimal(20),
     "TUI  Home Page : Arrival: Paid Search Actions" -> BigDecimal(10),
     "TUI Confirmation : PHD Request Info: Paid Search Actions" -> BigDecimal(5),
-    "TUI Apply Online : Step 0 - New Application: Paid Search Actions" -> BigDecimal(1)
+    "TUI Counter : Step 3 (was step 4): Paid Search Actions" -> BigDecimal(1)
   )
 
   def sampleAttributes = ds.DataSource.Attributes.fromMap(sampleNumericRow())
