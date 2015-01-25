@@ -32,24 +32,10 @@ object Marchex {
 
   val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
 
-  def getCallLogsOld(acctid: String, start: DateTime, end:DateTime): BravoM[List[CallLog]] = {
-     val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
-     val search: java.util.Map[String,String] = 
-     Map("start" -> start.toString(frmt),
-          "end"  -> end.toString(frmt))
-      val res = makeCall("call.search", List[Object](acctid, search)).flatMap(results => 
-        results.map(o => parseCallLog(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
-     )
-     res 
-  } 
-
-
   def getCallLogs(acctid: String, start: DateTime, end:DateTime): BravoM[List[CallLog]] = {
     (for {
-      search <- fctry(c => Map[String,String]("start" -> start.toString(frmt),"end" -> end.toString(frmt)))
-      _     = println(" ABOUT TO MAKE THE XML CALL ~~~~~~")
-      ss: java.util.Map[String,String] = search
-      results <- makeCall("call.search", List[Object](acctid, search))
+      search <- fctry(c => (Map[String,String]("start" -> start.toString(frmt),"end" -> end.toString(frmt))): java.util.Map[String,String] )
+      results                              <- makeCall("call.search", List[Object](acctid, search))
     } yield {
       results.map(o => parseCallLog(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
     }).flatMap(identity)

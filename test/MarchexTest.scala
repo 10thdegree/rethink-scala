@@ -57,7 +57,7 @@ object MarchexAPITest extends Properties("Bravo API tests") {
   var callLogs: List[CallLog] = List[CallLog]() 
   
   class Call {
-    def search(custId: String, m: java.util.Map[String,String]): Array[java.util.Map[String,Object]] =  null //Array[java.util.Map[String,Object]]()//callLogs.map(Marchex.callLogToMap(_): java.util.Map[String,Object]).toArray
+    def search(custId: String, m: java.util.Map[String,String]): Array[java.util.Map[String,Object]] = callLogs.map(Marchex.callLogToMap(_): java.util.Map[String,Object]).toArray
   }   
   
   property("service bijection") = forAll { (d: Date) => 
