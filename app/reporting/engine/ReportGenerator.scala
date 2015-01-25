@@ -3,10 +3,41 @@ package reporting.engine
 
 
 
-import org.joda.time.DateTime
 
 object Joda {
+  import org.joda.time._
   implicit def dateTimeOrdering: Ordering[DateTime] = Ordering.fromLessThan(_ isBefore _)
+
+  case class OverlapMatch(before: Option[Interval] = None, during: Option[Interval] = None, after: Option[Interval] = None)
+
+  def overlapMatch(span1: Interval, span2: Interval):OverlapMatch = {
+    import scalaz._, Scalaz._
+    val (fst, snd) = if (span1 isBefore span2) (span1, span2) else (span2, span1)
+    Option(fst overlap snd)
+      // Partial or complete overlap/subsuming
+      .map(o => OverlapMatch(
+        before = if (fst.getStart isEqual o.getStart) None else fst.withEnd(o.getStart).some,
+        during = o.some,
+        after = if (snd.getEnd isEqual o.getEnd) None else snd.withStart(o.getEnd).some))
+      // No overlap at all
+      .getOrElse(OverlapMatch(before = fst.some, after = snd.some))
+  }
+
+  def startOfTime: DateTime = {
+    new DateTime(Years.MIN_VALUE.getYears,
+      Months.MIN_VALUE.getMonths,
+      Days.MIN_VALUE.getDays,
+      Hours.MIN_VALUE.getHours,
+      Minutes.MIN_VALUE.getMinutes)
+  }
+
+  def endOfTime: DateTime = {
+    new DateTime(Years.MAX_VALUE.getYears,
+      Months.MAX_VALUE.getMonths,
+      Days.MAX_VALUE.getDays,
+      Hours.MAX_VALUE.getHours,
+      Minutes.MAX_VALUE.getMinutes)
+  }
 }
 
 /*

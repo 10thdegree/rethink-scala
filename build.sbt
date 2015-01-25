@@ -70,8 +70,9 @@ lazy val otherDeps = Seq(
   //
   // Slick
   // "com.typesafe.slick" %% "slick" % "2.1.0-M2",
-  // "joda-time" % "joda-time" % "2.3",
-  // "org.joda" % "joda-convert" % "1.5",
+  "joda-time" % "joda-time" % "2.5",
+  //"org.joda" % "joda-convert" % "1.5",
+  "com.github.nscala-time" %% "nscala-time" % "1.6.0",
   // "com.github.tototoshi" %% "slick-joda-mapper" % "1.2.0-SNAPSHOT"
   //v
   // Rules Engine
