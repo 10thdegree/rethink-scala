@@ -16,14 +16,14 @@ import bravo.core.Util._
 
 object Marchex {
   // PUBLIC API
-  def getGroups(accountid: String)(implicit c: MarchexCredentials): BravoM[List[MarchexGroup]] = 
+  def getGroups(accountid: String): BravoM[List[MarchexGroup]] = 
     (for {
       results <- makeCall("group.list", List[Object](accountid))
     } yield { 
       results.map(o => parseGroup(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
     }).flatMap(identity)
   
-  def getAccounts(implicit c: MarchexCredentials): BravoM[List[MarchexAccount]] = 
+  def getAccounts: BravoM[List[MarchexAccount]] = 
     (for {
       results <- makeCall("acct.list", List[Object]())
     } yield 
@@ -31,10 +31,24 @@ object Marchex {
     ).flatMap(identity)
 
   val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
-  
-  def getCallLogs(acctid: String, start: DateTime, end:DateTime)(implicit c: MarchexCredentials): BravoM[List[CallLog]] = {
+
+  def getCallLogsOld(acctid: String, start: DateTime, end:DateTime): BravoM[List[CallLog]] = {
+     val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
+     val search: java.util.Map[String,String] = 
+     Map("start" -> start.toString(frmt),
+          "end"  -> end.toString(frmt))
+      val res = makeCall("call.search", List[Object](acctid, search)).flatMap(results => 
+        results.map(o => parseCallLog(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
+     )
+     res 
+  } 
+
+
+  def getCallLogs(acctid: String, start: DateTime, end:DateTime): BravoM[List[CallLog]] = {
     (for {
-      search <- fctry(Map("start" -> start.toString(frmt),"end"  -> end.toString(frmt)))
+      search <- fctry(c => Map[String,String]("start" -> start.toString(frmt),"end" -> end.toString(frmt)))
+      _     = println(" ABOUT TO MAKE THE XML CALL ~~~~~~")
+      ss: java.util.Map[String,String] = search
       results <- makeCall("call.search", List[Object](acctid, search))
     } yield {
       results.map(o => parseCallLog(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
@@ -92,6 +106,7 @@ object Marchex {
       caller_name <- getVal[String]("caller_name")
       caller_number <- getVal[String]("caller_number")
       cmpid   <- getVal[String]("cmpid")
+      _       = println("halfoway through parsing")
       disposition <- getVal[String]("disposition")
       forwardno <- getVal[String]("forwardno")
       grpid   <- getVal[String]("grpid")
@@ -101,10 +116,10 @@ object Marchex {
       rating  <- getVal[String]("rating")
       recorded <- getVal[Boolean]("recorded")
       ringdur <- getVal[Int]("ring_duration")
+      _       = println("HERE at th eend of parsing")
     } yield 
       CallLog(acct, assigned_to, call_id, call_start, call_status, call_end, caller_name, caller_number, cmpid, disposition, forwardno, grpid, inbound_ext, inboundno, keyword, rating, recorded, ringdur)
   }
-
     
   private def parseAccount(implicit hm: HashMap[String,Object]): \/[JazelError, MarchexAccount] = 
     for {

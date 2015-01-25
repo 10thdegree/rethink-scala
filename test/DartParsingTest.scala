@@ -14,7 +14,7 @@ import Gen._
 import Arbitrary.arbitrary 
 import org.joda.time.DateTime
 
-object Test {
+object ReportParsingTest {
   trait SampleReport {
     def toMap: Map[String,String]
 
@@ -39,7 +39,7 @@ object Test {
 }
 
 object DartCSVParsingTest extends Properties("Dart Parsing Test") {
-  import Test._
+  import ReportParsingTest._
   
   property("Dart Parsing roundtrip") = forAll { (r: RawDartReport) => {
     val blah = ReportParser.parse(r.data)  

@@ -51,13 +51,13 @@ object MarchexDataGenerator {
                   number, cmpid, disp, forward, groupid, inboundExt, inbound, keyword, rating, recorded, ringdur)
 }
 
-object server extends Properties("Bravo API tests") {
+object MarchexAPITest extends Properties("Bravo API tests") {
   import bravo.test.api.MarchexDataGenerator._
   
   var callLogs: List[CallLog] = List[CallLog]() 
   
   class Call {
-    def search(custId: String, m: java.util.Map[String,String]): Array[java.util.Map[String,Object]] = callLogs.map(Marchex.callLogToMap(_): java.util.Map[String,Object]).toArray
+    def search(custId: String, m: java.util.Map[String,String]): Array[java.util.Map[String,Object]] =  null //Array[java.util.Map[String,Object]]()//callLogs.map(Marchex.callLogToMap(_): java.util.Map[String,Object]).toArray
   }   
   
   property("service bijection") = forAll { (d: Date) => 
@@ -79,12 +79,15 @@ object server extends Properties("Bravo API tests") {
     val config = DartAPITest.TestConfig()
     
     val dt = DateTime.now()
-
+    println("HERE = about to call getCallLogs")
     val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)
-    ws.shutdown()
-    val future = result.run.run(config)   
+    val future = result.run.run(config.copy(marchexurl="http://localhost:"+port))
     val either = Await.result(future, scala.concurrent.duration.Duration(3, SECONDS) )
-    either._2.fold(l => false, r => true)
+    ws.shutdown()
+    either._2.fold(l => {
+      println(" l = " + l)
+      false
+      }, r => true)
   }
 }
 
