@@ -24,10 +24,10 @@ lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
 
 
 lazy val angularDeps = Seq(// Angular-js
-  "org.webjars" % "angularjs" % "1.2.16",
-  "org.webjars" % "angular-ui" % "0.4.0-2"  exclude("org.webjars", "angularjs"),
-  "org.webjars" % "angular-ui-bootstrap" % "0.10.0-1"  exclude("org.webjars", "angularjs"),
-  "org.webjars" % "angular-ui-router" % "0.2.10" exclude("org.webjars", "angularjs"),
+  "org.webjars" % "angularjs" % "1.3.10",
+  "org.webjars" % "angular-ui" % "0.4.0-3"  exclude("org.webjars", "angularjs"),
+  "org.webjars" % "angular-ui-bootstrap" % "0.12.0"  exclude("org.webjars", "angularjs"),
+  "org.webjars" % "angular-ui-router" % "0.2.13" exclude("org.webjars", "angularjs"),
   "org.webjars" % "smart-table" % "1.4.8"
 )
 
