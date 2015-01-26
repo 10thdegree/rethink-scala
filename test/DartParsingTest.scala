@@ -16,7 +16,7 @@ import org.joda.time.DateTime
 
 
 object DartCSVParsingTest extends Properties("Dart Parsing Test") {
-  import bravo.ReportDataGen._
+  import bravo.test.ReportDataGen._
   
   property("Dart Parsing roundtrip") = forAll { (r: RawDartReport) => {
     val blah = ReportParser.parse(r.data)  

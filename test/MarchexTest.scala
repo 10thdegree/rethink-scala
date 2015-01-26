@@ -20,15 +20,14 @@ import scala.collection.JavaConversions._
 import bravo.core.Util._
 
 object MarchexDataGenerator {
- 
+  import bravo.test.ReportDataGen._
+
   case class Ascii(s: String) 
 
   
   val phonenumber = Gen.listOfN(9, arbitrary[Int]).map(l => l.map(_.toString).mkString)
   
-  implicit val datetime: Arbitrary[DateTime] = Arbitrary( arbitrary[Date].map(new DateTime(_)) )
-
-  val callLogGen = for {
+    val callLogGen = for {
    acct <- Gen.alphaStr
    assign <- Gen.alphaStr
    callid <- Gen.alphaStr
