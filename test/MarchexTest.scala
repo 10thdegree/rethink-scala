@@ -79,7 +79,6 @@ object MarchexAPITest extends Properties("Bravo API tests") {
     val config = DartAPITest.TestConfig()
     
     val dt = DateTime.now()
-    println("HERE = about to call getCallLogs")
     val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)
     val future = result.run.run(config.copy(marchexurl="http://localhost:"+port))
     val either = Await.result(future, scala.concurrent.duration.Duration(3, SECONDS) )

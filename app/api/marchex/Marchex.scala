@@ -92,7 +92,6 @@ object Marchex {
       caller_name <- getVal[String]("caller_name")
       caller_number <- getVal[String]("caller_number")
       cmpid   <- getVal[String]("cmpid")
-      _       = println("halfoway through parsing")
       disposition <- getVal[String]("disposition")
       forwardno <- getVal[String]("forwardno")
       grpid   <- getVal[String]("grpid")
@@ -102,7 +101,6 @@ object Marchex {
       rating  <- getVal[String]("rating")
       recorded <- getVal[Boolean]("recorded")
       ringdur <- getVal[Int]("ring_duration")
-      _       = println("HERE at th eend of parsing")
     } yield 
       CallLog(acct, assigned_to, call_id, call_start, call_status, call_end, caller_name, caller_number, cmpid, disposition, forwardno, grpid, inbound_ext, inboundno, keyword, rating, recorded, ringdur)
   }
