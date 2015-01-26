@@ -1,7 +1,7 @@
 app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', function ($timeout, reports, scope) {
     var vm = this;
 
-    vm.isLoading = false;
+    vm.isLoading = true;
 
     vm.range = {
         start: $("#startDate").val(),
@@ -36,7 +36,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', function (
         });
 
         var cols = report.columns.map(function (e) {
-            return new ColumnDesc(e, e, e);
+            return new ColumnDesc(e.varName, e.displayName, e.varName);
         });
         cols.unshift(new ColumnDesc("Key", "Key", "Key"));
 

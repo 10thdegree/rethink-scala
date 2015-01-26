@@ -20,10 +20,13 @@ object FooterTypes {
 }
 
 case class Field(id: Option[UUID],
-                 label: String,
-                 formula: Option[String], // NOTE: bindable fields don't have formulae
+                 displayName: Option[String],
+                 varName: String,
+                 formula: Option[String],
                  footerFormula: Option[String] = None,
-                 footerType: FooterTypes.FooterType = FooterTypes.IncludesAllData) extends Document
+                 footerType: FooterType = FooterTypes.IncludesAllData) extends Document {
+  def label = displayName.getOrElse(varName)
+}
 
 case class Template(id: Option[UUID], label: String, fieldIds: List[UUID])
   extends Document
@@ -35,10 +38,13 @@ case class Template(id: Option[UUID], label: String, fieldIds: List[UUID])
 
 case class Chart(id: Option[UUID] /* TODO */)
 
+case class FieldSort(fieldId: UUID, ascending: Boolean = false)
+
 case class View(id: Option[UUID],
                 label: String,
                 templateId: UUID,
                 fieldIds: List[UUID],
+                defaultFieldSort: Option[FieldSort],
                 permissionIds: List[UUID],
                 chartIds: List[UUID])
   extends Joins4[Template, Field, Permission, Chart] with Document

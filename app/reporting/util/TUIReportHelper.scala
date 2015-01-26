@@ -65,7 +65,7 @@ object TUIReportHelper {
                           fieldBindings: List[FieldBinding],
                           report: Report) {
 
-    val fieldsLookup = fields.map(f => f.label -> f).toMap
+    val fieldsLookup = fields.map(f => f.varName -> f).toMap
     val fieldsLookupById = fields.map(f => f.id.get -> f).toMap
   }
 
@@ -74,24 +74,24 @@ object TUIReportHelper {
     val account = Account(randUUID, "TUI")
 
     val fields = List(
-      Field(randUUID, "Spend", None),
+      Field(randUUID, None, "Spend", None),
       // Spend = [Cost] + ([Clicks]f * [PpcTrackingRate])
-      Field(randUUID, "TotalSpend", "currency(Spend)".some), // Should include fees!
-      Field(randUUID, "Impressions", None),
-      Field(randUUID, "Clicks", None, None),
-      Field(randUUID, "CTR", "percentage(Clicks / Impressions)".some),
-      Field(randUUID, "CPC", "currency(TotalSpend / Clicks)".some),
+      Field(randUUID, "Total Spend".some, "TotalSpend", "currency(Spend)".some), // Should include fees!
+      Field(randUUID, None, "Impressions", None),
+      Field(randUUID, None, "Clicks", None),
+      Field(randUUID, None, "CTR", "percentage(Clicks / Impressions)".some),
+      Field(randUUID, None, "CPC", "currency(TotalSpend / Clicks)".some),
       //Field(randUUID, "AvgPosition", None),
-      Field(randUUID, "Contact", None),
-      Field(randUUID, "Inquiries", None),
-      Field(randUUID, "Apps", None),
-      Field(randUUID, "Calls", "0".some),
-      Field(randUUID, "TotalLeads", "Contact + Inquiries + Apps + Calls".some),
-      Field(randUUID, "CPL", "currency(TotalSpend / TotalLeads)".some),
+      Field(randUUID, None, "Contact", None),
+      Field(randUUID, None, "Inquiries", None),
+      Field(randUUID, None, "Apps", None),
+      Field(randUUID, None, "Calls", "0".some),
+      Field(randUUID, "Total Leads".some, "TotalLeads", "Contact + Inquiries + Apps + Calls".some),
+      Field(randUUID, None, "CPL", "currency(TotalSpend / TotalLeads)".some),
       // What is SSC??
-      Field(randUUID, "SSC", "percentage(TotalLeads / Clicks)".some)
+      Field(randUUID, None, "SSC", "percentage(TotalLeads / Clicks)".some)
     )
-    val fieldsLookup = fields.map(f => f.label -> f).toMap
+    val fieldsLookup = fields.map(f => f.varName -> f).toMap
 
     val template = Template(randUUID, "Search Performance", fields.map(_.id).flatten)
 
@@ -99,7 +99,8 @@ object TUIReportHelper {
       randUUID,
       "General User",
       template.id.get,
-      fields.filterNot(_.label == "Spend").map(_.id).flatten,
+      fields.filterNot(_.varName == "Spend").map(_.id).flatten,
+      fields.find(_.varName == "TotalSpend").map(f => FieldSort(f.id.get, false)),
       List(),
       List())
 
