@@ -132,10 +132,20 @@ A report template should be composed of fields, which will form the columns of t
 
 ```
 #!groovy
-spendWithServingFees = spend + servingFees(adType).cpc * clicks + servingFees(adType).cpm * impressions / 1000
-spendWithBothFees = max(
-    agencyFees("display").monthlyFee / row.totalDaysInMonth * row.monthDays,
-    agencyFees("display").percentileMonth(month.sum(spendWithServingFees))
+// Serving fees are simple products:
+servingFees = (servingFees(adType).cpc * clicks) + (servingFees(adType).cpm * impressions / 1000)
+
+// During evaluation, the engine knows the time-span for each row,
+// so it can implicitly compute the agency fees.
+agencyFees = agencyFees("display").summedMonthlyFees(sum(impressions)) * (impressions / sum(impressions))
+
+// We could introduce a shorthand for the above:
+// (NOTE that it would still implicitly rely on sum(impressions) because
+// we need to know if we are adding in the base monthly fee or percentile)
+agencyFees1 = agencyFees("display").monthlyFees(impressions)
+
+// Combined field with all the fees + spend:
+spendWithBothFees = spend + servingFees + agencyFees
 ```
 
 Based on user permissions, different reports should be visible to the user.

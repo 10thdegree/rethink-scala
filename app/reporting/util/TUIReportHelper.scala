@@ -3,6 +3,7 @@ package reporting.util
 import java.util.UUID
 
 import org.joda.time.DateTime
+import reporting.models.Fees.ServingFees
 import reporting.models._
 import reporting.models.ds.{DateSelector, dart}
 
@@ -32,7 +33,7 @@ object TUIReportHelper {
     "Paid Search Clicks" -> BigDecimal(20),
     "TUI  Home Page : Arrival: Paid Search Actions" -> BigDecimal(10),
     "TUI Confirmation : PHD Request Info: Paid Search Actions" -> BigDecimal(5),
-    "TUI Apply Online : Step 0 - New Application: Paid Search Actions" -> BigDecimal(1)
+    "TUI Counter : Step 3 (was step 4): Paid Search Actions" -> BigDecimal(1)
   )
 
   def sampleAttributes = ds.DataSource.Attributes.fromMap(sampleNumericRow())
@@ -63,9 +64,10 @@ object TUIReportHelper {
                           view: View,
                           ds: DartDS,
                           fieldBindings: List[FieldBinding],
-                          report: Report) {
+                          report: Report,
+                          servingFees: List[ServingFees] = List()) {
 
-    val fieldsLookup = fields.map(f => f.label -> f).toMap
+    val fieldsLookup = fields.map(f => f.varName -> f).toMap
     val fieldsLookupById = fields.map(f => f.id.get -> f).toMap
   }
 
@@ -74,24 +76,28 @@ object TUIReportHelper {
     val account = Account(randUUID, "TUI")
 
     val fields = List(
-      Field(randUUID, "Spend", None),
+      Field(randUUID, None, "spend", None),
       // Spend = [Cost] + ([Clicks]f * [PpcTrackingRate])
-      Field(randUUID, "TotalSpend", "currency(Spend)".some), // Should include fees!
-      Field(randUUID, "Impressions", None),
-      Field(randUUID, "Clicks", None, None),
-      Field(randUUID, "CTR", "percentage(Clicks / Impressions)".some),
-      Field(randUUID, "CPC", "currency(TotalSpend / Clicks)".some),
+      //Field(randUUID, None, "servingFees",
+      //  "(servingFees(\"banner\").cpc * clicks) + (servingFees(\"banner\").cpm * impressions / 1000)".some),
+      //Field(randUUID, None, "agencyServingFees",
+      //  "agencyFees(\"display\").monthlyFees(impressions)".some),
+      Field(randUUID, "Total spend".some, "totalSpend", "currency(spend)".some), // Should include fees!
+      Field(randUUID, None, "impressions", None),
+      Field(randUUID, None, "clicks", None),
+      Field(randUUID, None, "ctr", "percentage(clicks / impressions)".some),
+      Field(randUUID, None, "cpc", "currency(totalSpend / clicks)".some),
       //Field(randUUID, "AvgPosition", None),
-      Field(randUUID, "Contact", None),
-      Field(randUUID, "Inquiries", None),
-      Field(randUUID, "Apps", None),
-      Field(randUUID, "Calls", "0".some),
-      Field(randUUID, "TotalLeads", "Contact + Inquiries + Apps + Calls".some),
-      Field(randUUID, "CPL", "currency(TotalSpend / TotalLeads)".some),
+      Field(randUUID, None, "contact", None),
+      Field(randUUID, None, "inquiries", None),
+      Field(randUUID, None, "apps", None),
+      Field(randUUID, None, "calls", "0".some),
+      Field(randUUID, "Total Leads".some, "totalLeads", "contact + inquiries + apps + calls".some),
+      Field(randUUID, None, "cpl", "currency(totalSpend / totalLeads)".some),
       // What is SSC??
-      Field(randUUID, "SSC", "percentage(TotalLeads / Clicks)".some)
+      Field(randUUID, None, "ssc", "percentage(totalLeads / clicks)".some)
     )
-    val fieldsLookup = fields.map(f => f.label -> f).toMap
+    val fieldsLookup = fields.map(f => f.varName -> f).toMap
 
     val template = Template(randUUID, "Search Performance", fields.map(_.id).flatten)
 
@@ -99,7 +105,8 @@ object TUIReportHelper {
       randUUID,
       "General User",
       template.id.get,
-      fields.filterNot(_.label == "Spend").map(_.id).flatten,
+      fields.filterNot(_.varName == "spend").map(_.id).flatten,
+      fields.find(_.varName == "totalSpend").map(f => FieldSort(f.id.get, false)),
       List(),
       List())
 
@@ -153,13 +160,13 @@ object TUIReportHelper {
     )
 
     val fieldBindings = List(
-      new FieldBinding(fieldsLookup("Spend").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("spend").id.get, dartDs.dsId.get,
         "Paid Search Cost"),
-      new FieldBinding(fieldsLookup("Impressions").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("impressions").id.get, dartDs.dsId.get,
         "Paid Search Impressions"),
-      new FieldBinding(fieldsLookup("Clicks").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("clicks").id.get, dartDs.dsId.get,
         "Paid Search Clicks"),
-      new FieldBinding(fieldsLookup("Contact").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("contact").id.get, dartDs.dsId.get,
         "TUI  Home Page : Arrival: Paid Search Actions"),
 
       // SHOULD BE:
@@ -168,11 +175,11 @@ object TUIReportHelper {
       // Ph.D. Inquiry Confirmation
       // Partnership Inquiry Confirmation
       // Net Price Calculator Inquiry Confirmation
-      new FieldBinding(fieldsLookup("Inquiries").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("inquiries").id.get, dartDs.dsId.get,
         "TUI Confirmation : PHD Request Info: Paid Search Actions"),
 
       // SHOULD BE: Step 3 (was step 4)
-      new FieldBinding(fieldsLookup("Apps").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("apps").id.get, dartDs.dsId.get,
         "TUI Counter : Step 3 (was step 4): Paid Search Actions")
       //new FieldBinding(fieldsLookup("Calls").id.get, dartDs.dsId.get, "")
     )

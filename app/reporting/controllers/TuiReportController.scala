@@ -102,7 +102,7 @@ object TuiReportController extends Controller {
         Logger.debug("Generating report...")
         val res = gen.getReport(ro.ds, dsRows)(start, end) //does this need start/end? we feed in the data?
         Logger.debug(s"Generated report with ${res.size} rows")
-        GeneratedReport(viewFields, res)
+        GeneratedReport(viewFields, res).sortRowsBy(ro.view.defaultFieldSort)
       }
     }
 
@@ -119,6 +119,11 @@ object TuiReportController extends Controller {
         (JsPath \ "disp").write[String]
       )((v: GeneratedReport.FieldValue) => (v.value, v.display))
 
+    implicit val fieldWrites: Writes[reporting.models.Field] = (
+      (JsPath \ "varName").write[String] and
+        (JsPath \ "displayName").write[String]
+      )((f: reporting.models.Field) => (f.varName, f.label))
+
     implicit val generatedReportRowWrites: Writes[GeneratedReport.Row] = (
       (JsPath \ "key").write[String] and
         //(JsPath \ "date").write[String] and
@@ -126,12 +131,12 @@ object TuiReportController extends Controller {
       )((row: GeneratedReport.Row) => (
       row.keys.mkString("-"),
       //row.date.toString("yyyy-MM-dd"),
-      row.orderedFields(viewFields).map({case (k,v) => k.label -> v }).toMap))//asInstanceOf[Map[String, GeneratedReport.FieldValue]]
+      row.orderedFields(viewFields).map({case (k,v) => k.varName -> v }).toMap))//asInstanceOf[Map[String, GeneratedReport.FieldValue]]
 
     implicit val generatedReportWrites: Writes[GeneratedReport] = (
-      (JsPath \ "fields").write[List[String]] and
+      (JsPath \ "fields").write[List[reporting.models.Field]] and
         (JsPath \ "rows").write[List[GeneratedReport.Row]]
-      )((r:GeneratedReport) => (r.fields.map(_.label).toList, r.rows))
+      )((r:GeneratedReport) => (r.fields.toList, r.rows))
 
     val report = Dart.getReport(ro.ds.queryId.toInt, start, end)
     val parsedReport = report

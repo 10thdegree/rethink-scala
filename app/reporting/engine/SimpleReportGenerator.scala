@@ -13,14 +13,14 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
   val allFields = fields
   val allFieldsLookup = allFields.map(f => f.id.get -> f).toMap
-  val compiler = new FormulaCompiler(allFields.map(_.label): _*)
+  val compiler = new FormulaCompiler(allFields.map(_.varName): _*)
   val compiledFields = allFields.map(f => f -> f.formula.map(compiler.apply))
-  val labeledTerms = compiledFields.map({ case (field, term) => field.label -> term}).toMap
-  val labeledFields = compiledFields.map({ case (field, term) => field.label -> field}).toMap
+  val labeledTerms = compiledFields.map({ case (field, term) => field.varName -> term}).toMap
+  val labeledFields = compiledFields.map({ case (field, term) => field.varName -> field}).toMap
   val groupedTerms = FormulaCompiler.segment(labeledTerms.toList: _*)(labeledTerms)
   val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
   val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
-  val labeledBindings = allFields.map(f => f.label -> bindings.get(f.id.get)).toMap
+  val labeledBindings = allFields.map(f => f.varName -> bindings.get(f.id.get)).toMap
 
   lazy val requiredFieldBindings: List[(String, FieldBinding)] = labeledBindings
       .map({case (k,vo) => vo.map(k -> _) })
@@ -73,7 +73,19 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
   }
 }
 
-case class GeneratedReport(fields: List[Field], rows: List[GeneratedReport.Row])
+case class GeneratedReport(fields: List[Field], rows: List[GeneratedReport.Row]) {
+
+  var fieldsLookup = fields.map(f => f.id.get -> f).toMap
+
+  import GeneratedReport.implicits._
+
+  def sortRowsBy(fieldSort: Option[reporting.models.FieldSort]) =
+    fieldSort.map(fs => fieldsLookup(fs.fieldId) -> fs.ascending) match {
+      case Some((f, true)) => this.copy(rows = this.rows.sortBy(r => r.fields(f)))
+      case Some((f, false)) => this.copy(rows = this.rows.sortBy(r => r.fields(f)).reverse)
+      case _ => this.copy(rows = this.rows.sortBy(r => r.keys.mkString("-")))
+    }
+}
 
 object GeneratedReport {
   case class FieldValue(value: BigDecimal, display: String)
@@ -87,7 +99,8 @@ object GeneratedReport {
   }
 
   object implicits {
-    import scalaz._, Scalaz._
+    implicit def FieldValueOrdering: Ordering[FieldValue] = Ordering.fromLessThan((a, b) => a.value < b.value)
+
     /*implicit def RowSemigroup: Semigroup[Row] = new Semigroup[Row] {
       def append(a1: Row, a2: => Row): Row = {
         import scalaz.Scalaz.ToSemigroupOps

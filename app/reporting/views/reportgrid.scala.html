@@ -3,15 +3,31 @@
 <html ng-app="app">
     <head>
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery.min.js"))"></script>
-        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular.js"></script>
-        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular-touch.js"></script>
-        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular-animate.js"></script>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("angular.min.js"))"></script>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("angular-touch.min.js"))"></script>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("angular-animate.min.js"))"></script>
         <link rel="stylesheet" type="text/css" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap.css"))">
         <link rel="stylesheet" type="text/css" href="@routes.WebJarAssets.at(WebJarAssets.locate("c3.css"))">
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("smart-table.min.js"))"></script>
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("d3.min.js"))"></script>
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("c3.min.js"))"></script>
         <link rel="stylesheet" type="text/css" href="@reporting.controllers.routes.Assets.at("stylesheets/ui-grid.css")">
+        <style type="text/css">
+            .glyphicon-refresh-animate {
+                -animation: spin .7s infinite linear;
+                -webkit-animation: spin2 .7s infinite linear;
+            }
+
+            @@-webkit-keyframes spin2 {
+                from { -webkit-transform: rotate(0deg);}
+                to { -webkit-transform: rotate(360deg);}
+            }
+
+            @@keyframes spin {
+                from { transform: scale(1) rotate(0deg);}
+                to { transform: scale(1) rotate(360deg);}
+            }
+        </style>
     </head>
     <body>
         <form>
@@ -19,38 +35,42 @@
             <input type="hidden" id="endDate" name="endDate" value="@endDate"/>
         </form>
         <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/lrDragNDrop.js")"></script>
-        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/reportgrid.js")"></script>
-        <div ng-controller="ReportView" style="padding-left: 10px; padding-right: 10px">
-            <div id="reportLoading" style="text-align: center; padding-top: 20px" ng-show="isLoading">
-                Loading Report...
-                <br/>
-                <img src="@reporting.controllers.routes.Assets.at("images/ajax-loader.gif")"/>
+        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportGridApp.js")"></script>
+        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportsService.js")"></script>
+        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportCtrl.js")"></script>
+        <div ng-controller="ReportCtrl as report" style="padding-left: 10px; padding-right: 10px">
+            <div id="reportLoading" style="text-align: center; padding-top: 20px" ng-show="report.isLoading" class="container">
+                <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading Report...
             </div>
-            <div id="report" ng-show="! isLoading">
-                <div style="text-align: center"><h2>{{reportTitle}}</h2></div>
+            <div id="report" ng-show="!report.isLoading">
+                <div style="text-align: center"><h2>{{report.reportTitle}}</h2></div>
                 <div>
-                    <div id="piechart" style="width : 48% ; display : inline-block"></div>
-                    <div id="barchart" style="width : 48% ; display : inline-block"></div>
+                    <div style="width: 48%; display: inline-block">
+                        <bvo-pie-chart id="piechart" row-data="report.rows" target-field="impressions" title="Visitors by Category" />
+                    </div>
+                    <div style="width : 48% ; display : inline-block">
+                        <bvo-bar-chart id="barchart" row-data="report.rows" target-field="cpc" title="Cost per Visitor"/>
+                    </div>
                 </div>
-                <table st-table="rowCollection" st-safe-src="rows" class="table table-striped">
+                <table st-table="rowCollection" st-safe-src="report.rows" class="table table-striped">
                     <thead>
                         <tr>
-                            <th ng-repeat="col in columns" lr-drag-src="headers" lr-drop-target="headers" st-sort="{{col.name}}.val">{{col.display}}</th>
+                            <th ng-repeat="col in report.columns" lr-drag-src="headers" lr-drop-target="headers" st-sort="{{col.name}}.val">{{col.display}}</th>
                         </tr>
                         <tr>
-                            <th ng-repeat="col in columns" ng-visible="col.name == 'Key'">
+                            <th ng-repeat="col in report.columns" ng-visible="col.name == 'Key'">
                                 <input st-search="'{{col.search}}'" placeholder="{{col.display}}" class="input-sm form-control" type="search"/>
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr ng-repeat="row in rowCollection">
-                            <td ng-repeat="col in columns">{{row[col.name].disp}}</td>
+                            <td ng-repeat="col in report.columns">{{row[col.name].disp}}</td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="{{columns.length}}" class="text-center"> FOOTER HERE </td>
+                            <td colspan="{{report.columns.length}}" class="text-center"> FOOTER HERE </td>
                         </tr>
                     </tfoot>
                 </table>
