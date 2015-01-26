@@ -74,22 +74,26 @@ object TUIReportHelper {
     val account = Account(randUUID, "TUI")
 
     val fields = List(
-      Field(randUUID, None, "Spend", None),
+      Field(randUUID, None, "spend", None),
       // Spend = [Cost] + ([Clicks]f * [PpcTrackingRate])
-      Field(randUUID, "Total Spend".some, "TotalSpend", "currency(Spend)".some), // Should include fees!
-      Field(randUUID, None, "Impressions", None),
-      Field(randUUID, None, "Clicks", None),
-      Field(randUUID, None, "CTR", "percentage(Clicks / Impressions)".some),
-      Field(randUUID, None, "CPC", "currency(TotalSpend / Clicks)".some),
+      //Field(randUUID, None, "servingFees",
+      //  "(servingFees(\"banner\").cpc * clicks) + (servingFees(\"banner\").cpm * impressions / 1000)".some),
+      //Field(randUUID, None, "agencyServingFees",
+      //  "agencyFees(\"display\").fees(sum(impressions))".some),
+      Field(randUUID, "Total spend".some, "totalSpend", "currency(spend)".some), // Should include fees!
+      Field(randUUID, None, "impressions", None),
+      Field(randUUID, None, "clicks", None),
+      Field(randUUID, None, "ctr", "percentage(clicks / impressions)".some),
+      Field(randUUID, None, "cpc", "currency(totalSpend / clicks)".some),
       //Field(randUUID, "AvgPosition", None),
-      Field(randUUID, None, "Contact", None),
-      Field(randUUID, None, "Inquiries", None),
-      Field(randUUID, None, "Apps", None),
-      Field(randUUID, None, "Calls", "0".some),
-      Field(randUUID, "Total Leads".some, "TotalLeads", "Contact + Inquiries + Apps + Calls".some),
-      Field(randUUID, None, "CPL", "currency(TotalSpend / TotalLeads)".some),
+      Field(randUUID, None, "contact", None),
+      Field(randUUID, None, "inquiries", None),
+      Field(randUUID, None, "apps", None),
+      Field(randUUID, None, "calls", "0".some),
+      Field(randUUID, "Total Leads".some, "totalLeads", "contact + inquiries + apps + calls".some),
+      Field(randUUID, None, "cpl", "currency(totalSpend / totalLeads)".some),
       // What is SSC??
-      Field(randUUID, None, "SSC", "percentage(TotalLeads / Clicks)".some)
+      Field(randUUID, None, "ssc", "percentage(totalLeads / clicks)".some)
     )
     val fieldsLookup = fields.map(f => f.varName -> f).toMap
 
@@ -99,8 +103,8 @@ object TUIReportHelper {
       randUUID,
       "General User",
       template.id.get,
-      fields.filterNot(_.varName == "Spend").map(_.id).flatten,
-      fields.find(_.varName == "TotalSpend").map(f => FieldSort(f.id.get, false)),
+      fields.filterNot(_.varName == "spend").map(_.id).flatten,
+      fields.find(_.varName == "totalSpend").map(f => FieldSort(f.id.get, false)),
       List(),
       List())
 
@@ -154,13 +158,13 @@ object TUIReportHelper {
     )
 
     val fieldBindings = List(
-      new FieldBinding(fieldsLookup("Spend").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("spend").id.get, dartDs.dsId.get,
         "Paid Search Cost"),
-      new FieldBinding(fieldsLookup("Impressions").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("impressions").id.get, dartDs.dsId.get,
         "Paid Search Impressions"),
-      new FieldBinding(fieldsLookup("Clicks").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("clicks").id.get, dartDs.dsId.get,
         "Paid Search Clicks"),
-      new FieldBinding(fieldsLookup("Contact").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("contact").id.get, dartDs.dsId.get,
         "TUI  Home Page : Arrival: Paid Search Actions"),
 
       // SHOULD BE:
@@ -169,11 +173,11 @@ object TUIReportHelper {
       // Ph.D. Inquiry Confirmation
       // Partnership Inquiry Confirmation
       // Net Price Calculator Inquiry Confirmation
-      new FieldBinding(fieldsLookup("Inquiries").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("inquiries").id.get, dartDs.dsId.get,
         "TUI Confirmation : PHD Request Info: Paid Search Actions"),
 
       // SHOULD BE: Step 3 (was step 4)
-      new FieldBinding(fieldsLookup("Apps").id.get, dartDs.dsId.get,
+      new FieldBinding(fieldsLookup("apps").id.get, dartDs.dsId.get,
         "TUI Counter : Step 3 (was step 4): Paid Search Actions")
       //new FieldBinding(fieldsLookup("Calls").id.get, dartDs.dsId.get, "")
     )

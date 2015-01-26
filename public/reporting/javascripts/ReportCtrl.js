@@ -55,7 +55,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', function (
     .directive('bvoBarChart', ['$window', function ($window) {
         function link(scope, element, attrs) {
             var rowData = [];
-            var targetFieldName = attrs.targetField || "CPC";
+            var targetFieldName = attrs.targetField || "cpc";
             var title = attrs.title;
 
             function updateChart() {
@@ -97,7 +97,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', function (
     .directive('bvoPieChart', ['$window', function ($window) {
         function link(scope, element, attrs) {
             var rowData = [];
-            var targetFieldName = attrs.fieldName || "Impressions";
+            var targetFieldName = attrs.targetField || "impressions";
             var title = attrs.title;
 
             function updateChart() {

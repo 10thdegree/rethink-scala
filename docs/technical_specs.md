@@ -324,7 +324,7 @@ Instead of passing start/end dates, we could create functions that implicitly wo
 //// For field "spendWithFees"
 // Implicitly use the current row's month info:
 value = max(
-    agencyFees("display").monthlyFee / row.totalDaysInMonth * row.monthDays,
+    agencyFees("display").monthlyFee * (row.monthDays / row.totalDaysInMonth),
     agencyFees("display").percentileMonth(sumMonth(impressions)) * sumMonth(spend))
 ```
 

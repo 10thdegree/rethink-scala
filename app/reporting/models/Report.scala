@@ -1,13 +1,10 @@
 package reporting.models
 
-//import DataSources.Row
-
 import java.util.UUID
 
 import com.rethinkscala.Document
-
-// XXX: DELETE ME
-trait Permission {}
+import core.models.Permission
+import reporting.models.FooterTypes.FooterType
 
 case class Account(id: Option[UUID], name: String)
 

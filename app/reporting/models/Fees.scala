@@ -29,10 +29,11 @@ object Fees {
     def overlap(span: Interval) = Option(validity.overlap(span))
   }
 
-  // Many of these
-  // If accountId == None, then it is global
-  // If validFrom/validUntil == None, then it never expires
-  case class ServingFees(accountId: Option[UUID],
+  /** ServingFees are simple proportional amounts; given some amount
+    * of impressions or clicks we do a simple product with cpm or cpc
+    * to get the total cost.
+    */
+  case class ServingFees(accountId: Option[UUID], // None == global
                          label: String, // e.g. "video", "banner"
                          cpm: Double,
                          cpc: Double,
@@ -49,9 +50,14 @@ object Fees {
                         monthlyFee: Option[Double],
                         spendPercent: Option[Double])
 
-  // If accountId == None, then it is global
-  // If validFrom/validUntil == None, then it never expires
-  case class AgencyFees(accountId: Option[UUID],
+  /** AgencyFees are more complicated that ServingFees, because they
+    * can only be computed on aggregate for a time period, and then
+    * distributed afterwards; the reason for this is that there is a minimum
+    * agency monthly fee that should be used if not-enough impressions were
+    * reached. Then using this aggregate sum, we can get each report entry's
+    * proportional amount by dividing against it.
+    */
+  case class AgencyFees(accountId: Option[UUID], // None == global
                         label: String, // e.g. "display", "search"
                         spendRanges: List[SpendRange],
                         validFrom: Option[DateTime],

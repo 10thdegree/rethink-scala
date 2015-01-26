@@ -32,7 +32,9 @@ object FormulaEvaluator {
 
   class EvaluationCxt[R](val report: Report) {
 
-    case class Sum(count: Long, sum: Result)
+    case class Sum(count: Long, sum: Result) {
+      def +(that: Sum): Sum = Sum(this.count + that.count, this.sum + that.sum)
+    }
 
     // Represents the current row being processed
     case class RowCxt(date: DateTime)(implicit report: Report) extends EvaluationCxt.Row {
@@ -82,7 +84,11 @@ object FormulaEvaluator {
 
     def sum(key: String): Result = sums(key).sum
 
+    // TODO(dk): Rows need to represent spans(?) not single instants in time.
     def monthlySum(row: EvaluationCxt.Row)(key: String): Double = monthSums(row.year + "/" + row.month)(key).sum.toDouble
+
+    // Return a map of dateStrs (yr/mo) to sums for the requested field.
+    def monthlySums(key: String) = monthSums.map({ case (dateStr, vals) => dateStr -> vals(key) })
 
     def updateSums(row: EvaluationCxt.Row, key: String, value: Result) = {
       // Month sums
@@ -100,6 +106,8 @@ object FormulaEvaluator {
     }
 
     object AgencyFees {
+      def fees(label: String) = monthlySums(label).values.reduce(_ + _).sum //agencyFeesLookup()
+
       def monthly = 0d // agencyFeesLookup(row.month)
 
       def percentileMonthly(impressions: Int) = 0d //agencyFeesLookup(row.month, Some(impressions))
@@ -254,9 +262,12 @@ object FormulaEvaluator {
     // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
     case Max(left, right) => Result(eval(left).value.max(eval(right).value)) // loses format
     // Fees
-    case t@Fees.ServingFee(label, ft) if ft == Fees.ServingFeeTypes.Cpc => Result(cxt.servingFees(label).cpc)
-    case t@Fees.ServingFee(label, ft) if ft == Fees.ServingFeeTypes.Cpm => Result(cxt.servingFees(label).cpm)
-    case t@Fees.AgencyFee(label, ft, ref) if ft == Fees.AgencyFeeTypes.Monthly => Result(cxt.agencyFees(label).monthly)
+    case t@Fees.ServingFee(label, ft) if ft == Fees.ServingFeeTypes.Cpc =>
+      Result(cxt.servingFees(label).cpc)
+    case t@Fees.ServingFee(label, ft) if ft == Fees.ServingFeeTypes.Cpm =>
+      Result(cxt.servingFees(label).cpm)
+    case t@Fees.AgencyFee(label, ft, ref) if ft == Fees.AgencyFeeTypes.Monthly =>
+      Result(cxt.agencyFees(label).monthly)
     case t@Fees.AgencyFee(label, ft, ref) if ft == Fees.AgencyFeeTypes.PercentileMonth =>
       Result(cxt.agencyFees(label).percentileMonthly(ref.map(r => eval(r).toInt).getOrElse(0)))
   }
