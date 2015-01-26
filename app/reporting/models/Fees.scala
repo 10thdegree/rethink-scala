@@ -4,17 +4,19 @@ import java.util.UUID
 
 import com.rethinkscala.Document
 import org.joda.time.{Years, Interval, DateTime}
-import reporting.engine.Joda
+import reporting.engine.JodaTime.implicits._
+import reporting.engine.JodaTime
 
 object Fees {
 
   trait Fees {
     def accountId: Option[UUID]
     def label: String
+    // We are only concerned with year/months of these
     def validFrom: Option[DateTime]
     def validUntil: Option[DateTime]
 
-    lazy val dates = (validFrom.getOrElse(Joda.startOfTime), validUntil.getOrElse(Joda.endOfTime))
+    lazy val dates = (validFrom.getOrElse(JodaTime.startOfTime), validUntil.getOrElse(JodaTime.endOfTime))
     lazy val validity = new Interval(dates._1, dates._2)
 
     /*
@@ -27,6 +29,17 @@ object Fees {
     */
 
     def overlap(span: Interval) = Option(validity.overlap(span))
+  }
+
+  trait FeesComputer[T <: Fees] {
+    def apply(fees: List[T])(inputs: (Interval, BigDecimal)*): BigDecimal
+  }
+
+  object ServingFeesComputer extends FeesComputer[ServingFees] {
+    override def apply(fees: List[ServingFees])(inputs: (Interval, BigDecimal)*): BigDecimal = {
+      // TODO: Use
+      0
+    }
   }
 
   /** ServingFees are simple proportional amounts; given some amount
@@ -73,7 +86,7 @@ object Fees {
   //   it expects them to be contiguous only.
   class FeesByLabelLookup[F <: Fees](label: String, fees: List[F]) {
 
-    import Joda._
+    import JodaTime._
     val sortedFees = fees.sortBy(x => x.dates)
 
     def apply(searchSpan: Interval): List[F] = {
@@ -82,16 +95,16 @@ object Fees {
 
       def fold(state: State, fee: F): State = state.span
         // Some interval remains to process, so let's process it
-        .map(ss => Joda.overlapMatch(fee.validity, ss) match {
+        .map(ss => JodaTime.overlapMatch(fee.validity, ss) match {
 
           // Fees should always subsume, but we have a portion with no valid fees
-          case Joda.OverlapMatch(Some(invalid), Some(_), None) => state.copy(span = None, fees = fees :+ fee)
+          case JodaTime.OverlapMatch(Some(invalid), Some(_), None) => state.copy(span = None, fees = fees :+ fee)
 
           // Partial fee match
-          case Joda.OverlapMatch(None, Some(_), todo @ Some(_)) => state.copy(span = todo, fees = fees :+ fee)
+          case JodaTime.OverlapMatch(None, Some(_), todo @ Some(_)) => state.copy(span = todo, fees = fees :+ fee)
 
           // No overlap, so just skip the current fee
-          case Joda.OverlapMatch(Some(_), None, Some(_)) => state
+          case JodaTime.OverlapMatch(Some(_), None, Some(_)) => state
         })
         // No more interval to process, so this is a NOOP
         .getOrElse(state)

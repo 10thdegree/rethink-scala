@@ -3,6 +3,7 @@ package reporting.util
 import java.util.UUID
 
 import org.joda.time.DateTime
+import reporting.models.Fees.ServingFees
 import reporting.models._
 import reporting.models.ds.{DateSelector, dart}
 
@@ -63,7 +64,8 @@ object TUIReportHelper {
                           view: View,
                           ds: DartDS,
                           fieldBindings: List[FieldBinding],
-                          report: Report) {
+                          report: Report,
+                          servingFees: List[ServingFees] = List()) {
 
     val fieldsLookup = fields.map(f => f.varName -> f).toMap
     val fieldsLookupById = fields.map(f => f.id.get -> f).toMap
@@ -79,7 +81,7 @@ object TUIReportHelper {
       //Field(randUUID, None, "servingFees",
       //  "(servingFees(\"banner\").cpc * clicks) + (servingFees(\"banner\").cpm * impressions / 1000)".some),
       //Field(randUUID, None, "agencyServingFees",
-      //  "agencyFees(\"display\").fees(sum(impressions))".some),
+      //  "agencyFees(\"display\").monthlyFees(impressions)".some),
       Field(randUUID, "Total spend".some, "totalSpend", "currency(spend)".some), // Should include fees!
       Field(randUUID, None, "impressions", None),
       Field(randUUID, None, "clicks", None),

@@ -5,7 +5,7 @@ import java.util.UUID
 
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatterBuilder, DateTimeFormatter}
-import reporting.engine.Joda
+import reporting.engine.JodaTime.implicits._
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scalaz.Semigroup
@@ -218,7 +218,6 @@ package object ds {
       //      def groupByDate(dses: Seq[DataSource.Row]): Map[DateTime, Seq[DataSource.Row]] = dses.groupBy(_.date)
 
       def groupByDate(dses: (DataSource, Seq[T])*): Seq[(DateTime, Seq[T])] = {
-        import Joda._
         //        import scalaz.Scalaz.ToSemigroupOps
         //        val maps = dses.map(_._2.groupBy(_.date)).toList
         //        maps.reduce(_ |+| _).toSeq.sortBy(x => x._1)
