@@ -401,16 +401,19 @@ For the most part, a pretty normalised schema is fine. For storing report data f
         * Charts
             * (set defaults where appropriate; allow changing during view)
             * Pie
+                * NOTE: selection of single field is needed
                 * Domain: primary keys
-                * Range: target field
+                * Range: selected field's value
                 * Series: N/A
             * Bar
-                * Domain: target field(s)
-                * Range: target field(s) min/max
+                * NOTE: selection of one or more fields to plot bars for is needed
+                * Domain: selected fields' value(s)
+                * Range: automatic
                 * Series: primary keys
             * Line
-                * Domain: date range
-                * Range: target field
+                * NOTE: selection of
+                * Domain: date range (automatic from available data?)
+                * Range: selected field's value
                 * Series: primary keys or accounts or date ranges
     * Report Bindings
         * Report template

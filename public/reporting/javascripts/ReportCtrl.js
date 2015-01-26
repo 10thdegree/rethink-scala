@@ -47,58 +47,91 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', function (
         scope.$apply();
         // Update watchers //
 
-        var piechartData = flattened.map(function (e) {
-            return [e["Key"].disp, parseInt(e["Impressions"].val)];
-        });
-
-        var barchartData = flattened.map(function (e) {
-            var cpc = e["CPC"].val;
-            return [e["Key"].disp, parseFloat(cpc)];
-        });
-
-        var piechart = c3.generate({
-            bindto: "#piechart",
-            data: {
-                columns: piechartData,
-                type: 'donut',
-                onclick: function (d, i) {
-                    console.log("onclick", d, i);
-                },
-                onmouseover: function (d, i) {
-                    console.log("onmouseover", d, i);
-                },
-                onmouseout: function (d, i) {
-                    console.log("onmouseout", d, i);
-                }
-            },
-            donut: {
-                title: "Visitors by Category"
-            },
-            transition: {duration: 1500},
-            legend: {
-                position: 'inset'
-            }
-        });
-
-        var barchart = c3.generate({
-            bindto: "#barchart",
-            data: {
-                columns: barchartData,
-                type: "bar"
-            },
-            legend: {show: false},
-            bar: {
-                title: "Cost per Visitor"
-            },
-            axis: {
-                y: {
-                    label: "Cost per Visitor"
-                }
-            }
-        });
         console.log("Finished loading table and charts.");
     }
 
     $timeout(function() { reports.getReport(vm.range.start, vm.range.end, reportLoadedCallback); }, 1);
-}]);
+}])
+    .directive('bvoBarChart', ['$window', function ($window) {
+        function link(scope, element, attrs) {
+            var rowData = [];
+            var targetFieldName = attrs.targetField || "CPC";
+            var title = attrs.title;
 
+            function updateChart() {
+
+                var barchartData = rowData.map(function (e) {
+                    var v = e[targetFieldName].val;
+                    return [e["Key"].disp, parseFloat(v)];
+                });
+
+                var barchart = c3.generate({
+                    bindto: "#" + element.attr('id'),
+                    data: {
+                        columns: barchartData,
+                        type: "bar"
+                    },
+                    size: {
+                        width: $window.innerWidth * 0.48 // TODO: Make better
+                    },
+                    legend: {show: false},
+                    axis: {
+                        y: {
+                            label: title
+                        }
+                    }
+                });
+            }
+
+            scope.$watch(attrs.rowData, function(value) {
+                rowData = value;
+                updateChart();
+            });
+        }
+        return {
+            link: link,
+            restrict: 'E',
+            template: '<div id="{{id}}" style="{{style}}"></div>'
+        };
+    }])
+    .directive('bvoPieChart', ['$window', function ($window) {
+        function link(scope, element, attrs) {
+            var rowData = [];
+            var targetFieldName = attrs.fieldName || "Impressions";
+            var title = attrs.title;
+
+            function updateChart() {
+
+                var piechartData = rowData.map(function (e) {
+                    return [e["Key"].disp, parseInt(e[targetFieldName].val)];
+                });
+
+                var piechart = c3.generate({
+                    bindto: '#' + element.attr('id'),
+                    data: {
+                        columns: piechartData,
+                        type: 'donut'
+                    },
+                    size: {
+                        width: $window.innerWidth * 0.48 // TODO: Make better
+                    },
+                    donut: {
+                        title: title
+                    },
+                    transition: { duration: 1500 },
+                    legend: { position: 'inset' }
+                });
+            }
+
+            scope.$watch(attrs.rowData, function(value) {
+                rowData = value;
+                updateChart();
+            });
+        }
+
+        return {
+            link: link,
+            restrict: 'E',
+            template: '<div id="{{id}}" style="{{style}}"></div>'
+        };
+    }]);
