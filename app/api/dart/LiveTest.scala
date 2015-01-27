@@ -13,16 +13,16 @@ import play.Logger
 
 
 object LiveTest {
-  
+  //  implicit def defaultC = MarchexCredentials("http://api.voicestar.com/api/xmlrpc/1", "urp@10thdegree.com", "10thdegreee")
   case class ProdConfig(
       val api: DartInternalAPI = LiveDart, 
       val filePath: String = "conf/Bravo-44871094176f.p12",
       val accountId: String = "399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com",
       val userAccount: String = "bravo@10thdegree.com",
       val clientId: Int =  1297324,
-      val marchexpass: String = "",
-      val marchexurl: String = "",
-      val marchexuser: String = "",
+      val marchexpass: String = "10thdegreee",
+      val marchexurl: String = "http://api.voicestar.com/api/xmlrpc/1",
+      val marchexuser: String = "urp@10thdegree.com",
       val m: Map[String, List[Map[String,String]]] = Map[String,List[Map[String,String]]]()
     ) extends Config {
       def cache(id: String, s: DateTime, e: DateTime) = {
@@ -62,7 +62,6 @@ object LiveTest {
         val future = result.run.run(prodConfig)
         Await.result(future, scala.concurrent.duration.Duration(30, SECONDS))._2
     }
-
 
     def saveProdTest(filename:String): Unit = {
       import java.nio.file.{Paths, Files}

@@ -20,15 +20,14 @@ import scala.collection.JavaConversions._
 import bravo.core.Util._
 
 object MarchexDataGenerator {
- 
+  import bravo.test.ReportDataGen._
+
   case class Ascii(s: String) 
 
   
   val phonenumber = Gen.listOfN(9, arbitrary[Int]).map(l => l.map(_.toString).mkString)
   
-  implicit val datetime: Arbitrary[DateTime] = Arbitrary( arbitrary[Date].map(new DateTime(_)) )
-
-  val callLogGen = for {
+    val callLogGen = for {
    acct <- Gen.alphaStr
    assign <- Gen.alphaStr
    callid <- Gen.alphaStr
@@ -51,7 +50,7 @@ object MarchexDataGenerator {
                   number, cmpid, disp, forward, groupid, inboundExt, inbound, keyword, rating, recorded, ringdur)
 }
 
-object server extends Properties("Bravo API tests") {
+object MarchexAPITest extends Properties("Bravo API tests") {
   import bravo.test.api.MarchexDataGenerator._
   
   var callLogs: List[CallLog] = List[CallLog]() 
@@ -79,12 +78,14 @@ object server extends Properties("Bravo API tests") {
     val config = DartAPITest.TestConfig()
     
     val dt = DateTime.now()
-
     val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)
-    ws.shutdown()
-    val future = result.run.run(config)   
+    val future = result.run.run(config.copy(marchexurl="http://localhost:"+port))
     val either = Await.result(future, scala.concurrent.duration.Duration(3, SECONDS) )
-    either._2.fold(l => false, r => true)
+    ws.shutdown()
+    either._2.fold(l => {
+      println(" l = " + l)
+      false
+      }, r => true)
   }
 }
 

@@ -57,7 +57,14 @@ object Util {
   
   def fctry[A](f: Config => A, s: Option[String]): BravoM[A] =
     liftBravoM(c => Future {
-        \/.fromTryCatchNonFatal( f(c) ).leftMap(nf => JazelError(nf.some, s.getOrElse(nf.getMessage())))
+        \/.fromTryCatchNonFatal( {
+        try {
+          f(c) 
+        } catch {
+          case ex: Exception => println("error = " + ex)
+                                throw ex
+        }
+        }).leftMap(nf => JazelError(nf.some, s.getOrElse(nf.getMessage())))
       }
     )
 

@@ -16,14 +16,14 @@ import bravo.core.Util._
 
 object Marchex {
   // PUBLIC API
-  def getGroups(accountid: String)(implicit c: MarchexCredentials): BravoM[List[MarchexGroup]] = 
+  def getGroups(accountid: String): BravoM[List[MarchexGroup]] = 
     (for {
       results <- makeCall("group.list", List[Object](accountid))
     } yield { 
       results.map(o => parseGroup(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
     }).flatMap(identity)
   
-  def getAccounts(implicit c: MarchexCredentials): BravoM[List[MarchexAccount]] = 
+  def getAccounts: BravoM[List[MarchexAccount]] = 
     (for {
       results <- makeCall("acct.list", List[Object]())
     } yield 
@@ -31,11 +31,11 @@ object Marchex {
     ).flatMap(identity)
 
   val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
-  
-  def getCallLogs(acctid: String, start: DateTime, end:DateTime)(implicit c: MarchexCredentials): BravoM[List[CallLog]] = {
+
+  def getCallLogs(acctid: String, start: DateTime, end:DateTime): BravoM[List[CallLog]] = {
     (for {
-      search <- fctry(Map("start" -> start.toString(frmt),"end"  -> end.toString(frmt)))
-      results <- makeCall("call.search", List[Object](acctid, search))
+      search <- fctry(c => (Map[String,String]("start" -> start.toString(frmt),"end" -> end.toString(frmt))): java.util.Map[String,String] )
+      results                              <- makeCall("call.search", List[Object](acctid, search))
     } yield {
       results.map(o => parseCallLog(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
     }).flatMap(identity)
@@ -104,7 +104,6 @@ object Marchex {
     } yield 
       CallLog(acct, assigned_to, call_id, call_start, call_status, call_end, caller_name, caller_number, cmpid, disposition, forwardno, grpid, inbound_ext, inboundno, keyword, rating, recorded, ringdur)
   }
-
     
   private def parseAccount(implicit hm: HashMap[String,Object]): \/[JazelError, MarchexAccount] = 
     for {
