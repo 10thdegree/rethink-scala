@@ -3,11 +3,11 @@ package reporting.engine
 import org.joda.time.DateTime
 import reporting.models.ds.DataSource
 import DataSource.{BasicRow, Attributes}
-import reporting.models.{FieldBinding, Field, Report}
+import reporting.models.{Fees, FieldBinding, Field, Report}
 
 import scala.collection.SortedMap
 
-class SimpleReportGenerator(report: Report, fields: List[Field]) {
+class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servingFees: Fees.FeesLookup[Fees.ServingFees]) {
 
   import DataSource.DataSourceAggregators.implicits._
 
@@ -31,6 +31,8 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
     requiredFieldBindings.filterNot(b => foundAttributes.contains(b._2.dataSourceAttribute))
   }
 
+  import JodaTime.implicits._
+
   def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime): List[GeneratedReport.Row] = {
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
     val rowsByDate = dsa
@@ -39,7 +41,7 @@ class SimpleReportGenerator(report: Report, fields: List[Field]) {
 
     // Do K iterations over all rows, where K = groupedLabels.length
     // Each of K groups separates dependencies, so we must process A before B where B depends on A.
-    val cxt = new FormulaEvaluator.EvaluationCxt[BasicRow](FormulaEvaluator.Report(start, end))
+    val cxt = new FormulaEvaluator.EvaluationCxt[BasicRow](FormulaEvaluator.Report(start, end.withTimeAtEndOfDay))
 
     def termFromBinding(nrow: BasicRow)(label: String) =
       for (b <- labeledBindings(label)) yield {

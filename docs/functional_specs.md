@@ -133,7 +133,7 @@ A report template should be composed of fields, which will form the columns of t
 ```
 #!groovy
 // Serving fees are simple products:
-servingFees = (servingFees(adType).cpc * clicks) + (servingFees(adType).cpm * impressions / 1000)
+servingFees = servingFees(adType).cpc(clicks) + (servingFees(adType).cpm(impressions)
 
 // During evaluation, the engine knows the time-span for each row,
 // so it can implicitly compute the agency fees.

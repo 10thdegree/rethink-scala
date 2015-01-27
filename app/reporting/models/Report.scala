@@ -22,7 +22,10 @@ case class Field(id: Option[UUID],
                  formula: Option[String],
                  footerFormula: Option[String] = None,
                  footerType: FooterType = FooterTypes.IncludesAllData) extends Document {
-  def label = displayName.getOrElse(varName)
+
+  def prettyVarName = if (varName.length < 4) varName.toUpperCase else varName.capitalize
+
+  def label = displayName.getOrElse(prettyVarName)
 }
 
 case class Template(id: Option[UUID], label: String, fieldIds: List[UUID])
