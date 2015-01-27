@@ -60,18 +60,10 @@ object JodaTime {
   }
 
   def startOfTime: DateTime = {
-    new DateTime(Years.MIN_VALUE.getYears,
-      Months.MIN_VALUE.getMonths,
-      Days.MIN_VALUE.getDays,
-      Hours.MIN_VALUE.getHours,
-      Minutes.MIN_VALUE.getMinutes)
+    new DateTime(0,1,1,0,0).withTimeAtStartOfDay
   }
 
   def endOfTime: DateTime = {
-    new DateTime(Years.MAX_VALUE.getYears,
-      Months.MAX_VALUE.getMonths,
-      Days.MAX_VALUE.getDays,
-      Hours.MAX_VALUE.getHours,
-      Minutes.MAX_VALUE.getMinutes)
+    new DateTime(3000,1,1,0,0).withTimeAtEndOfDay
   }
 }

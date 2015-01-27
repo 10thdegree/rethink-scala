@@ -4,7 +4,7 @@ import play.api._
 import play.api.mvc._
 import play.Logger
 import reporting.engine.SimpleReportGenerator
-import reporting.models.ds
+import reporting.models.{Fees, ds}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global 
 import org.joda.time._
@@ -13,7 +13,7 @@ import org.joda.time.format.DateTimeFormat
 import bravo.core.Util._
 import play.api.libs.json._
 import play.api.Play.current
-import scalaz.\/
+import scalaz.{-\/, \/, \/-}
 import akka.pattern.pipe
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -46,14 +46,19 @@ object TuiReportController extends Controller {
         val json = Json.parse(msg)
         val startDate = (json \ "startDate").as[String]
         val endDate = (json \ "endDate").as[String] //TODO: option, then for comp, handle errors etc.
-        reportAsync(startDate, endDate).map(_.fold(err => err,json => json.toString)).foreach(json => {
-        Logger.debug("ok sending back to the ws")
-        try {
-          out ! json
-          } catch {
-            case ex: Exception => Logger.error(ex.toString)
-          }
-        })
+        reportAsync(startDate, endDate)
+          //.map(_.fold(err => err,json => json.toString))
+          .foreach(_ match {
+            case -\/(err) =>
+              Logger.error("Report generation failed: " + err)
+            case \/-(json) =>
+              Logger.debug("ok sending back to the ws")
+              try {
+                out ! json.toString
+              } catch {
+                case ex: Exception => Logger.error(ex.toString)
+              }
+          })
     }
   }
   /////////////////END ACTOR STUFF /////////////
@@ -76,10 +81,14 @@ object TuiReportController extends Controller {
 
     //val tui = reporting.util.TUIReportHelper
     val ro = reporting.util.TUIReportHelper.TUISearchPerformanceRO()
+    implicit val servingFeesLookup = new Fees.FeesLookup(ro.servingFees)
+    Logger.debug("Compiling report fields...")
     val gen = new SimpleReportGenerator(ro.report, ro.fields)
+    Logger.debug("Building DS row factory...")
     val dsf = new ds.DataSource.DataSourceRowFactory(ro.ds) //factorys?
     val viewFields = ro.view.fieldIds.map(ro.fieldsLookupById).toList
 
+    Logger.debug("Looking up required DS attributes...")
     // List of fields (numeric) that we need when generating the report.
     val requiredAttributes = gen.requiredFieldBindings.map(_._2.dataSourceAttribute).toSet
 

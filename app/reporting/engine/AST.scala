@@ -134,6 +134,11 @@ object AST {
     val toLong = ops.toLong(v)
   }
 
+  case class ForcedDependancy(term: Term, dep: Term) extends WrappedTerm {
+
+    override def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = (term has f) || (dep has f)
+  }
+
   case class WholeNumber(term: Term) extends WrappedTerm
 
   case class FractionalNumber(term: Term) extends WrappedTerm
@@ -171,11 +176,11 @@ object AST {
       val Cpm = ServingFeeType("cpm")
     }
 
-    case class ServingFee(override val label: String, feeType: ServingFeeTypes.ServingFeeType) extends AST.Term
+    case class ServingFee(override val label: String, feeType: ServingFeeTypes.ServingFeeType, ref: Option[AST.Term] = None) extends AST.Term
 
     case class ServingFees(label: String) {
-      val cpc: AST.Term = ServingFee(label, ServingFeeTypes.Cpc)
-      val cpm: AST.Term = ServingFee(label, ServingFeeTypes.Cpm)
+      def cpc(clicks: AST.Term): AST.Term = ForcedDependancy(ServingFee(label, ServingFeeTypes.Cpc, Some(clicks)), Sum(Variable(clicks.label)))
+      def cpm(impressions: AST.Term): AST.Term = ForcedDependancy(ServingFee(label, ServingFeeTypes.Cpm, Some(impressions)), Sum(Variable(impressions.label)))
     }
 
     object AgencyFeeTypes {

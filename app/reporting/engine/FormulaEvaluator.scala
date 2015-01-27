@@ -1,6 +1,9 @@
 package reporting.engine
 
 import org.joda.time.DateTime
+import reporting.engine.AST.Fees
+import reporting.engine.AST.Fees.ServingFeeTypes.ServingFeeType
+import reporting.models.Fees.FeesLookup
 
 object FormulaEvaluator {
 
@@ -16,6 +19,8 @@ object FormulaEvaluator {
 
       def year: Int
 
+      def dateStr = s"$year/$month"
+
       def totalDaysInMonth: Int
 
       def reportDaysInMonth: Int
@@ -30,7 +35,9 @@ object FormulaEvaluator {
     }
   }
 
-  class EvaluationCxt[R](val report: Report) {
+  import reporting.models.{Fees => MFees}
+
+  class EvaluationCxt[R](val report: Report)(implicit servingFeesLookup: MFees.FeesLookup[MFees.ServingFees]) {
 
     case class Sum(count: Long, sum: Result) {
       def +(that: Sum): Sum = Sum(this.count + that.count, this.sum + that.sum)
@@ -113,7 +120,26 @@ object FormulaEvaluator {
       def percentileMonthly(impressions: Int) = 0d //agencyFeesLookup(row.month, Some(impressions))
     }
 
-    def servingFees(label: String) = ServingFees
+    // TODO: Use date range from Row, not report!
+    def servingFees(label: String, rowCxt: EvaluationCxt.Row, dependsOn: Option[AST.Term], tpe: Fees.ServingFeeTypes.ServingFeeType) = {
+      import reporting.engine.JodaTime.implicits._
+      import Result.implicits._
+      import org.joda.time._
+      val lookup = servingFeesLookup
+      val span = new Interval(report.start, report.end)
+      val fees = for {
+        s <- span.intoMonths
+        year = s.getStart.getYear
+        month = s.getStart.getMonthOfYear
+        ll <- lookup(label)
+        df <- dependsOn
+        v = monthlySums(df.label)(year + "/" + month)
+      } yield tpe match {
+        case Fees.ServingFeeTypes.Cpc => ll(s).head.cpc * rowCxt(df.label)
+        case Fees.ServingFeeTypes.Cpm => rowCxt(df.label) * ll(s).head.cpm / 1000 // Force lifting
+      }
+      fees.sum(Result.implicits.ResultNumeric)
+    }
 
     def agencyFees(label: String) = AgencyFees
   }
@@ -141,17 +167,25 @@ object FormulaEvaluator {
 
     def formatted = dfOpt.map(_.format(value)).getOrElse(value.rounded.toString())
 
-    def +(that: Result) = new Result(this.value + that.value, this.format orElse that.format)
+    def +(that: Result): Result = new Result(this.value + that.value, this.format orElse that.format)
 
-    def -(that: Result) = new Result(this.value - that.value, this.format orElse that.format)
+    def -(that: Result): Result = new Result(this.value - that.value, this.format orElse that.format)
 
-    def *(that: Result) = new Result(this.value * that.value, this.format orElse that.format)
+    def *(that: Result): Result = new Result(this.value * that.value, this.format orElse that.format)
 
-    def /(that: Result) = try {
+    def /(that: Result): Result = try {
       new Result(this.value / that.value, this.format orElse that.format)
     } catch {
       case c: java.lang.ArithmeticException => NoResult
     }
+
+    def +[A: Numeric](that: A): Result = this + Result(that)
+
+    def -[A: Numeric](that: A): Result = this - Result(that)
+
+    def *[A: Numeric](that: A): Result = this * Result(that)
+
+    def /[A: Numeric](that: A): Result = this / Result(that)
 
     override def toString = formatted
   }
@@ -254,6 +288,7 @@ object FormulaEvaluator {
     // Month functions
     case Month.Sum(n) => Result(cxt.monthlySum(rcxt)(n.label))
     // case MonthlyAvg(n) => cxt.monthlySum(n.label) / cxt.monthlyCount(n.label)
+    case ForcedDependancy(n, _) => eval(n) // Ignore dep entirely, just there for ordering
     // Global functions
     case t@WholeNumber(n) => eval(n).rounded.withFormat(Result.Formats.WholeNumber)
     case t@FractionalNumber(n) => eval(n).asFractional.withFormat(Result.Formats.FractionalNumber)
@@ -262,10 +297,7 @@ object FormulaEvaluator {
     // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
     case Max(left, right) => Result(eval(left).value.max(eval(right).value)) // loses format
     // Fees
-    case t@Fees.ServingFee(label, ft) if ft == Fees.ServingFeeTypes.Cpc =>
-      Result(cxt.servingFees(label).cpc)
-    case t@Fees.ServingFee(label, ft) if ft == Fees.ServingFeeTypes.Cpm =>
-      Result(cxt.servingFees(label).cpm)
+    case t@Fees.ServingFee(label, ft, ref) => cxt.servingFees(label, rcxt, ref, ft)
     case t@Fees.AgencyFee(label, ft, ref) if ft == Fees.AgencyFeeTypes.Monthly =>
       Result(cxt.agencyFees(label).monthly)
     case t@Fees.AgencyFee(label, ft, ref) if ft == Fees.AgencyFeeTypes.PercentileMonth =>

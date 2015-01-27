@@ -81,7 +81,7 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
         "fooBarSum" -> Some("sum(fooBar)"),
         "agencyFees1" -> Some("fees.agency(\"FOO\").monthly"),
         "agencyFees2" -> Some("fees.agency(\"FOO\").percentileMonth(bar)"),
-        "servingFeesCpc" -> Some("fees.serving(\"BAZ\").cpc"),
+        "servingFeesCpc" -> Some("fees.serving(\"BAZ\").cpc(foo)"),
         "fooBarInt" -> Some("round(fooBar)"),
         "barMoney" -> Some("currency(bar)"),
         "rowDays" -> Some("row.totalDaysInMonth"),
@@ -97,7 +97,7 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
         "fooBarSum" -> Some(AST.Sum(AST.Variable("fooBar"))),
         "agencyFees1" -> Some(AST.Fees.AgencyFee("FOO", AST.Fees.AgencyFeeTypes.Monthly)),
         "agencyFees2" -> Some(AST.Fees.AgencyFee("FOO", AST.Fees.AgencyFeeTypes.PercentileMonth, Some(AST.Variable("bar")))),
-        "servingFeesCpc" -> Some(AST.Fees.ServingFee("BAZ", AST.Fees.ServingFeeTypes.Cpc)),
+        "servingFeesCpc" -> Some(AST.ForcedDependancy(AST.Fees.ServingFee("BAZ", AST.Fees.ServingFeeTypes.Cpc, Some(AST.Variable("foo"))),AST.Sum(AST.Variable("foo")))),
         "fooBarInt" -> Some(AST.WholeNumber(AST.Variable("fooBar"))),
         "barMoney" -> Some(AST.Format(AST.Variable("bar"), AST.Functions.CurrencyFormat)),
         "rowDays" -> Some(AST.Row.TotalDaysInMonth),
@@ -149,7 +149,7 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
         Map("foo" -> "4.5", "bar" -> "10", "fooBar" -> "14.5")
       )
 
-      implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))
+      implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))(null)
 
       for ((r, idx) <- rows.zipWithIndex) {
         val terms = for ((key, astOpt) <- asts) yield key -> astOpt.orElse(Some(AST.Constant(r.values(key))))
@@ -206,7 +206,7 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
       val orderedTerms = FormulaCompiler.sort(labeledTerms.toList: _*)(labeledTerms)
       val groupedTerms = FormulaCompiler.segment(orderedTerms: _*)(labeledTerms)
 
-      implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))
+      implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))(null)
 
       for {
         grpTerms <- groupedTerms

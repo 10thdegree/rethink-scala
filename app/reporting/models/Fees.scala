@@ -31,17 +31,6 @@ object Fees {
     def overlap(span: Interval) = Option(validity.overlap(span))
   }
 
-  trait FeesComputer[T <: Fees] {
-    def apply(fees: List[T])(inputs: (Interval, BigDecimal)*): BigDecimal
-  }
-
-  object ServingFeesComputer extends FeesComputer[ServingFees] {
-    override def apply(fees: List[ServingFees])(inputs: (Interval, BigDecimal)*): BigDecimal = {
-      // TODO: Use
-      0
-    }
-  }
-
   /** ServingFees are simple proportional amounts; given some amount
     * of impressions or clicks we do a simple product with cpm or cpc
     * to get the total cost.
@@ -75,16 +64,11 @@ object Fees {
                         spendRanges: List[SpendRange],
                         validFrom: Option[DateTime],
                         validUntil: Option[DateTime]) extends Document with Fees {
-
-    def spend(impressions: Long) = {
-      // compute spend
-      0
-    }
   }
 
   // XXX(dk): This implementation does not handle cases in which fees's valid ranges are nested;
   //   it expects them to be contiguous only.
-  class FeesByLabelLookup[F <: Fees](label: String, fees: List[F]) {
+  class LabeledFeesLookup[F <: Fees](label: String, fees: List[F]) {
 
     import JodaTime._
     val sortedFees = fees.sortBy(x => x.dates)
@@ -117,6 +101,10 @@ object Fees {
       //   the month, e.g. feesComputation.fee(span, impressions(span))
       sortedFees.foldLeft(State(Some(searchSpan)))(fold).fees
     }
+
+    // XXX(dk): Simple case: use the first fees regardless of expiration
+    def fees(searchSpan: Interval) = null
+
   }
 
   // Usage:
@@ -132,8 +120,8 @@ object Fees {
   //   e.g. impressions(range)
   class FeesLookup[F <: Fees](feesList: List[F]) {
 
-    var global = feesList.find(_.accountId.isEmpty).map({ case (f) => new FeesByLabelLookup(f.label, List(f)) })
-    var labels = feesList.groupBy(_.label).map({ case (k, fs) => k -> new FeesByLabelLookup(k, fs) }).toMap
+    val global = feesList.find(_.accountId.isEmpty).map({ case (f) => new LabeledFeesLookup(f.label, List(f)) })
+    val labels = feesList.groupBy(_.label).map({ case (k, fs) => k -> new LabeledFeesLookup(k, fs) }).toMap
 
     def apply(label: String) = labels.get(label).orElse(global)
   }

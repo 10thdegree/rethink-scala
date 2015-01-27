@@ -18,6 +18,17 @@ import scala.util.matching.Regex
 @RunWith(classOf[JUnitRunner])
 class ReportTests extends Specification with org.specs2.matcher.ThrownExpectations {
 
+  val servingFeesList = List(Fees.ServingFees(
+    accountId = None,
+    label = "banner",
+    cpm = 1.0,
+    cpc = 0.25,
+    validFrom = None,
+    validUntil = None
+  ))
+
+  implicit val servingFeesLookup = new Fees.FeesLookup(servingFeesList)
+
   "ReportGenerator" should {
 
     "convert maps to properly aggregated data source rows" >> {

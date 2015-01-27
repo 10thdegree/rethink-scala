@@ -75,14 +75,25 @@ object TUIReportHelper {
 
     val account = Account(randUUID, "TUI")
 
+    val servingFeesList = List(Fees.ServingFees(
+      accountId = None,
+      label = "banner",
+      cpm = 1.0,
+      cpc = 0.25,
+      validFrom = None,
+      validUntil = None
+    ))
+
     val fields = List(
       Field(randUUID, None, "spend", None),
       // Spend = [Cost] + ([Clicks]f * [PpcTrackingRate])
-      //Field(randUUID, None, "servingFees",
-      //  "(servingFees(\"banner\").cpc * clicks) + (servingFees(\"banner\").cpm * impressions / 1000)".some),
+      Field(randUUID, None, "cpcFees",
+        "currency(fees.serving(\"banner\").cpc(clicks))".some),
+      Field(randUUID, None, "cpmFees",
+        "currency(fees.serving(\"banner\").cpm(impressions))".some),
       //Field(randUUID, None, "agencyServingFees",
       //  "agencyFees(\"display\").monthlyFees(impressions)".some),
-      Field(randUUID, "Total spend".some, "totalSpend", "currency(spend)".some), // Should include fees!
+      Field(randUUID, "Total Spend".some, "totalSpend", "currency(spend + cpcFees + cpmFees)".some), // Should include fees!
       Field(randUUID, None, "impressions", None),
       Field(randUUID, None, "clicks", None),
       Field(randUUID, None, "ctr", "percentage(clicks / impressions)".some),
@@ -198,6 +209,7 @@ object TUIReportHelper {
       view,
       dartDs,
       fieldBindings,
-      report.get)
+      report.get,
+      servingFeesList)
   }
 }

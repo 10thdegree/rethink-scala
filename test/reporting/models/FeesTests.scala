@@ -5,7 +5,7 @@ import java.util.UUID
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{Interval, DateTime}
 import reporting.engine.{JodaTime, SimpleReportGenerator}
-import reporting.models.Fees.{FeesLookup, FeesByLabelLookup, ServingFees}
+import reporting.models.Fees.{FeesLookup, LabeledFeesLookup, ServingFees}
 import reporting.models.ds.{DateSelector, dart}
 import reporting.util.TUIReportHelper
 
@@ -20,7 +20,8 @@ import scala.util.matching.Regex
 @RunWith(classOf[JUnitRunner])
 class FeesTests extends Specification with org.specs2.matcher.ThrownExpectations {
 
-  def dt(str: String) = DateTime.parse(str, DateTimeFormat.forPattern("yyyy-MM-dd"))
+  import JodaTime.mkSpan
+  def dt(str: String) = JodaTime.mkDateTime(str)
 
   "Fees" should {
 
@@ -32,7 +33,7 @@ class FeesTests extends Specification with org.specs2.matcher.ThrownExpectations
         cpc = 0.25,
         validFrom = None,
         validUntil = None)
-      val span = new Interval(dt("2001-01-01"), dt("2001-01-31"))
+      val span = mkSpan(dt("2001-01-01"), dt("2001-01-07"))
       val impressions = List(
         dt("2001-01-01") -> 100,
         dt("2001-01-02") -> 100,
