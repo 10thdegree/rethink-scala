@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.rethinkscala.Document
 import org.joda.time.{Years, Interval, DateTime}
+import reporting.engine
 import reporting.engine.JodaTime.implicits._
 import reporting.engine.JodaTime
 
@@ -50,7 +51,26 @@ object Fees {
   case class SpendRange(minImpressions: Long,
                         maxImpressions: Option[Long],
                         monthlyFee: Option[Double],
-                        spendPercent: Option[Double])
+                        spendPercent: Option[Double]) {
+    def validFor(impressions: Long) = {
+      minImpressions <= impressions &&
+        maxImpressions.map(impressions.toLong.<=).getOrElse(true)
+    }
+
+    // NOTE(dk): Does not work if span is
+    def apply(spend: BigDecimal, span: Interval): BigDecimal = {
+      import engine.JodaTime.implicits._
+      val monthDays = span.getStart.totalDaysInMonth
+      val curDays   = span.toPeriod.getDays
+
+      assert(curDays <= monthDays,
+        "Cannot apply a spend range to more days than are in the month")
+
+      val mf = monthlyFee.map(f => f * curDays / monthDays).getOrElse(0d)
+      val sp = spendPercent.map(p => spend * p).getOrElse(BigDecimal(0))
+      mf + sp
+    }
+  }
 
   /** AgencyFees are more complicated that ServingFees, because they
     * can only be computed on aggregate for a time period, and then
@@ -62,8 +82,18 @@ object Fees {
   case class AgencyFees(accountId: Option[UUID], // None == global
                         label: String, // e.g. "display", "search"
                         spendRanges: List[SpendRange],
+                        minMonthlyFee: Option[Double],
                         validFrom: Option[DateTime],
                         validUntil: Option[DateTime]) extends Document with Fees {
+    def validRangeFor(impressions: Long): Option[SpendRange] = {
+      spendRanges.find(_.validFor(impressions))
+    }
+
+    def apply(impressions: Long)(spend: BigDecimal, span: Interval): BigDecimal = {
+      val fees = validRangeFor(impressions).map(_(spend, span)).getOrElse(BigDecimal(0))
+      val min = minMonthlyFee.getOrElse(0d)
+      if (fees < min) min else fees
+    }
   }
 
   // XXX(dk): This implementation does not handle cases in which fees's valid ranges are nested;
@@ -107,22 +137,15 @@ object Fees {
 
   }
 
-  // Usage:
-  // val servingFees = new FeesLookup(servingFeesList)("FooLabel")(dateSpan)
-  // servingFees.foldLeft(0)((sum, fee) => sum + fee.cpm * impressions(fee.validity)/1000)
-  // servingFees.foldLeft(0)((sum, fee) => sum + fee.cpc * clicks(fee.validity))
-  //
-  // val agencyFees = new FeesLookup(agencyFeesList)("FooLabel")(dateSpan)
-  // agencyFees.foldLeft(0)((sum, fee) => sum + fee.spend(impressions(fee.validity)))
-  //
-  // NOTE that for each Fees object, we need a means to get the dependant field's
-  //   value ONLY for the range that that fees object is valid for,
-  //   e.g. impressions(range)
   class FeesLookup[F <: Fees](feesList: List[F]) {
 
     val global = feesList.find(_.accountId.isEmpty).map({ case (f) => new LabeledFeesLookup(f.label, List(f)) })
     val labels = feesList.groupBy(_.label).map({ case (k, fs) => k -> new LabeledFeesLookup(k, fs) }).toMap
 
     def apply(label: String) = labels.get(label).orElse(global)
+  }
+
+  object FeesLookup {
+    implicit def empty[T <: Fees]: FeesLookup[T] = new FeesLookup[T](List.empty[T])
   }
 }

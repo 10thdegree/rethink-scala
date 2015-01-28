@@ -4,16 +4,13 @@ import java.util.UUID
 
 import org.joda.time.DateTime
 import reporting.models.Fees.ServingFees
+import reporting.models.Fees.AgencyFees
 import reporting.models._
 import reporting.models.ds.{DateSelector, dart}
 
 import scala.collection.GenIterableLike
 import scala.util.matching.Regex
-import scala.util.matching.Regex.Match
 
-/**
- * Created by dain on 19/01/2015.
- */
 object TUIReportHelper {
 
   import reporting.models.ds.DataSource.BasicRow
@@ -65,7 +62,8 @@ object TUIReportHelper {
                           ds: DartDS,
                           fieldBindings: List[FieldBinding],
                           report: Report,
-                          servingFees: List[ServingFees] = List()) {
+                          servingFees: List[ServingFees] = List(),
+                          agencyFees: List[AgencyFees] = List()) {
 
     val fieldsLookup = fields.map(f => f.varName -> f).toMap
     val fieldsLookupById = fields.map(f => f.id.get -> f).toMap
@@ -84,6 +82,21 @@ object TUIReportHelper {
       validUntil = None
     ))
 
+    val agencyFeesList = List(Fees.AgencyFees(
+      accountId = None,
+      label = "display",
+      minMonthlyFee = (0d).some,
+      spendRanges = List(
+        Fees.SpendRange(    0, 10000L.some, None, (0.15).some),
+        Fees.SpendRange(10000, 25000L.some, None, (0.14).some),
+        Fees.SpendRange(20000, 40000L.some, None, (0.13).some),
+        Fees.SpendRange(40000, 75000L.some, None, (0.12).some),
+        Fees.SpendRange(75000,        None, None, (0.11).some)
+      ),
+      validFrom = None,
+      validUntil = None
+    ))
+
     val fields = List(
       Field(randUUID, None, "spend", None),
       // Spend = [Cost] + ([Clicks]f * [PpcTrackingRate])
@@ -91,9 +104,9 @@ object TUIReportHelper {
         "currency(fees.serving(\"banner\").cpc(clicks))".some),
       Field(randUUID, None, "cpmFees",
         "currency(fees.serving(\"banner\").cpm(impressions))".some),
-      //Field(randUUID, None, "agencyServingFees",
-      //  "agencyFees(\"display\").monthlyFees(impressions)".some),
-      Field(randUUID, "Total Spend".some, "totalSpend", "currency(spend + cpcFees + cpmFees)".some), // Should include fees!
+      Field(randUUID, None, "dispFees",
+        "currency(fees.agency(\"display\").monthly(spend, impressions))".some),
+      Field(randUUID, "Total Spend".some, "totalSpend", "currency(spend + cpcFees + cpmFees + dispFees)".some), // Should include fees!
       Field(randUUID, None, "impressions", None),
       Field(randUUID, None, "clicks", None),
       Field(randUUID, None, "ctr", "percentage(clicks / impressions)".some),
@@ -116,44 +129,46 @@ object TUIReportHelper {
       randUUID,
       "General User",
       template.id.get,
-      fields.filterNot(_.varName == "spend").map(_.id).flatten,
+      fields.filterNot(_.varName == "spend123").map(_.id).flatten,
       fields.find(_.varName == "totalSpend").map(f => FieldSort(f.id.get, false)),
       List(),
       List())
 
     // XXX(dk): this can't be serialised as is!!
     val keySelector = new ds.KeySelector {
+
+      import util.matching.RegexOps.implicits._
+
       def select(attrs: Map[String, String]): Option[String] = {
-        val patterns = List[(String, Regex.Match=>String)](
-          "^(Brand).*$" -> (m => m.group(1)),
-          "^(Partners)hips.*$" -> (m => m.group(1)),
-          "^(Accredited)$" -> (m => m.group(1)),
-          "^(Auto Suggest).*$" -> (m => m.group(1)),
-          "^(Bachelors).*" -> (m => m.group(1)),
-          "^Online (Bachelors).*$" -> (m => m.group(1)),
-          "^(Certificate).*$" -> (m => m.group(1)),
-          "^(Anthem College).*$" -> (m => m.group(1)),
-          "^(Competitors).*$" -> (_ => "Anthem College"), // => Anthem College
-          "^(Content).*$" -> (m => m.group(1)),
-          "^Remarketing (Content).*$" -> (m => m.group(1)),
-          "^(Distance Learning).*$" -> (m => m.group(1)),
-          "^(Doctorate).*" -> (m => m.group(1)),
-          "^(Masters).*$" -> (m => m.group(1)),
-          "^(Military).*$" -> (m => m.group(1)),
-          "^(Degree).*$" -> (m => m.group(1)),
-          "^(Veterans).*$" -> (m => m.group(1)),
-          "^(PhD).*$" -> (m => m.group(1)),
-          "^(Undergraduate).*$" -> (m => m.group(1)),
-          "^(Veterans).*$" -> (m => m.group(1)),
-          "^(Online).*$" -> (m => m.group(1)))
+        val patterns = List[(String, String)](
+          "^(Brand).*$" -> "$1",
+          "^(Partners)hips.*$" -> "$1",
+          "^(Accredited)$" -> "$1",
+          "^(Auto Suggest).*$" -> "$1",
+          "^(Bachelors).*" -> "$1",
+          "^Online (Bachelors).*$" -> "$1",
+          "^(Certificate).*$" -> "$1",
+          "^(Anthem College).*$" -> "$1",
+          "^(Competitors).*$" -> "Anthem College",
+          "^(Content).*$" -> "$1",
+          "^Remarketing (Content).*$" -> "$1",
+          "^(Distance Learning).*$" -> "$1",
+          "^(Doctorate).*" -> "$1",
+          "^(Masters).*$" -> "$1",
+          "^(Military).*$" -> "$1",
+          "^(Degree).*$" -> "$1",
+          "^(Veterans).*$" -> "$1",
+          "^(PhD).*$" -> "$1",
+          "^(Undergraduate).*$" -> "$1",
+          "^(Veterans).*$" -> "$1",
+          "^(Online).*$" -> "$1")
           .map(p => p._1.r -> p._2)
 
         val campaign = attrs.getOrElse("Paid Search Campaign", "")
 
         patterns
-          .findFirst({case (regex,getLabel) => regex
-            .findFirstMatchIn(campaign)
-            .map(getLabel)
+          .findFirst({case (regex,replacement) =>
+            regex.maybeReplaceFirstIn(campaign, replacement)
           })
           .orElse("Other".some)
       }
@@ -210,6 +225,7 @@ object TUIReportHelper {
       dartDs,
       fieldBindings,
       report.get,
-      servingFeesList)
+      servingFeesList,
+      agencyFeesList)
   }
 }

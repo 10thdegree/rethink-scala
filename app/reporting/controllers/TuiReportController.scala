@@ -82,6 +82,7 @@ object TuiReportController extends Controller {
     //val tui = reporting.util.TUIReportHelper
     val ro = reporting.util.TUIReportHelper.TUISearchPerformanceRO()
     implicit val servingFeesLookup = new Fees.FeesLookup(ro.servingFees)
+    implicit val agencyFeesLookup = new Fees.FeesLookup(ro.agencyFees)
     Logger.debug("Compiling report fields...")
     val gen = new SimpleReportGenerator(ro.report, ro.fields)
     Logger.debug("Building DS row factory...")
@@ -155,7 +156,7 @@ object TuiReportController extends Controller {
       .map(t => {
         cache.set(t._1.m)
         t._2
-      }) //feed in the cache again 
+      }) //feed in the cache again
       
     parsedReport.map(_.leftMap(err => err.msg)) //we could return the transformer stack, but we want to see both erorr/not error so i think this is better?
   }

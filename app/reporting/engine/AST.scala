@@ -179,25 +179,19 @@ object AST {
     case class ServingFee(override val label: String, feeType: ServingFeeTypes.ServingFeeType, ref: Option[AST.Term] = None) extends AST.Term
 
     case class ServingFees(label: String) {
-      def cpc(clicks: AST.Term): AST.Term = ForcedDependancy(ServingFee(label, ServingFeeTypes.Cpc, Some(clicks)), Sum(Variable(clicks.label)))
-      def cpm(impressions: AST.Term): AST.Term = ForcedDependancy(ServingFee(label, ServingFeeTypes.Cpm, Some(impressions)), Sum(Variable(impressions.label)))
+      def cpc(clicks: AST.Term): AST.Term =
+        ForcedDependancy(ServingFee(label, ServingFeeTypes.Cpc, Some(clicks)), Sum(Variable(clicks.label)))
+      def cpm(impressions: AST.Term): AST.Term =
+        ForcedDependancy(ServingFee(label, ServingFeeTypes.Cpm, Some(impressions)), Sum(Variable(impressions.label)))
     }
 
-    object AgencyFeeTypes {
-
-      case class AgencyFeeType(name: String)
-
-      val Monthly = AgencyFeeType("monthly")
-
-      val PercentileMonth = AgencyFeeType("percentileMonth")
-    }
-
-    case class AgencyFee(override val label: String, feeType: AgencyFeeTypes.AgencyFeeType, ref: Option[AST.Term] = None) extends AST.Term
+    case class AgencyFee(override val label: String, spend: AST.Term, impressions: AST.Term) extends AST.Term
 
     case class AgencyFees(label: String) {
-      val monthly: AST.Term = AgencyFee(label, AgencyFeeTypes.Monthly)
-
-      def percentileMonth(impressions: AST.Term): AST.Term = AgencyFee(label, AgencyFeeTypes.PercentileMonth, Some(impressions))
+      def monthly(spend: AST.Term, impressions: AST.Term): AST.Term =
+        ForcedDependancy(AgencyFee(label, spend, impressions),
+          // XXX: Just to insure computation of this happens after summations.
+          Add(Sum(Variable(spend.label)), Sum(Variable(impressions.label))))
     }
 
   }
