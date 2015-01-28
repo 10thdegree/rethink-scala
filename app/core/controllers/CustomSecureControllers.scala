@@ -6,6 +6,7 @@ import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc._
+import play.filters.csrf.CSRFAddToken
 import securesocial.controllers.BaseRegistration._
 import securesocial.controllers._
 import securesocial.core._
@@ -21,16 +22,18 @@ class CustomLoginPage @Inject() (override implicit val env: RuntimeEnvironment[B
    * Renders the login page
    * @return
    */
-  override def login = UserAwareAction { implicit request =>
-    val to = ProviderControllerHelper.landingUrl
-    if ( request.user.isDefined ) {
-      // if the user is already logged in just redirect to the app
-      Redirect( to )
-    } else {
-      if ( SecureSocial.enableRefererAsOriginalUrl ) {
-        SecureSocial.withRefererAsOriginalUrl(Ok(env.viewTemplates.getLoginPage(UsernamePasswordProvider.loginForm)))
+  override def login =  CSRFAddToken {
+    UserAwareAction { implicit request =>
+      val to = ProviderControllerHelper.landingUrl
+      if (request.user.isDefined) {
+        // if the user is already logged in just redirect to the app
+        Redirect(to)
       } else {
-        Ok(core.views.html.nonuser(core.views.html.login.head(), core.views.html.login.main(), "Login"))
+        if (SecureSocial.enableRefererAsOriginalUrl) {
+          SecureSocial.withRefererAsOriginalUrl(Ok(env.viewTemplates.getLoginPage(UsernamePasswordProvider.loginForm)))
+        } else {
+          Ok(core.views.html.nonuser(core.views.html.login.head(), core.views.html.login.main(), "Login"))
+        }
       }
     }
   }

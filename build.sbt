@@ -41,9 +41,9 @@ lazy val otherDeps = Seq(
   //scalaz
   "org.scalaz" % "scalaz-core_2.11" % "7.1.0",
   // Rethink-DB Driver
-  "com.rethinkscala" % "core_2.11" % "0.4.4-SNAPSHOT",
+  "com.rethinkscala" % "core_2.11" % "0.4.6-SNAPSHOT",
   // Secure Social
-  "ws.securesocial" %% "securesocial" % "master-SNAPSHOT",
+  "ws.securesocial" %% "securesocial" % "3.0-M2" ,
   "org.slf4j" % "slf4j-api" % "1.7.7",
   // DI
   "com.google.inject" % "guice" % "4.0-beta4",
