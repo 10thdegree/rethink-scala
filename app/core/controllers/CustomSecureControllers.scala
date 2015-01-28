@@ -12,7 +12,7 @@ import securesocial.controllers._
 import securesocial.core._
 import securesocial.core.authenticator.CookieAuthenticator
 import securesocial.core.providers.UsernamePasswordProvider
-import securesocial.core.services.SaveMode
+import securesocial.core.services.{RoutesService, SaveMode}
 import securesocial.core.utils._
 
 import scala.concurrent.Future
@@ -37,6 +37,10 @@ class CustomLoginPage @Inject() (override implicit val env: RuntimeEnvironment[B
       }
     }
   }
+}
+
+class CustomRoutesService extends RoutesService.Default {
+  override def loginPageUrl(implicit req: RequestHeader): String = core.controllers.routes.CustomLoginPage.login().absoluteURL(IdentityProvider.sslEnabled)
 }
 
 class CustomRegistration @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile]) extends BaseRegistration[BasicProfile] {

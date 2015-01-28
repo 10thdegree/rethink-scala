@@ -1,16 +1,13 @@
-import java.lang.reflect.Constructor
-
 import com.google.inject.{AbstractModule, Guice}
+import core.controllers.CustomRoutesService
 import core.dataBrokers.Setup
 import core.models.User
 import core.services.{RethinkAuthenticatorStore, RethinkUserService}
 import net.codingwell.scalaguice.ScalaModule
 import play.api.GlobalSettings
-import securesocial.core.{BasicProfile, RuntimeEnvironment}
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticatorBuilder, HttpHeaderAuthenticatorBuilder}
 import securesocial.core.services.AuthenticatorService
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
+import securesocial.core.{BasicProfile, RuntimeEnvironment}
 
 /**
  * Set up the Guice injector and provide the mechanism for return objects from the dependency graph.
@@ -60,6 +57,8 @@ object Global extends GlobalSettings {
   }
 
   object MyRuntimeEnvironment extends RuntimeEnvironment.Default[User] {
+
+    override lazy val routes = new CustomRoutesService()
 
     override lazy val userService: RethinkUserService = new RethinkUserService()
 

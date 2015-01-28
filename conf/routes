@@ -73,3 +73,4 @@ POST          /authenticate                           @core.controllers.CustomPr
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/*file                           controllers.Assets.at(path="/public/core", file)
 GET           /webjars/*file                          controllers.WebJarAssets.at(file)
+GET           /assets/*file                           securesocial.controllers.Assets.at(path = "/public/securesocial", file)
