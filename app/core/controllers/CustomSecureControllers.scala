@@ -6,7 +6,7 @@ import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc._
-import play.filters.csrf.CSRFAddToken
+import play.filters.csrf._
 import securesocial.controllers.BaseRegistration._
 import securesocial.controllers._
 import securesocial.core._
@@ -39,49 +39,80 @@ class CustomLoginPage @Inject() (override implicit val env: RuntimeEnvironment[B
   }
 }
 
-class CustomRoutesService extends RoutesService.Default {
-  override def loginPageUrl(implicit req: RequestHeader): String = core.controllers.routes.CustomLoginPage.login().absoluteURL(IdentityProvider.sslEnabled)
+class CustomRoutesService @Inject() extends RoutesService.Default {
+  override def loginPageUrl(implicit req: RequestHeader): String =
+    core.controllers.routes.CustomLoginPage.login().absoluteURL(IdentityProvider.sslEnabled)
+
+  override def signUpUrl(implicit req: RequestHeader): String =
+    core.controllers.routes.CustomRegistration.startSignUp().absoluteURL(IdentityProvider.sslEnabled)
+
+  override def signUpUrl(token: String)(implicit req: RequestHeader): String =
+    core.controllers.routes.CustomRegistration.signUp(token).absoluteURL(IdentityProvider.sslEnabled)
+
+  override def handleSignUpUrl(mailToken: String)(implicit req: RequestHeader): String =
+    core.controllers.routes.CustomRegistration.handleSignUp(mailToken).absoluteURL(IdentityProvider.sslEnabled)
+
+  override def resetPasswordUrl(implicit request: RequestHeader): String =
+    core.controllers.routes.PasswordReset.startResetPassword().absoluteURL(IdentityProvider.sslEnabled)
+
+  override def resetPasswordUrl(mailToken: String)(implicit req: RequestHeader): String =
+    core.controllers.routes.PasswordReset.resetPassword(mailToken).absoluteURL(IdentityProvider.sslEnabled)
+
+  override def handleStartResetPasswordUrl(implicit req: RequestHeader): String =
+    core.controllers.routes.PasswordReset.handleStartResetPassword().absoluteURL(IdentityProvider.sslEnabled)
+
+  override def handleStartResetPasswordUrl(mailToken: String)(implicit req: RequestHeader): String =
+    core.controllers.routes.PasswordReset.handleResetPassword(mailToken).absoluteURL(IdentityProvider.sslEnabled)
+
+  override def authenticationUrl(provider: String, redirectTo: Option[String] = None)(implicit req: RequestHeader): String =
+    core.controllers.routes.CustomProviderController.authenticateByPost(redirectTo).absoluteURL(IdentityProvider.sslEnabled)
 }
 
 class CustomRegistration @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile]) extends BaseRegistration[BasicProfile] {
-  override def handleStartSignUp = Action.async {
-    implicit request =>
-      startForm.bindFromRequest.fold(
-        errors => {
-          Future.successful(BadRequest(env.viewTemplates.getStartSignUpPage(errors)))
-        },
-        e => {
-          val email = e.toLowerCase
-          // check if there is already an account for this email address
-          import scala.concurrent.ExecutionContext.Implicits.global
-          env.userService.findByEmailAndProvider(email, UsernamePasswordProvider.UsernamePassword).map {
-            maybeUser =>
-              maybeUser match {
-                case Some(user) =>
-                  // user signed up already, send an email offering to login/recover password
-                  //env.mailer.sendAlreadyRegisteredEmail(user)
-                case None =>
-                  import scala.concurrent.ExecutionContext.Implicits.global
-                  createToken(email, isSignUp = true).map { token =>
-                    env.mailer.sendSignUpEmail(email, token.uuid)
-                  }
-              }
-              handleStartResult().flashing(Success -> Messages(ThankYouCheckEmail), Email -> email)
+  override def handleStartSignUp =  CSRFCheck {
+    Action.async {
+      implicit request =>
+        startForm.bindFromRequest.fold(
+          errors => {
+            Future.successful(BadRequest(env.viewTemplates.getStartSignUpPage(errors)))
+          },
+          e => {
+            val email = e.toLowerCase
+            // check if there is already an account for this email address
+            import scala.concurrent.ExecutionContext.Implicits.global
+            env.userService.findByEmailAndProvider(email, UsernamePasswordProvider.UsernamePassword).map {
+              maybeUser =>
+                maybeUser match {
+                  case Some(user) =>
+                    // user signed up already, send an email offering to login/recover password
+                    //env.mailer.sendAlreadyRegisteredEmail(user)
+                  case None =>
+                    import scala.concurrent.ExecutionContext.Implicits.global
+                    createToken(email, isSignUp = true).flatMap { token =>
+                      env.mailer.sendSignUpEmail(email, token.uuid)
+                      env.userService.saveToken(token)
+
+                    }
+                }
+                handleStartResult().flashing(Success -> Messages(ThankYouCheckEmail), Email -> email)
+            }
           }
-        }
-      )
+        )
+    }
   }
 
   /**
    * Renders the sign up page
    * @return
    */
-  override def signUp(token: String) = Action.async {
-    implicit request =>
-      executeForToken(token, true, {
-        _ =>
-          Future.successful(Ok(env.viewTemplates.getSignUpPage(form, token)))
-      })
+  override def signUp(token: String) = CSRFAddToken {
+      Action.async {
+      implicit request =>
+        executeForToken(token, true, {
+          _ =>
+            Future.successful(Ok(env.viewTemplates.getSignUpPage(form, token)))
+        })
+    }
   }
 }
 
@@ -244,3 +275,6 @@ object ProviderControllerHelper {
    */
   def toUrl(session: Session) = session.get(SecureSocial.OriginalUrlKey).getOrElse(ProviderControllerHelper.landingUrl)
 }
+
+class PasswordReset @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile]) extends BasePasswordReset[BasicProfile]
+class PasswordChange @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile]) extends BasePasswordChange[BasicProfile]

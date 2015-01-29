@@ -10,23 +10,23 @@ GET           /manage                                 @core.controllers.CoreAppl
 
 # Login page
 GET           /login                                  @core.controllers.CustomLoginPage.login
-GET           /logout                                 @securesocial.controllers.LoginPage.logout
+GET           /logout                                 @core.controllers.CustomLoginPage.logout
 
 # Registration routes
 GET           /invite                                 @core.controllers.CustomRegistration.startSignUp
 GET           /signup/:mailToken                      @core.controllers.CustomRegistration.signUp(mailToken)
 POST          /invite                                 @core.controllers.CustomRegistration.handleStartSignUp
-POST          /signup/:mailToken                      @securesocial.controllers.Registration.handleSignUp(mailToken)
+POST          /signup/:mailToken                      @core.controllers.CustomRegistration.handleSignUp(mailToken)
 
 # Reset password
-GET           /reset                                  @securesocial.controllers.PasswordReset.startResetPassword
-POST          /reset                                  @securesocial.controllers.PasswordReset.handleStartResetPassword
-GET           /reset/:mailToken                       @securesocial.controllers.PasswordReset.resetPassword(mailToken)
-POST          /reset/:mailToken                       @securesocial.controllers.PasswordReset.handleResetPassword(mailToken)
+GET           /reset                                  @core.controllers.PasswordReset.startResetPassword
+POST          /reset                                  @core.controllers.PasswordReset.handleStartResetPassword
+GET           /reset/:mailToken                       @core.controllers.PasswordReset.resetPassword(mailToken)
+POST          /reset/:mailToken                       @core.controllers.PasswordReset.handleResetPassword(mailToken)
 
 # Change Password
-GET           /password                               @securesocial.controllers.PasswordChange.page
-POST          /password                               @securesocial.controllers.PasswordChange.handlePasswordChange
+GET           /password                               @core.controllers.PasswordChange.page
+POST          /password                               @core.controllers.PasswordChange.handlePasswordChange
 
 # Permissions
 GET           /permission                             @core.controllers.PermissionsController.getPermissions
