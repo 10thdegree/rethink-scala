@@ -7,7 +7,7 @@ import reporting.models.{Fees, FieldBinding, Field, Report}
 
 import scala.collection.SortedMap
 
-class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servingFees: Fees.FeesLookup[Fees.ServingFees]) {
+class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servingFees: Fees.FeesLookup[Fees.ServingFees], agencyFees: Fees.FeesLookup[Fees.AgencyFees]) {
 
   import DataSource.DataSourceAggregators.implicits._
 
@@ -34,6 +34,7 @@ class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servin
   import JodaTime.implicits._
 
   def getReport(ds: DataSource, dsRows: Seq[BasicRow])(start: DateTime, end: DateTime): List[GeneratedReport.Row] = {
+    play.Logger.debug("getReport() running...")
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
     val rowsByDate = dsa
       .groupByDate(ds -> dsRows)

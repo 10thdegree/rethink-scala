@@ -82,6 +82,7 @@ object TuiReportController extends Controller {
     //val tui = reporting.util.TUIReportHelper
     val ro = reporting.util.TUIReportHelper.TUISearchPerformanceRO()
     implicit val servingFeesLookup = new Fees.FeesLookup(ro.servingFees)
+    implicit val agencyFeesLookup = new Fees.FeesLookup(ro.agencyFees)
     Logger.debug("Compiling report fields...")
     val gen = new SimpleReportGenerator(ro.report, ro.fields)
     Logger.debug("Building DS row factory...")
@@ -130,8 +131,14 @@ object TuiReportController extends Controller {
 
     implicit val fieldWrites: Writes[reporting.models.Field] = (
       (JsPath \ "varName").write[String] and
-        (JsPath \ "displayName").write[String]
-      )((f: reporting.models.Field) => (f.varName, f.label))
+        (JsPath \ "displayName").write[String] and
+        (JsPath \ "format").write[String] and
+        (JsPath \ "footerType").write[String]
+      )((f: reporting.models.Field) => (
+        f.varName,
+        f.label,
+        f.format.map(_.name).getOrElse(""),
+        f.footer.map(_.name).getOrElse("")))
 
     implicit val generatedReportRowWrites: Writes[GeneratedReport.Row] = (
       (JsPath \ "key").write[String] and
@@ -155,7 +162,7 @@ object TuiReportController extends Controller {
       .map(t => {
         cache.set(t._1.m)
         t._2
-      }) //feed in the cache again 
+      }) //feed in the cache again
       
     parsedReport.map(_.leftMap(err => err.msg)) //we could return the transformer stack, but we want to see both erorr/not error so i think this is better?
   }

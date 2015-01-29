@@ -1,4 +1,4 @@
-app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', function ($timeout, reports, scope) {
+app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter', function ($timeout, reports, scope, $filter) {
     var vm = this;
 
     vm.isLoading = true;
@@ -12,6 +12,8 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', function (
 
     vm.rows = [];
 
+    vm.footers = [];
+
     vm.reportTitle = "Report for " + vm.range.start + " to " + vm.range.end;
 
     scope.$on('report.fetch.start', function () {
@@ -24,21 +26,80 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', function (
         vm.isLoading = false;
     });
 
-    function ColumnDesc(name, display, sort) {
+    function ColumnDesc(name, display, sort, format, footerType) {
         this.name = name;
         this.display = display;
         this.sort = sort;
+        this.format = format;
+        this.footerType = footerType;
     }
 
     function reportLoadedCallback(report) {
+
+        var cols = report.columns.map(function (e) {
+            return new ColumnDesc(e.varName, e.displayName, e.varName, e.format, e.footerType);
+        });
+        cols.unshift(new ColumnDesc("Key", "Key", "Key", ""));
+
+        var footers = cols.map(function (e, i) { return { sum: 0, min: undefined, max: undefined}; });
+
         var flattened = report.rows.map(function (e) {
             return angular.extend({}, {'Key': { 'val':e.key, 'disp': e.key}}, e.values);
         });
 
-        var cols = report.columns.map(function (e) {
-            return new ColumnDesc(e.varName, e.displayName, e.varName);
+        flattened.forEach(function (r, ri) {
+            cols.forEach(function (c, ci) {
+                if (ci > 0) {
+                    var v = r[c.name].val;
+                    var f = footers[ci];
+                    footers[ci].sum += v;
+                    if (f.min == undefined || v < f.min) f.min = v;
+                    if (f.max == undefined || v > f.min) f.max = v;
+                }
+            });
         });
-        cols.unshift(new ColumnDesc("Key", "Key", "Key"));
+
+        vm.footers = cols.map(function (c, ci) {
+            var ret = "";
+            if (ci > 0) {
+                var f = footers[ci];
+                switch (c.footerType) {
+                    case "avg":
+                        ret = f.sum / flattened.length;
+                        break;
+                    case "min":
+                        ret = f.min;
+                        break;
+                    case "max":
+                        ret = f.max;
+                        break;
+                    case "sum":
+                        ret = f.sum;
+                        break;
+                    default:
+                        ret = "";
+                        break;
+                }
+            }
+            var formatted = "";
+            switch (c.format) {
+                case "currency":
+                    formatted = $filter('currency')(ret);
+                    break;
+                case "percentage":
+                    formatted = $filter('number')(ret * 100, 0) + "%";
+                    break;
+                case "fractional":
+                    formatted = $filter('number')(ret, 2);
+                    break;
+                case "whole":
+                    formatted = $filter('number')(ret, 0);
+                    break;
+                default:
+                    formatted = ret;
+            }
+            return { value: formatted };
+        });
 
         vm.columns = cols;
         vm.rows = flattened;

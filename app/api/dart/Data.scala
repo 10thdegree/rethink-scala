@@ -34,7 +34,7 @@ object Data {
 
   case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
 
-  case class DownloadedReport(reportid: Long, data: List[Map[String,String]]) extends DartReportData //TODO: nomore list, should be traversable
+  case class DownloadedReport(reportid: Long, startDate: DateTime, endDate: DateTime, data: List[Map[String,String]]) extends DartReportData //TODO: nomore list, should be traversable
 
   case class GoogleAuthCred(filepath: String, accountId: String,  userAccount: String)
 }

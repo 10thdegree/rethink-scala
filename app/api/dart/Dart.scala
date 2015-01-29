@@ -18,7 +18,7 @@ object Dart {
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
     c.cache(reportId.toString, startDate, endDate) match {
       case h :: tail => 
-        Monad[BravoM].point( DownloadedReport(reportId, h :: tail))        
+        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, h :: tail))        
       case Nil =>
         for {
           dfa <- c.api.getDartAuth
@@ -28,7 +28,7 @@ object Dart {
           rep = ReportParser.parse(rs)
           _   <- put(c.updateCache(reportId.toString, startDate, endDate, rep))
         } yield {
-          DownloadedReport(reportId,rep)
+          DownloadedReport(reportId, startDate, endDate, rep)
         }
     }).toBravoM
     

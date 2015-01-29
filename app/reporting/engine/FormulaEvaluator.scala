@@ -1,9 +1,6 @@
 package reporting.engine
 
 import org.joda.time.DateTime
-import reporting.engine.AST.Fees
-import reporting.engine.AST.Fees.ServingFeeTypes.ServingFeeType
-import reporting.models.Fees.FeesLookup
 
 object FormulaEvaluator {
 
@@ -35,9 +32,11 @@ object FormulaEvaluator {
     }
   }
 
-  import reporting.models.{Fees => MFees}
+  import reporting.models.Fees.FeesLookup
+  import reporting.models.Fees.{ServingFees => MServingFees}
+  import reporting.models.Fees.{AgencyFees => MAgencyFees}
 
-  class EvaluationCxt[R](val report: Report)(implicit servingFeesLookup: MFees.FeesLookup[MFees.ServingFees]) {
+  class EvaluationCxt[R](val report: Report)(implicit servingFeesLookup: FeesLookup[MServingFees], agencyFeesLookup: FeesLookup[MAgencyFees]) {
 
     case class Sum(count: Long, sum: Result) {
       def +(that: Sum): Sum = Sum(this.count + that.count, this.sum + that.sum)
@@ -121,27 +120,50 @@ object FormulaEvaluator {
     }
 
     // TODO: Use date range from Row, not report!
-    def servingFees(label: String, rowCxt: EvaluationCxt.Row, dependsOn: Option[AST.Term], tpe: Fees.ServingFeeTypes.ServingFeeType) = {
+    import reporting.engine.AST.Fees.ServingFeeTypes.ServingFeeType
+    import reporting.engine.AST.Fees.ServingFeeTypes
+    def servingFees(label: String, rowCxt: EvaluationCxt.Row, dependsOn: Option[AST.Term], tpe: ServingFeeType) = {
       import reporting.engine.JodaTime.implicits._
-      import Result.implicits._
       import org.joda.time._
       val lookup = servingFeesLookup
       val span = new Interval(report.start, report.end)
       val fees = for {
-        s <- span.intoMonths
+        s <- span.intoMonths.headOption // Should support more than 1 month
         year = s.getStart.getYear
         month = s.getStart.getMonthOfYear
         ll <- lookup(label)
         df <- dependsOn
         v = monthlySums(df.label)(year + "/" + month)
       } yield tpe match {
-        case Fees.ServingFeeTypes.Cpc => ll(s).head.cpc * rowCxt(df.label)
-        case Fees.ServingFeeTypes.Cpm => rowCxt(df.label) * ll(s).head.cpm / 1000 // Force lifting
+            // XXX(dk): This actually needs to ask for nested date ranges
+        case ServingFeeTypes.Cpc => rowCxt(df.label) * ll(s).head.cpc
+        case ServingFeeTypes.Cpm => rowCxt(df.label) * ll(s).head.cpm / 1000
       }
-      fees.sum(Result.implicits.ResultNumeric)
+      //import Result.implicits._
+      fees.getOrElse(Result(0))//.sum(Result.implicits.ResultNumeric)
     }
 
-    def agencyFees(label: String) = AgencyFees
+    def agencyFees(label: String, rowCxt: EvaluationCxt.Row, spend: AST.Term, impressions: AST.Term) = {
+      import reporting.engine.JodaTime.implicits._
+      import org.joda.time._
+      val lookup = agencyFeesLookup
+      val span = new Interval(report.start, report.end)
+      val fees = for {
+        s <- span.intoMonths.headOption // Should support more than 1 month
+        year = s.getStart.getYear
+        month = s.getStart.getMonthOfYear
+        ll <- lookup(label)
+        mvImpr = monthlySums(impressions.label)(year + "/" + month).sum
+        vImpr = rowCxt(impressions.label)
+        mvSpend = monthlySums(spend.label)(year + "/" + month).sum
+        vSpend = rowCxt(spend.label)
+        fees = ll(s).head(mvImpr.toLong)(mvSpend.value, s)
+      } yield {
+        (vSpend / mvSpend) * fees
+      }
+      play.Logger.debug(s"v = $fees")
+      fees.getOrElse(Result.Zero)
+    }
   }
 
   import reporting.engine.AST._
@@ -207,10 +229,13 @@ object FormulaEvaluator {
 
   object Result {
 
+    case object Zero extends Result(0, None)
+
     object Formats {
       val WholeNumber = "#,###"
       val FractionalNumber = "#,###.##"
       val Nan = "N/A"
+      val Currency = "\u00A4#,##0.00"
     }
 
     //def
@@ -256,7 +281,7 @@ object FormulaEvaluator {
 
         override def toInt(x: Result): Int = x.toInt
 
-        override def negate(x: Result): Result = ???
+        override def negate(x: Result): Result = new Result(-x.value, x.format)
 
         override def fromInt(x: Int): Result = new Result(x, Some(Formats.WholeNumber))
 
@@ -266,12 +291,13 @@ object FormulaEvaluator {
 
         override def minus(x: Result, y: Result): Result = x - y
 
-        override def compare(x: Result, y: Result): Int = ???
+        override def compare(x: Result, y: Result): Int = x.value.compare(y.value)
       }
     }
   }
 
   import Result.implicits._
+  import reporting.engine.AST.Fees
 
   def eval[A](term: Term)(implicit cxt: EvaluationCxt[A], rcxt: EvaluationCxt.Row): Result = term match {
     case t@Constant(v) => Result(t.toDouble)
@@ -298,10 +324,7 @@ object FormulaEvaluator {
     case Max(left, right) => Result(eval(left).value.max(eval(right).value)) // loses format
     // Fees
     case t@Fees.ServingFee(label, ft, ref) => cxt.servingFees(label, rcxt, ref, ft)
-    case t@Fees.AgencyFee(label, ft, ref) if ft == Fees.AgencyFeeTypes.Monthly =>
-      Result(cxt.agencyFees(label).monthly)
-    case t@Fees.AgencyFee(label, ft, ref) if ft == Fees.AgencyFeeTypes.PercentileMonth =>
-      Result(cxt.agencyFees(label).percentileMonthly(ref.map(r => eval(r).toInt).getOrElse(0)))
+    case t@Fees.AgencyFee(label, spend, impressions) => cxt.agencyFees(label, rcxt, spend, impressions)
   }
 
   def eval[R](row: R, date: DateTime, orderedTerms: List[LabeledTerm])(implicit cxt: EvaluationCxt[R]): Map[String, Result] = {

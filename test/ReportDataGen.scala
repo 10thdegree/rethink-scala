@@ -16,9 +16,27 @@ import org.joda.time.DateTime
 import java.util.Date
 
 object ReportDataGen {
- 
- implicit val datetime: Arbitrary[DateTime] = Arbitrary( arbitrary[Date].map(new DateTime(_)) )
- 
+  
+  implicit val dateGen: Arbitrary[(DateTime,DateTime)] = Arbitrary(for {
+    year <- Gen.choose(2010, 2020)
+    month <- Gen.choose(1, 12)
+    day <- Gen.choose(1, month match {
+      case 2 => 28
+      case 4 | 6 | 9 | 11 => 30
+      case _ => 31
+    })
+    hour <- Gen.choose(0, 23)
+    minute <- Gen.choose(0, 59)
+    second <- Gen.choose(0, 59)
+    start  = new DateTime(year, month, day, hour, minute, second)
+    days  <- Gen.choose(1, 365) //probably the longest report someone would want
+  } yield 
+    (start, start.plusDays(days))
+  )
+  
+  implicit val datetime: Arbitrary[DateTime] = Arbitrary( arbitrary[Date].map(new DateTime(_)) )
+
+  /*
   implicit def reportDataStr: Arbitrary[RawDartReport] = Arbitrary(for {
     reports  <- arbitrary[List[SDartReport]]
     strs <- Gen.containerOf[List,String](Gen.alphaStr) 
@@ -33,15 +51,33 @@ object ReportDataGen {
       case Nil => RawDartReport("")
     }
   })
-
-  implicit def sampleReports: Arbitrary[List[SDartReport]] =   //Arbitrary(Gen.containerOf[List,SDartReport](sampleReportGen)) 
-    Arbitrary(
+  */
+  
+  implicit def arbSampleReport: Arbitrary[DownloadedReport] =  Arbitrary(sampleReport)
+  
+  implicit def sampleReport: Gen[DownloadedReport] =
     for {
-      numb <- Gen.choose(0,1000)
-      li   <- Gen.containerOfN[List,SDartReport](numb, sampleReportGen) //(numb, sampleReportGen)
+      numb                <- Gen.choose(2,1000)
+      (startDate,endDate) <- arbitrary[(DateTime,DateTime)]
+      reportId            <- arbitrary[Long]
+      li   <- Gen.containerOfN[List, DartReportRow](numb, sampleReportRowGen(startDate.getMillis(), endDate.getMillis())) //(numb, sampleReportGen)
     } yield 
-      li)
-  case class SDartReport  (
+       DownloadedReport(reportId, startDate, endDate, li.map(_.toMap)) 
+  
+  def sampleReportRowGen(startD: Long, endD: Long) = for {
+      long      <- Gen.choose(startD, endD)
+      date      = new DateTime(long)
+      paidSCamp <- arbitrary[BigDecimal]
+      paidSCost <- arbitrary[BigDecimal]
+      psrchImp  <- arbitrary[BigDecimal]
+      homepage  <- arbitrary[BigDecimal]
+      confirm   <- arbitrary[BigDecimal]
+      applyo    <- arbitrary[BigDecimal]
+    } yield {
+      DartReportRow(date, paidSCamp, paidSCost, psrchImp, homepage, confirm, applyo)  
+    }
+
+  case class DartReportRow  (
     date: DateTime,
     paidSearchCampaign: BigDecimal,
     paidSearchCost: BigDecimal,
@@ -55,19 +91,6 @@ object ReportDataGen {
                                        "TUI Apply Online" -> tuiApplyOnline.toString)
     }
 
-  def sampleReportGen: Gen[SDartReport] = for {
-      date <- arbitrary[DateTime]
-      paidSCamp <- arbitrary[BigDecimal]
-      paidSCost <- arbitrary[BigDecimal]
-      psrchImp  <- arbitrary[BigDecimal]
-      homepage  <- arbitrary[BigDecimal]
-      confirm   <- arbitrary[BigDecimal]
-      applyo    <- arbitrary[BigDecimal]
-    } yield {
-      SDartReport(date, paidSCamp, paidSCost, psrchImp, homepage, confirm, applyo)  
-    }
-  
-  
   case class RawDartReport(data: String)
 
   trait SampleReport {
@@ -77,5 +100,16 @@ object ReportDataGen {
       Option(a).fold("")(o => o.toString())
 
   }
+
+  def toDartReportString(downloadedReport: DownloadedReport): String = 
+    downloadedReport.data match {
+      case x :: xs =>
+        val headers = x.keys.toList.mkString(",")
+        val values:List[String] = headers :: (xs.map(m => x.keys.map(k => m(k)).mkString(",")))
+        val csvdata = values.mkString("\n")
+        downloadedReport.reportid.toString + "\nReport Fields\n" + csvdata
+      case Nil => "" 
+    }
+  
 
 }

@@ -70,7 +70,7 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="{{report.columns.length}}" class="text-center"> FOOTER HERE </td>
+                            <td ng-repeat="f in report.footers" style="font-weight: bold">{{f.value}}</td>
                         </tr>
                     </tfoot>
                 </table>

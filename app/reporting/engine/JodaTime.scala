@@ -15,6 +15,7 @@ object JodaTime {
 
     implicit class DateTimeOps(dt: DateTime) {
       def withTimeAtEndOfDay = dt.plusDays(1).withTimeAtStartOfDay.minusMillis(1)
+      def totalDaysInMonth = dt.monthOfYear.getMaximumValue
     }
 
     implicit class IntervalOps(span: Interval) {
