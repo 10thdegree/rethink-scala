@@ -147,7 +147,7 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
         Map("foo" -> "4.5", "bar" -> "10", "fooBar" -> "14.5")
       )
 
-      implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))(null)
+      implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))
 
       for ((r, idx) <- rows.zipWithIndex) {
         val terms = for ((key, astOpt) <- asts) yield key -> astOpt.orElse(Some(AST.Constant(r.values(key))))
@@ -204,7 +204,7 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
       val orderedTerms = FormulaCompiler.sort(labeledTerms.toList: _*)(labeledTerms)
       val groupedTerms = FormulaCompiler.segment(orderedTerms: _*)(labeledTerms)
 
-      implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))(null)
+      implicit val cxt = new FormulaEvaluator.EvaluationCxt[Row](FormulaEvaluator.Report(rows.head.date, rows.last.date))
 
       for {
         grpTerms <- groupedTerms
