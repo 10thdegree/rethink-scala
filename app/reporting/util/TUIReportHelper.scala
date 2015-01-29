@@ -97,29 +97,36 @@ object TUIReportHelper {
       validUntil = None
     ))
 
+    val currency = FormatTypes.Currency.some
+    val numberWhole = FormatTypes.WholeNumber.some
+    val numberFrac = FormatTypes.FractionalNumber.some
+    val percent = FormatTypes.Percentage.some
+
+    val summation = FooterTypes.Summation.some
+    val average = FooterTypes.Average.some
+
     val fields = List(
-      Field(randUUID, None, "spend", None),
+      Field(randUUID, None, "spend", None, currency, summation),
       // Spend = [Cost] + ([Clicks]f * [PpcTrackingRate])
       Field(randUUID, None, "cpcFees",
-        "currency(fees.serving(\"banner\").cpc(clicks))".some),
+        "currency(fees.serving(\"banner\").cpc(clicks))".some, currency, summation),
       Field(randUUID, None, "cpmFees",
-        "currency(fees.serving(\"banner\").cpm(impressions))".some),
+        "currency(fees.serving(\"banner\").cpm(impressions))".some, currency, summation),
       Field(randUUID, None, "dispFees",
-        "currency(fees.agency(\"display\").monthly(spend, impressions))".some),
-      Field(randUUID, "Total Spend".some, "totalSpend", "currency(spend + cpcFees + cpmFees + dispFees)".some), // Should include fees!
-      Field(randUUID, None, "impressions", None),
-      Field(randUUID, None, "clicks", None),
-      Field(randUUID, None, "ctr", "percentage(clicks / impressions)".some),
-      Field(randUUID, None, "cpc", "currency(totalSpend / clicks)".some),
+        "currency(fees.agency(\"display\").monthly(spend, impressions))".some, currency, summation),
+      Field(randUUID, "Total Spend".some, "totalSpend", "currency(spend + cpcFees + cpmFees + dispFees)".some, currency, summation),
+      Field(randUUID, None, "impressions", None, numberWhole, summation),
+      Field(randUUID, None, "clicks", None, numberWhole, summation),
+      Field(randUUID, None, "ctr", "percentage(clicks / impressions)".some, percent, average),
+      Field(randUUID, None, "cpc", "currency(totalSpend / clicks)".some, currency, average),
       //Field(randUUID, "AvgPosition", None),
-      Field(randUUID, None, "contact", None),
-      Field(randUUID, None, "inquiries", None),
-      Field(randUUID, None, "apps", None),
-      Field(randUUID, None, "calls", "0".some),
-      Field(randUUID, "Total Leads".some, "totalLeads", "contact + inquiries + apps + calls".some),
-      Field(randUUID, None, "cpl", "currency(totalSpend / totalLeads)".some),
-      // What is SSC??
-      Field(randUUID, None, "ssc", "percentage(totalLeads / clicks)".some)
+      Field(randUUID, None, "contact", None, numberWhole, summation),
+      Field(randUUID, None, "inquiries", None, numberWhole, summation),
+      Field(randUUID, None, "apps", None, numberWhole, summation),
+      Field(randUUID, None, "calls", "0".some, numberWhole, summation),
+      Field(randUUID, "Total Leads".some, "totalLeads", "contact + inquiries + apps + calls".some, numberWhole, summation),
+      Field(randUUID, None, "cpl", "currency(totalSpend / totalLeads)".some, currency, average),
+      Field(randUUID, None, "ssc", "percentage(totalLeads / clicks)".some, percent, average)
     )
     val fieldsLookup = fields.map(f => f.varName -> f).toMap
 

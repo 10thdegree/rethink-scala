@@ -9,19 +9,28 @@ import reporting.models.FooterTypes.FooterType
 case class Account(id: Option[UUID], name: String)
 
 object FooterTypes {
-
   case class FooterType(name: String)
 
-  val IncludesAllData = FooterType("all_data")
-  val IncludesFilteredData = FooterType("filtered_data")
+  val Average = FooterType("avg")
+  val Summation = FooterType("sum")
+  val Minimum = FooterType("min")
+  val Maximum = FooterType("max")
+}
+
+object FormatTypes {
+  case class FormatType(name: String)
+  val Currency = FormatType("currency")
+  val FractionalNumber = FormatType("fractional")
+  val WholeNumber = FormatType("whole")
+  val Percentage = FormatType("percentage")
 }
 
 case class Field(id: Option[UUID],
                  displayName: Option[String],
                  varName: String,
                  formula: Option[String],
-                 footerFormula: Option[String] = None,
-                 footerType: FooterType = FooterTypes.IncludesAllData) extends Document {
+                 format: Option[FormatTypes.FormatType] = None,
+                 footer: Option[FooterTypes.FooterType] = None) extends Document {
 
   def prettyVarName = if (varName.length < 4) varName.toUpperCase else varName.capitalize
 

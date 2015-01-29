@@ -131,8 +131,14 @@ object TuiReportController extends Controller {
 
     implicit val fieldWrites: Writes[reporting.models.Field] = (
       (JsPath \ "varName").write[String] and
-        (JsPath \ "displayName").write[String]
-      )((f: reporting.models.Field) => (f.varName, f.label))
+        (JsPath \ "displayName").write[String] and
+        (JsPath \ "format").write[String] and
+        (JsPath \ "footerType").write[String]
+      )((f: reporting.models.Field) => (
+        f.varName,
+        f.label,
+        f.format.map(_.name).getOrElse(""),
+        f.footer.map(_.name).getOrElse("")))
 
     implicit val generatedReportRowWrites: Writes[GeneratedReport.Row] = (
       (JsPath \ "key").write[String] and
