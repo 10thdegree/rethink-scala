@@ -12,8 +12,10 @@ import org.scalacheck.Prop._
 import org.scalacheck._    
 import Gen._               
 import Arbitrary.arbitrary 
-import org.joda.time.DateTime
+import org.joda.time._
 import java.util.Date
+import bravo.api.dart.DateUtil._
+import bravo.api.dart.Data._
 
 object ReportDataGen {
   
@@ -36,23 +38,6 @@ object ReportDataGen {
   
   implicit val datetime: Arbitrary[DateTime] = Arbitrary( arbitrary[Date].map(new DateTime(_)) )
 
-  /*
-  implicit def reportDataStr: Arbitrary[RawDartReport] = Arbitrary(for {
-    reports  <- arbitrary[List[SDartReport]]
-    strs <- Gen.containerOf[List,String](Gen.alphaStr) 
-    reportsMap = reports.map(_.toMap)
-  } yield {
-    reportsMap match {
-      case x :: xs =>
-        val headers = x.keys.toList.mkString(",")
-        val values:List[String] = headers :: (xs.map(m => x.keys.map(k => m(k)).mkString(",")))
-        val csvdata = values.mkString("\n")
-        RawDartReport(strs.mkString("\n") + "\nReport Fields\n" + csvdata)
-      case Nil => RawDartReport("")
-    }
-  })
-  */
-  
   implicit def arbSampleReport: Arbitrary[DownloadedReport] =  Arbitrary(sampleReport)
   
   implicit def sampleReport: Gen[DownloadedReport] =
@@ -62,7 +47,7 @@ object ReportDataGen {
       reportId            <- arbitrary[Long]
       li   <- Gen.containerOfN[List, DartReportRow](numb, sampleReportRowGen(startDate.getMillis(), endDate.getMillis())) //(numb, sampleReportGen)
     } yield 
-       DownloadedReport(reportId, startDate, endDate, li.map(_.toMap)) 
+       DownloadedReport(reportId, startDate, endDate, groupDates(li.map(_.toMap))) 
   
   def sampleReportRowGen(startD: Long, endD: Long) = for {
       long      <- Gen.choose(startD, endD)
@@ -74,11 +59,11 @@ object ReportDataGen {
       confirm   <- arbitrary[BigDecimal]
       applyo    <- arbitrary[BigDecimal]
     } yield {
-      DartReportRow(date, paidSCamp, paidSCost, psrchImp, homepage, confirm, applyo)  
+      DartReportRow(date.toLocalDate(), paidSCamp, paidSCost, psrchImp, homepage, confirm, applyo)  
     }
 
   case class DartReportRow  (
-    date: DateTime,
+    date: LocalDate,
     paidSearchCampaign: BigDecimal,
     paidSearchCost: BigDecimal,
     paidSearchImpressions: BigDecimal,
@@ -102,7 +87,7 @@ object ReportDataGen {
   }
 
   def toDartReportString(downloadedReport: DownloadedReport): String = 
-    downloadedReport.data match {
+    ungroupDates(downloadedReport.data) match {
       case x :: xs =>
         val headers = x.keys.toList.mkString(",")
         val values:List[String] = headers :: (xs.map(m => x.keys.map(k => m(k)).mkString(",")))

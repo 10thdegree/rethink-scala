@@ -6,7 +6,7 @@ trait DartInternalAPI {
   import bravo.core.Util._
   import scala.concurrent.{Future,Promise}
   import org.joda.time.format.DateTimeFormat
-  import org.joda.time.DateTime
+  import org.joda.time._
   import bravo.api.dart.Data._
 
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
@@ -26,15 +26,21 @@ trait DartInternalAPI {
 }
 
 object Data {
-  import org.joda.time.DateTime
+  import org.joda.time._
   
   sealed trait DartReportData {
     def reportid: Long
   }
 
+  //case class ReportRow(rowDate: LocalDate, retreivedDate: DateTime, raw: Map[String,String])
+
+  case class ReportDay(retrievedDate: DateTime = new DateTime(), rowDate: LocalDate, raw: List[Map[String,String]])
+  
   case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
 
-  case class DownloadedReport(reportid: Long, startDate: DateTime, endDate: DateTime, data: List[Map[String,String]]) extends DartReportData //TODO: nomore list, should be traversable
+  //case class DownloadedReport(reportid: Long, startDate: DateTime, endDate: DateTime, data: List[(LocalDate, List[ReportRow])]) extends DartReportData
+  //case class DownloadedReport(reportid: Long, startDate: DateTime, endDate: DateTime, data: List[(LocalDate, List[Map[String,String]])]) extends DartReportData //TODO: nomore list, should be traversable
+  case class DownloadedReport(reportid: Long, startDate: DateTime, endDate: DateTime, data: List[ReportDay]) extends DartReportData
 
   case class GoogleAuthCred(filepath: String, accountId: String,  userAccount: String)
 }

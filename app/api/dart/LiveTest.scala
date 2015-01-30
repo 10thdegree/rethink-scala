@@ -8,6 +8,8 @@ import com.google.api.services.dfareporting.Dfareporting
 import scala.annotation.tailrec
 import bravo.api.dart.Data._
 import scala.concurrent.{Future,Await}
+import org.joda.time._
+import bravo.api.dart.DateUtil._
 
 import play.Logger
 
@@ -23,15 +25,8 @@ object LiveTest {
       val marchexpass: String = "10thdegreee",
       val marchexurl: String = "http://api.voicestar.com/api/xmlrpc/1",
       val marchexuser: String = "urp@10thdegree.com",
-      val m: Map[String, List[Map[String,String]]] = Map[String,List[Map[String,String]]]()
-    ) extends Config {
-      def cache(id: String, s: DateTime, e: DateTime) = {
-          m.get(id + s.toString() + e.toString()  ).getOrElse( List[Map[String,String]]() )
-      }
-      def updateCache(id: String, s: DateTime, e: DateTime, d: List[Map[String,String]]): Config = {
-        this.copy(m = (m + ((id + s.toString() + e.toString()) -> d)))
-        }    
-    }
+      val m: Map[Long, List[ReportDay]] = Map()
+    ) extends Config 
 
     val prodConfig = new ProdConfig()
 
@@ -66,7 +61,7 @@ object LiveTest {
     def saveProdTest(filename:String): Unit = {
       import java.nio.file.{Paths, Files}
       import java.nio.charset.StandardCharsets
-      val report = prodTest().fold(err => "ERROR", report => ReportParser.unparse(report.data)) 
+      val report = prodTest().fold(err => "ERROR", report => ReportParser.unparse(ungroupDates(report.data))) 
       val onlyreport = ReportParser.findTable(report.split("\\r?\\n").toList,"")
       Files.write(Paths.get(filename), onlyreport.getBytes(StandardCharsets.UTF_8))
     }

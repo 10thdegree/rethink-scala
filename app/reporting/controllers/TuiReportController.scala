@@ -18,12 +18,13 @@ import akka.pattern.pipe
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicReference
+import bravo.api.dart.Data._
+import bravo.api.dart.DateUtil._
 
 object TuiReportController extends Controller {
   
-  private val cache = new AtomicReference(Map[String,List[Map[String,String]]]())
+  private val cache = new AtomicReference(Map[Long,List[ReportDay]]())
   
-
   def reportGrid(startDate: String, endDate: String) = Action {
     Ok(reporting.views.html.reportgrid(startDate, endDate))
   }
@@ -149,7 +150,7 @@ object TuiReportController extends Controller {
 
     val report = Dart.getReport(ro.ds.queryId.toInt, start, end)
     val parsedReport = report
-      .map(dr => convertResult(dr.data))
+      .map(dr => convertResult(ungroupDates(dr.data))) //we can keep the grouping here and remove it from the other stuff
       .map(li => Json.toJson(li))
       .run.run(config)
       .map(t => {

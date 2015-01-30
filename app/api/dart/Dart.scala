@@ -14,24 +14,34 @@ object Dart {
   import scala.annotation.tailrec
   import bravo.api.dart.Data._
   import scala.concurrent.{Future,Await}
-     
-  def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
-    c.cache(reportId.toString, startDate, endDate) match {
-      case h :: tail => 
-        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, h :: tail))        
-      case Nil =>
+  import org.joda.time.format._
+  import org.joda.time._
+  import bravo.core._
+  import bravo.api.dart.DateUtil._
+
+  def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => {
+    val reportIdCache = c.cache(reportId)  //v.toList.join //s 
+    val dates = DateUtil.findLargestRange(reportIdCache, startDate, endDate)
+    
+    //we don't want to have to do two queries, so maybe we don't want contiguous... only contiguous at the boundaries? 
+      
+    //c.cache(reportId.toString, startDate, endDate) match {
+     // case h :: tail => 
+     //   Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, h :: tail))        
+     // case Nil =>
         for {
           dfa <- c.api.getDartAuth
           _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
           id  <- c.api.runDartReport(dfa, c.clientId, reportId)
           rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
-          rep = ReportParser.parse(rs)
-          _   <- put(c.updateCache(reportId.toString, startDate, endDate, rep))
+          rep = groupDates(ReportParser.parse(rs))
+          //_   <- put(c.updateCache(reportId, startDate, endDate, rep))
         } yield {
           DownloadedReport(reportId, startDate, endDate, rep)
         }
     }).toBravoM
-    
+
+
   private def fulfillReport(dfa: Dfareporting, reportId: Long, fileId: Long, delayMultiplier: Int): BravoM[String] = ((c:Config) => {
     //not tailrec but we're not going that deep
     def rec(attempts: Int): BravoM[String] =  

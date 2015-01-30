@@ -47,13 +47,8 @@ object DartAPITest extends Properties("Dart API test") {
     val marchexuser: String = "", 
     val marchexpass: String = "",
     val marchexurl: String = "",
-    val m: Map[String, List[Map[String,String]]] = Map[String, List[Map[String,String]]]("1" -> List[Map[String,String]]( Map[String,String]("asdf" -> "blah"))) 
-    ) extends Config {
-      def cache(id: String, s: DateTime, e: DateTime) = m.get(id).getOrElse( List[Map[String,String]]() )
-      def updateCache(id: String, s: DateTime, e: DateTime, d: List[Map[String,String]]): Config = {
-        this.copy(m = (m + ((id) -> d)))
-      }
-  }
+    val m: Map[Long, List[ReportDay]] = Map[Long, List[ReportDay]]() //Map[String, List[Map[String,String]]]("1" -> List[Map[String,String]]( Map[String,String]("asdf" -> "blah"))) 
+    ) extends Config   
 
   val config = TestConfig()
 

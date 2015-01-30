@@ -80,7 +80,7 @@ object MarchexAPITest extends Properties("Bravo API tests") {
     val dt = DateTime.now()
     val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)
     val future = result.run.run(config.copy(marchexurl="http://localhost:"+port))
-    val either = Await.result(future, scala.concurrent.duration.Duration(3, SECONDS) )
+    val either = Await.result(future, scala.concurrent.duration.Duration(30, SECONDS) )
     ws.shutdown()
     either._2.fold(l => {
       println(" l = " + l)
