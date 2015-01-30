@@ -18,6 +18,8 @@ import org.apache.xmlrpc.webserver.WebServer
 import org.apache.xmlrpc.server.PropertyHandlerMapping
 import scala.collection.JavaConversions._
 import bravo.core.Util._
+import scalaz._
+import Scalaz._
 
 object MarchexDataGenerator {
   import bravo.test.ReportDataGen._
@@ -58,9 +60,50 @@ object MarchexAPITest extends Properties("Bravo API tests") {
   class Call {
     def search(custId: String, m: java.util.Map[String,String]): Array[java.util.Map[String,Object]] = callLogs.map(Marchex.callLogToMap(_): java.util.Map[String,Object]).toArray
   }   
+ 
+  private def available(port: Int): Boolean = {
+    import java.io.IOException
+    import java.net.DatagramSocket
+    import java.net.ServerSocket
+    
+    var serverSocket: ServerSocket = null
+    var dataSocket: DatagramSocket = null
+    try {
+      serverSocket = new ServerSocket(port)
+      serverSocket.setReuseAddress(true)
+      dataSocket = new DatagramSocket(port)
+      dataSocket.setReuseAddress(true)
+      return true
+    } catch {
+      case t: Throwable =>
+        return false
+    } finally {
+      if (dataSocket != null) {
+        dataSocket.close()
+      }
+      if (serverSocket != null) {
+        serverSocket.close()
+      }
+    }
+  }
+
+  def findFreePort(): Option[Int] = {
+    def inner(attempt: Int): Option[Int] = 
+      (attempt > 9) match {
+        case true => 
+          None
+        case false =>
+          val portAttempt = 9000 + Gen.choose(0,1000).sample.get
+          if (available(portAttempt))
+            portAttempt.some
+          else 
+            inner(attempt+1)
+      }
+    inner(1)
+  }
   
   property("service bijection") = forAll { (d: Date) => 
-    val port = 9200 + Gen.choose(0,1000).sample.get
+    val port = findFreePort().get 
     val ws = new WebServer(port)
     val xmlServer = ws.getXmlRpcServer()
     val phm = new PropertyHandlerMapping()
