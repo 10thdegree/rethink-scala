@@ -25,14 +25,14 @@ object DartAPITest extends Properties("Dart API test") {
   property("nonblocking test") = forAll { (i:Int) =>
    val reportCall = Dart.getReport(444, new DateTime(), new DateTime())
    val future = reportCall.run.run(config)
-   val result = Await.result(future, scala.concurrent.duration.Duration(1, SECONDS) )
+   val result = Await.result(future, scala.concurrent.duration.Duration(10, SECONDS) )
    true
   }
 
   property("test Cache") = forAll { (i: Int) =>
     val reportCall = Dart.getReport(1, new DateTime(), new DateTime())
     val future = reportCall.run.run(config)
-    val result = Await.result(future, scala.concurrent.duration.Duration(1, SECONDS) )
+    val result = Await.result(future, scala.concurrent.duration.Duration(10, SECONDS) )
     result._2.fold(l => false, r => {
       true
     })

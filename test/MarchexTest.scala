@@ -60,7 +60,7 @@ object MarchexAPITest extends Properties("Bravo API tests") {
   }   
   
   property("service bijection") = forAll { (d: Date) => 
-    val port = 8000 + Gen.choose(0,1000).sample.get
+    val port = 9200 + Gen.choose(0,1000).sample.get
     val ws = new WebServer(port)
     val xmlServer = ws.getXmlRpcServer()
     val phm = new PropertyHandlerMapping()
@@ -80,7 +80,7 @@ object MarchexAPITest extends Properties("Bravo API tests") {
     val dt = DateTime.now()
     val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)
     val future = result.run.run(config.copy(marchexurl="http://localhost:"+port))
-    val either = Await.result(future, scala.concurrent.duration.Duration(3, SECONDS) )
+    val either = Await.result(future, scala.concurrent.duration.Duration(10, SECONDS) )
     ws.shutdown()
     either._2.fold(l => {
       println(" l = " + l)
