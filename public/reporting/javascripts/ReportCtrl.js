@@ -14,6 +14,8 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
 
     vm.footers = [];
 
+    vm.charts = [];
+
     vm.reportTitle = "Report for " + vm.range.start + " to " + vm.range.end;
 
     scope.$on('report.fetch.start', function () {
@@ -26,7 +28,8 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
         vm.isLoading = false;
     });
 
-    function ColumnDesc(name, display, sort, format, footerType) {
+    function ColumnDesc(uuid, name, display, sort, format, footerType) {
+        this.uuid = uuid;
         this.name = name;
         this.display = display;
         this.sort = sort;
@@ -37,9 +40,13 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
     function reportLoadedCallback(report) {
 
         var cols = report.columns.map(function (e) {
-            return new ColumnDesc(e.varName, e.displayName, e.varName, e.format, e.footerType);
+            return new ColumnDesc(e.uuid, e.varName, e.displayName, e.varName, e.format, e.footerType);
         });
-        cols.unshift(new ColumnDesc("Key", "Key", "Key", ""));
+        cols.unshift(new ColumnDesc("", "Key", "Key", "Key", ""));
+        var colsById = {};
+        cols.forEach(function (c, ci) {
+            colsById[c.uuid] = c;
+        });
 
         var footers = cols.map(function (e, i) { return { sum: 0, min: undefined, max: undefined}; });
 
@@ -58,6 +65,26 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
                 }
             });
         });
+
+        vm.charts = report.charts.map(function (c, ci) {
+            switch (c.type) {
+                case "Bar":
+                    return {
+                        id: 'chart-' + ci,
+                        type: "Bar",
+                        targetFieldName: colsById[c.domainField].name,
+                        label: c.label
+                    };
+                case "Pie":
+                    return {
+                        id: 'chart-' + ci,
+                        type: "Pie",
+                        targetFieldName: colsById[c.rangeField].name,
+                        label: c.label
+                    };
+            }
+        });
+        console.log(vm.charts);
 
         vm.footers = cols.map(function (c, ci) {
             var ret = "";

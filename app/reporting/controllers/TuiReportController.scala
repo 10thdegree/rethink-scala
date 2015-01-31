@@ -15,8 +15,6 @@ import play.api.libs.json._
 import play.api.Play.current
 import scalaz.{-\/, \/, \/-}
 import akka.pattern.pipe
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicReference
 
 object TuiReportController extends Controller {
@@ -48,7 +46,7 @@ object TuiReportController extends Controller {
         val endDate = (json \ "endDate").as[String] //TODO: option, then for comp, handle errors etc.
         reportAsync(startDate, endDate)
           //.map(_.fold(err => err,json => json.toString))
-          .foreach(_ match {
+          .foreach({
             case -\/(err) =>
               Logger.error("Report generation failed: " + err)
             case \/-(json) =>
@@ -103,7 +101,7 @@ object TuiReportController extends Controller {
       if (missingFbs.nonEmpty) {
         val missing = missingFbs.map(x => x._1 -> x._2.dataSourceAttribute).map({case (field, attr) => "Field \"%s\" needs attribute \"%s\"".format(field, attr) })
         Logger.error("Missing required attributes from field bindings: " + missing)
-        GeneratedReport(viewFields, List())
+        GeneratedReport(viewFields, List(), List())
       } else {
         //Logger.debug(rows.map(_("Paid Search Campaign")).toSet.mkString("\n"))
         Logger.debug("Converting raw key/value string data...")
@@ -112,60 +110,26 @@ object TuiReportController extends Controller {
         Logger.debug("Generating report...")
         val res = gen.getReport(ro.ds, dsRows)(start, end) //does this need start/end? we feed in the data?
         Logger.debug(s"Generated report with ${res.size} rows")
-        GeneratedReport(viewFields, res).sortRowsBy(ro.view.defaultFieldSort)
+        GeneratedReport(viewFields, res, ro.view.charts).sortRowsBy(ro.view.defaultFieldSort)
       }
     }
 
-    Logger.debug("WHAT??? qid = " + ro.ds.queryId)
+    Logger.debug("Dart qid = " + ro.ds.queryId)
 
+    import reporting.util.json.GeneratedReportWrites._
     import play.api.libs.json._
-    import play.api.libs.functional.syntax._
-    import scala.collection.SortedMap
-
-    //TODO: can we move this to a general JSON helper lib?
-
-    implicit val generatedReportFieldValueWrites: Writes[GeneratedReport.FieldValue] = (
-      (JsPath \ "val").write[BigDecimal] and
-        (JsPath \ "disp").write[String]
-      )((v: GeneratedReport.FieldValue) => (v.value, v.display))
-
-    implicit val fieldWrites: Writes[reporting.models.Field] = (
-      (JsPath \ "varName").write[String] and
-        (JsPath \ "displayName").write[String] and
-        (JsPath \ "format").write[String] and
-        (JsPath \ "footerType").write[String]
-      )((f: reporting.models.Field) => (
-        f.varName,
-        f.label,
-        f.format.map(_.name).getOrElse(""),
-        f.footer.map(_.name).getOrElse("")))
-
-    implicit val generatedReportRowWrites: Writes[GeneratedReport.Row] = (
-      (JsPath \ "key").write[String] and
-        //(JsPath \ "date").write[String] and
-        (JsPath \ "values").write[Map[String, GeneratedReport.FieldValue]]
-      )((row: GeneratedReport.Row) => (
-      row.keys.mkString("-"),
-      //row.date.toString("yyyy-MM-dd"),
-      row.orderedFields(viewFields).map({case (k,v) => k.varName -> v }).toMap))//asInstanceOf[Map[String, GeneratedReport.FieldValue]]
-
-    implicit val generatedReportWrites: Writes[GeneratedReport] = (
-      (JsPath \ "fields").write[List[reporting.models.Field]] and
-        (JsPath \ "rows").write[List[GeneratedReport.Row]]
-      )((r:GeneratedReport) => (r.fields.toList, r.rows))
 
     val report = Dart.getReport(ro.ds.queryId.toInt, start, end)
     val parsedReport = report
       .map(dr => convertResult(dr.data))
       .map(li => Json.toJson(li))
       .run.run(config)
-      .map(t => {
-        cache.set(t._1.m)
-        t._2
+      .map({
+        case (cfg, res) =>
+          cache.set(cfg.m)
+          res
       }) //feed in the cache again
       
     parsedReport.map(_.leftMap(err => err.msg)) //we could return the transformer stack, but we want to see both erorr/not error so i think this is better?
   }
-
 }
-

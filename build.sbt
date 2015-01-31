@@ -45,6 +45,7 @@ lazy val otherDeps = Seq(
   // Secure Social
   "ws.securesocial" %% "securesocial" % "master-SNAPSHOT",
   "org.slf4j" % "slf4j-api" % "1.7.7",
+  "org.julienrf" %% "play-json-variants" % "1.1.0",
   // DI
   "com.google.inject" % "guice" % "4.0-beta4",
   "javax.inject" % "javax.inject" % "1",
