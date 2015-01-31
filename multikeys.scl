@@ -12,7 +12,7 @@ val cxtRows =
     val cxtRow = mkFieldsFromAttributes(attrsToFields)(dsRow)
 
     // There are a few attributes/fields that aren't additive, 
-    // like "Avgerage Position"; to handle that, we have an 
+    // like "Average Position"; to handle that, we have an 
     // early formula evaluation phase that can transform these
     // values into something that _is_ additive.
     cxtRow.map(rawTransforms)
@@ -74,5 +74,3 @@ val finalRows = cxt.rows()
 // ===========================
 // End mutates state
 // ===========================
-
-
