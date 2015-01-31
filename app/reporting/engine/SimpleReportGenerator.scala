@@ -69,7 +69,7 @@ class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servin
     // Extract the map of values from each row
     for {
       (row, computed) <- cxt.allRows.toList
-      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> GeneratedReport.FieldValue(vv.value, vv.formatted) })
+      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> GeneratedReport.FieldValue(vv.value, vv.toString) })
     } yield GeneratedReport.Row(row.keys, row.date, fields = attrs)
   }
 }
