@@ -37,6 +37,27 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
         this.footerType = footerType;
     }
 
+    function formatValue(format, ret) {
+        var formatted = ret;
+        switch (format) {
+            case "currency":
+                formatted = $filter('currency')(ret);
+                break;
+            case "percentage":
+                formatted = $filter('number')(ret * 100, 0) + "%";
+                break;
+            case "fractional":
+                formatted = $filter('number')(ret, 2);
+                break;
+            case "whole":
+                formatted = $filter('number')(ret, 0);
+                break;
+            default:
+                formatted = ret;
+        }
+        return formatted;
+    }
+
     function reportLoadedCallback(report) {
 
         var cols = report.columns.map(function (e) {
@@ -46,12 +67,19 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
         var colsById = {};
         cols.forEach(function (c, ci) {
             colsById[c.uuid] = c;
+            colsById[c.name] = c;
         });
 
         var footers = cols.map(function (e, i) { return { sum: 0, min: undefined, max: undefined}; });
 
         var flattened = report.rows.map(function (e) {
-            return angular.extend({}, {'Key': { 'val':e.key, 'disp': e.key}}, e.values);
+            Object.keys(e.values).forEach(function (k, ki) {
+                e.values[k].disp = formatValue(colsById[k].format, e.values[k].val);
+            });
+            return angular.extend(
+                {},
+                {'Key': { 'val':e.key, 'disp': e.key}},
+                e.values);
         });
 
         flattened.forEach(function (r, ri) {
@@ -108,24 +136,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
                         break;
                 }
             }
-            var formatted = "";
-            switch (c.format) {
-                case "currency":
-                    formatted = $filter('currency')(ret);
-                    break;
-                case "percentage":
-                    formatted = $filter('number')(ret * 100, 0) + "%";
-                    break;
-                case "fractional":
-                    formatted = $filter('number')(ret, 2);
-                    break;
-                case "whole":
-                    formatted = $filter('number')(ret, 0);
-                    break;
-                default:
-                    formatted = ret;
-            }
-            return { value: formatted };
+            return { value: formatValue(c.format, ret) };
         });
 
         vm.columns = cols;
