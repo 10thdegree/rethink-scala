@@ -74,11 +74,11 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
 
         var flattened = report.rows.map(function (e) {
             Object.keys(e.values).forEach(function (k, ki) {
-                e.values[k].disp = formatValue(colsById[k].format, e.values[k].val);
+                e.values[k].display = formatValue(colsById[k].format, e.values[k].val);
             });
             return angular.extend(
                 {},
-                {'Key': { 'val':e.key, 'disp': e.key}},
+                {'Key': { 'val':e.key, 'display': e.key}},
                 e.values);
         });
 
@@ -161,7 +161,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
 
                 var barchartData = rowData.map(function (e) {
                     var v = e[targetFieldName].val;
-                    return [e["Key"].disp, parseFloat(v)];
+                    return [e["Key"].display, parseFloat(v)];
                 });
 
                 var barchart = c3.generate({
@@ -202,7 +202,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
             function updateChart() {
 
                 var piechartData = rowData.map(function (e) {
-                    return [e["Key"].disp, parseInt(e[targetFieldName].val)];
+                    return [e["Key"].display, parseInt(e[targetFieldName].val)];
                 });
 
                 var piechart = c3.generate({
