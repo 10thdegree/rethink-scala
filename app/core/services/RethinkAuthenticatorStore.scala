@@ -1,13 +1,14 @@
 package core.services
 
+import com.rethinkscala.reflect.Reflector
 import core.dataBrokers.{Connection, CoreBroker}
 import core.models.{Authenticators, User}
 import org.joda.time.DateTime
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticator}
-import scalaz._
-import Scalaz._
+
 import scala.concurrent.Future
 import scala.reflect.ClassTag
+import scalaz.Scalaz._
 
 object RethinkAuthenticatorStore {
 
@@ -18,30 +19,14 @@ object RethinkAuthenticatorStore {
 
     override def find(id: String)(implicit ct: ClassTag[CookieAuthenticator[User]]): Future[Option[CookieAuthenticator[User]]] = {
       import com.rethinkscala.Blocking._
-      val auth = coreBroker.authenticatorsTable.filter(Map("authId" -> id)).run match {
-        case Right(x) => if(x.size == 0) None else Some(x(0))
-        case Left(x) => None
-      }
+      val auth = coreBroker.authenticatorsTable.filter(Map("authId" -> id))(0).toOpt
       val authGive = for {
         x     <- auth
         user  <- coreBroker.usersTable.get(x.user.id.get.toString).run.fold(err => None, u => u.some)
-      } yield 
+      } yield
         new CookieAuthenticator[User](x.authId,user,
                 new DateTime(x.expirationDate),new DateTime(x.lastUsed),new DateTime(x.creationDate),this)
 
-      /*
-      val authGive = auth match {
-        case Some(x) => {
-          coreBroker.usersTable.get(x.user.id.get.toString).run match {
-            case Right(user) => {
-              Some(new CookieAuthenticator[User](x.authId,user,
-                new DateTime(x.expirationDate),new DateTime(x.lastUsed),new DateTime(x.creationDate),this))
-            }
-            case Left(u) => None
-          }
-        }
-        case None => None
-      }*/
       Future.successful(authGive)
     }
 
@@ -59,13 +44,16 @@ object RethinkAuthenticatorStore {
         coreBroker.authenticatorsTable.filter(Map("authId" -> authenticator.id)).run match {
           case Right(x) => {
             if (x.size == 0)
-              coreBroker.authenticatorsTable.insert(auth).run
+              // TODO: Nesting still giving null
+//              coreBroker.authenticatorsTable.insert(auth).run
+              coreBroker.authenticatorsTable.insertMap(Seq(Reflector.toMap(auth))).run
             else {
               coreBroker.authenticatorsTable.filter(Map(
                 "authId"-> x(0).authId
-//                "user"-> Map("permissions" -> Reflector.toMap(Reflector.toMap(authenticator.user.permissions)))
               )).update(
-                Map("lastUsed" -> authenticator.lastUsed.toString())).run
+              // TODO: Need to update permissions in authentication token
+//                Map("user"-> Reflector.toMap(authenticator.user))).run
+                  Map("lastUsed" -> authenticator.lastUsed.toString())).run
             }
           }
           case Left(x) => coreBroker.authenticatorsTable.insert(auth).run

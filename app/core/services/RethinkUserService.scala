@@ -1,7 +1,5 @@
 package core.services
 
-import java.util.UUID
-
 import com.rethinkscala.reflect.Reflector
 import core.dataBrokers.{Connection, CoreBroker}
 import core.models.{MailTokens, User}
@@ -64,7 +62,8 @@ class RethinkUserService extends UserService[User] {
             Future.successful(existingUser)
           case None =>
             val newUser = User(user, Nil, Nil, None)
-            coreBroker.usersTable.insert(newUser).run
+//            coreBroker.usersTable.insert(newUser).run
+            coreBroker.usersTable.insertMap(Seq(Reflector.toMap(newUser))).run
             coreBroker.tokensTable.filter(Map("email"->newUser.main.email)).delete().run
             Future.successful(newUser)
         }
@@ -88,7 +87,8 @@ class RethinkUserService extends UserService[User] {
             Future.successful(existingUser)
           case None =>
             val newUser = User(user, Nil, Nil, None)
-            coreBroker.usersTable.insert(newUser).run
+//            coreBroker.usersTable.insert(newUser).run
+            coreBroker.usersTable.insertMap(Seq(Reflector.toMap(newUser))).run
             Future.successful(newUser)
         }
       }
@@ -98,7 +98,7 @@ class RethinkUserService extends UserService[User] {
   def saveToken(token: MailToken): Future[MailToken] =
     Future.successful {
       import com.rethinkscala.Blocking._
-      coreBroker.tokensTable.insert(MailTokens(token.email, token.creationTime.toString, token.expirationTime.toString(), token.isSignUp, Some(UUID.fromString(token.uuid)))).run
+      coreBroker.tokensTable.insert(MailTokens(token.email, token.creationTime.toString, token.expirationTime.toString(), token.isSignUp, Some(token.uuid))).run
       token
     }
 
