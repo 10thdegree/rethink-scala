@@ -6,16 +6,6 @@ import scalaz._
 import Scalaz._
 import bravo.api.dart.Data._
 
-object RowCombination {
-  /*
-  val dateRowsMonoid[A,B] = new Monoid[List[(LocalDate,List[Map[A,B]])]] {
-    def append(a: List[(LocalDate, List[Map[A,B]])]): List[(LocalDate, List[Map[A,B]])] = {
-      
-    }
-  }*/
-}
-
-
 object DateUtil {
 
   def mkDateTime(str: String, fmt: String = "yyyy-MM-dd") =
@@ -27,16 +17,8 @@ object DateUtil {
   }
 
   def ungroupDates(li: List[ReportDay]): List[Map[String,String]] = 
-    li.map(_.raw).join  
+    li.map(_.rows).join  
 
-
-  /*def orderedGroup(l: List[Map[String,String]]) = {
-    l.map(m => (mkDateTime(m("date")).toLocalDate(), m))
-      .groupBy(t => t._1)
-      .toList
-      .sortWith((a, b) => a._1.equals(b._1))
-  }*/
- 
   private def generateDatesFromDateRange(startDate: DateTime, endDate: DateTime): List[LocalDate] = {
     val r = (0 to Math.abs(Days.daysBetween(startDate.toLocalDate(), endDate.toLocalDate()).getDays())).toList
     r.map(i => startDate.plusDays(i).toLocalDate())

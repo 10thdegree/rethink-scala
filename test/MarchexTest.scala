@@ -1,4 +1,4 @@
-package bravo.test.api
+package bravo.test
 
 import org.apache.xmlrpc._
 import org.scalacheck.Properties
@@ -51,7 +51,7 @@ object MarchexDataGenerator {
 }
 
 object MarchexAPITest extends Properties("Bravo API tests") {
-  import bravo.test.api.MarchexDataGenerator._
+  import bravo.test.MarchexDataGenerator._
   
   var callLogs: List[CallLog] = List[CallLog]() 
   

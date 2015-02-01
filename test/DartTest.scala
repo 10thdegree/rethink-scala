@@ -1,4 +1,4 @@
-package bravo.test.api
+package bravo.test
 
 import bravo.api
 
@@ -20,8 +20,26 @@ import Gen._
 import Arbitrary.arbitrary 
 import org.joda.time._
 
+ 
+import Scalaz._
+import org.specs2.scalaz._
+import scalaz._
+import scalaz.scalacheck.ScalazProperties._
+import scalaz.scalacheck.ScalazArbitrary._ 
+import bravo.api.dart.Data._  
+import ReportDataGen._
+
+class ReportDayLaws extends Spec {
+  import bravo.api.dart.Data._
+  checkAll(equal.laws[ReportDaysWrapper])  
+  checkAll(semigroup.laws[ReportDaysWrapper])
+}
+
+
+
 object DartAPITest extends Properties("Dart API test") {
-  
+ 
+ 
   property("nonblocking test") = forAll { (i:Int) =>
    val reportCall = Dart.getReport(444, new DateTime(), new DateTime())
    val future = reportCall.run.run(config)

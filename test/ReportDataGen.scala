@@ -4,7 +4,6 @@ import com.google.api.services.dfareporting.Dfareporting
 import bravo.api.dart.Data._
 import bravo.core.Util._
 import scalaz._
-import Scalaz._
 import bravo.api.dart._
 import org.scalacheck.Properties
 import org.scalacheck.Prop.forAll
@@ -16,6 +15,7 @@ import org.joda.time._
 import java.util.Date
 import bravo.api.dart.DateUtil._
 import bravo.api.dart.Data._
+import scalaz.scalacheck.ScalazProperties._  
 
 object ReportDataGen {
   
@@ -61,6 +61,13 @@ object ReportDataGen {
     } yield {
       DartReportRow(date.toLocalDate(), paidSCamp, paidSCost, psrchImp, homepage, confirm, applyo)  
     }
+    
+  implicit def arbitraryDayRows: Arbitrary[ReportDaysWrapper] = Arbitrary {
+    for {
+      r <- arbitrary[DownloadedReport]
+    } yield ReportDaysWrapper(r.data)
+  }
+
 
   case class DartReportRow  (
     date: LocalDate,

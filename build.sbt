@@ -40,6 +40,8 @@ initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.t
 lazy val otherDeps = Seq(
   //scalaz
   "org.scalaz" % "scalaz-core_2.11" % "7.1.0",
+  "org.scalaz" %% "scalaz-scalacheck-binding" % "7.1.0",
+  "org.typelevel" %% "scalaz-specs2" % "0.3.0" % "test",
   // Rethink-DB Driver
   "com.rethinkscala" % "core_2.11" % "0.4.4-SNAPSHOT",
   // Secure Social
