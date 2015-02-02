@@ -17,8 +17,9 @@ app.service('ReportsService', ['$rootScope', function(scope) {
             var data2 = JSON.parse(data.data);
             var rows = data2.rows;
             var columns = data2.fields;
+            var charts = data2.charts;
 
-            callback({ columns: columns, rows: rows });
+            callback({ columns: columns, rows: rows, charts: charts });
 
             //scope.$broadcast( 'report.fetch.end' );
         };

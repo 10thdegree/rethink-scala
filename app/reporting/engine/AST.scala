@@ -76,10 +76,9 @@ object AST {
    *   - row.totalDaysInMonth
    *   - row.reportDaysInMonth
    * fee functions:
-   *   - fees.agency("label").monthly
-   *   - fees.agency("label").percentileMonth(impressions)
-   *   - fees.serving("label").cpc
-   *   - fees.serving("label").cpm
+   *   - fees.agency("label").monthly(spend, impressions)
+   *   - fees.serving("label").cpc(clicks)
+   *   - fees.serving("label").cpm(impressions)
    */
 
   type LabeledTerm = (String, Option[Term])
@@ -139,11 +138,7 @@ object AST {
     override def contains(f: Term => Boolean)(implicit tl: TermLookup): Boolean = (term has f) || (dep has f)
   }
 
-  case class WholeNumber(term: Term) extends WrappedTerm
-
-  case class FractionalNumber(term: Term) extends WrappedTerm
-
-  case class Format(term: Term, fmt: String) extends WrappedTerm
+  case class Round(term: Term) extends WrappedTerm
 
   case class Max(left: Term, right: Term) extends OpTerm
 
@@ -193,7 +188,6 @@ object AST {
           // XXX: Just to insure computation of this happens after summations.
           Add(Sum(Variable(spend.label)), Sum(Variable(impressions.label))))
     }
-
   }
 
   object Row {
@@ -218,19 +212,7 @@ object AST {
 
     def max(left: Term, right: Term) = Max(left, right)
 
-    def fractional(term: Term) = FractionalNumber(term)
-
-    def round(term: Term) = WholeNumber(term)
-
-    def format(term: Term, format: String) = Format(term, format)
-
-    val CurrencyFormat = "\u00A4#,##0.00"
-
-    def currency(term: Term) = Format(term, CurrencyFormat)
-
-    val PercentageFormat = "#%"
-
-    def percentage(term: Term) = Format(term, PercentageFormat)
+    def round(term: Term) = Round(term)
 
     def sum(term: Term): Sum = Sum(term)
 
@@ -240,18 +222,6 @@ object AST {
         def apply(arg: AST.Term): AST.Term = AST.Functions.sum(arg)
       }
 
-      val format = new Function2[AST.Term, String, AST.Term] with GroovyInterop.Closure2[AST.Term, String, AST.Term] {
-        def apply(arg: AST.Term, fmt: String): AST.Term = AST.Functions.format(arg, fmt)
-      }
-
-      val currency = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
-        def apply(arg: AST.Term): AST.Term = AST.Functions.currency(arg)
-      }
-
-      val percentage = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
-        def apply(arg: AST.Term): AST.Term = AST.Functions.percentage(arg)
-      }
-
       val max = new Function2[AST.Term, AST.Term, AST.Term] with GroovyInterop.Closure2[AST.Term, AST.Term, AST.Term] {
         def apply(arg: AST.Term, arg2: AST.Term): AST.Term = AST.Functions.max(arg, arg2)
       }
@@ -259,14 +229,8 @@ object AST {
       val round = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
         def apply(arg: AST.Term): AST.Term = AST.Functions.round(arg)
       }
-
-      val fractional = new Function1[AST.Term, AST.Term] with GroovyInterop.Closure1[AST.Term, AST.Term] {
-        def apply(arg: AST.Term): AST.Term = AST.Functions.fractional(arg)
-      }
     }
-
   }
-
 }
 
 object FormulaCompiler {
@@ -321,12 +285,8 @@ class FormulaCompiler(varNames: String*) {
     // TODO: Use reflection to automatically generate this
     import AST.Functions.{functions => funcs}
     b.put("sum", funcs.sum)
-    b.put("display", funcs.format)
-    b.put("currency", funcs.currency)
-    b.put("percentage", funcs.percentage)
     b.put("max", funcs.max)
     b.put("round", funcs.round)
-    b.put("fractional", funcs.round)
 
     for ((k, v) <- props) b.put(k, v)
     e.setBindings(b, ScriptContext.ENGINE_SCOPE)

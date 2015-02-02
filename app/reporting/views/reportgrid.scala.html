@@ -45,11 +45,15 @@
             <div id="report" ng-show="!report.isLoading">
                 <div style="text-align: center"><h2>{{report.reportTitle}}</h2></div>
                 <div>
-                    <div style="width: 48%; display: inline-block">
-                        <bvo-pie-chart id="piechart" row-data="report.rows" target-field="impressions" title="Visitors by Category" />
-                    </div>
-                    <div style="width : 48% ; display : inline-block">
-                        <bvo-bar-chart id="barchart" row-data="report.rows" target-field="cpc" title="Cost per Visitor"/>
+                    <div style="width: 48%; display: inline-block" ng-repeat="chart in report.charts">
+                        <div ng-if="chart.type == 'Pie'">
+                          <bvo-pie-chart id="{{chart.id}}" row-data="report.rows"
+                            target-field="{{chart.targetFieldName}}" title="{{chart.label}}" />
+                        </div>
+                        <div ng-if="chart.type == 'Bar'">
+                          <bvo-bar-chart id="{{chart.id}}" row-data="report.rows"
+                            target-field="{{chart.targetFieldName}}" title="{{chart.label}}"/>
+                        </div>
                     </div>
                 </div>
                 <table st-table="rowCollection" st-safe-src="report.rows" class="table table-striped">
@@ -65,7 +69,7 @@
                     </thead>
                     <tbody>
                         <tr ng-repeat="row in rowCollection">
-                            <td ng-repeat="col in report.columns">{{row[col.name].disp}}</td>
+                            <td ng-repeat="col in report.columns">{{row[col.name].display}}</td>
                         </tr>
                     </tbody>
                     <tfoot>

@@ -14,6 +14,8 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
 
     vm.footers = [];
 
+    vm.charts = [];
+
     vm.reportTitle = "Report for " + vm.range.start + " to " + vm.range.end;
 
     scope.$on('report.fetch.start', function () {
@@ -26,7 +28,8 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
         vm.isLoading = false;
     });
 
-    function ColumnDesc(name, display, sort, format, footerType) {
+    function ColumnDesc(uuid, name, display, sort, format, footerType) {
+        this.uuid = uuid;
         this.name = name;
         this.display = display;
         this.sort = sort;
@@ -34,17 +37,49 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
         this.footerType = footerType;
     }
 
+    function formatValue(format, ret) {
+        var formatted = ret;
+        switch (format) {
+            case "currency":
+                formatted = $filter('currency')(ret);
+                break;
+            case "percentage":
+                formatted = $filter('number')(ret * 100, 0) + "%";
+                break;
+            case "fractional":
+                formatted = $filter('number')(ret, 2);
+                break;
+            case "whole":
+                formatted = $filter('number')(ret, 0);
+                break;
+            default:
+                formatted = ret;
+        }
+        return formatted;
+    }
+
     function reportLoadedCallback(report) {
 
         var cols = report.columns.map(function (e) {
-            return new ColumnDesc(e.varName, e.displayName, e.varName, e.format, e.footerType);
+            return new ColumnDesc(e.uuid, e.varName, e.displayName, e.varName, e.format, e.footerType);
         });
-        cols.unshift(new ColumnDesc("Key", "Key", "Key", ""));
+        cols.unshift(new ColumnDesc("", "Key", "Key", "Key", ""));
+        var colsById = {};
+        cols.forEach(function (c, ci) {
+            colsById[c.uuid] = c;
+            colsById[c.name] = c;
+        });
 
         var footers = cols.map(function (e, i) { return { sum: 0, min: undefined, max: undefined}; });
 
         var flattened = report.rows.map(function (e) {
-            return angular.extend({}, {'Key': { 'val':e.key, 'disp': e.key}}, e.values);
+            Object.keys(e.values).forEach(function (k, ki) {
+                e.values[k].display = formatValue(colsById[k].format, e.values[k].val);
+            });
+            return angular.extend(
+                {},
+                {'Key': { 'val':e.key, 'display': e.key}},
+                e.values);
         });
 
         flattened.forEach(function (r, ri) {
@@ -58,6 +93,26 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
                 }
             });
         });
+
+        vm.charts = report.charts.map(function (c, ci) {
+            switch (c.type) {
+                case "Bar":
+                    return {
+                        id: 'chart-' + ci,
+                        type: "Bar",
+                        targetFieldName: colsById[c.domainField].name,
+                        label: c.label
+                    };
+                case "Pie":
+                    return {
+                        id: 'chart-' + ci,
+                        type: "Pie",
+                        targetFieldName: colsById[c.rangeField].name,
+                        label: c.label
+                    };
+            }
+        });
+        console.log(vm.charts);
 
         vm.footers = cols.map(function (c, ci) {
             var ret = "";
@@ -81,24 +136,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
                         break;
                 }
             }
-            var formatted = "";
-            switch (c.format) {
-                case "currency":
-                    formatted = $filter('currency')(ret);
-                    break;
-                case "percentage":
-                    formatted = $filter('number')(ret * 100, 0) + "%";
-                    break;
-                case "fractional":
-                    formatted = $filter('number')(ret, 2);
-                    break;
-                case "whole":
-                    formatted = $filter('number')(ret, 0);
-                    break;
-                default:
-                    formatted = ret;
-            }
-            return { value: formatted };
+            return { value: formatValue(c.format, ret) };
         });
 
         vm.columns = cols;
@@ -123,7 +161,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
 
                 var barchartData = rowData.map(function (e) {
                     var v = e[targetFieldName].val;
-                    return [e["Key"].disp, parseFloat(v)];
+                    return [e["Key"].display, parseFloat(v)];
                 });
 
                 var barchart = c3.generate({
@@ -164,7 +202,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
             function updateChart() {
 
                 var piechartData = rowData.map(function (e) {
-                    return [e["Key"].disp, parseInt(e[targetFieldName].val)];
+                    return [e["Key"].display, parseInt(e[targetFieldName].val)];
                 });
 
                 var piechart = c3.generate({

@@ -1,5 +1,7 @@
 package reporting.engine
 
+import java.text.DecimalFormat
+
 import org.joda.time.DateTime
 
 object FormulaEvaluator {
@@ -9,7 +11,11 @@ object FormulaEvaluator {
 
   object EvaluationCxt {
 
-    def formattedRowValues(values: Map[String, Result]) = values.map({case (k,v) => k -> v.formatted})
+
+    def formattedRowValues(values: Map[String, Result]) = {
+      import Result.implicits._
+      values.map({case (k,v) => k -> v.formatted})
+    }
 
     trait Row {
       def month: Int
@@ -30,17 +36,149 @@ object FormulaEvaluator {
 
       def formattedValues: Map[String, String]
     }
+
+    case class Sum(count: Long, sum: Result) {
+      def +(that: Sum): Sum = Sum(this.count + that.count, this.sum + that.sum)
+    }
+
+    class Result(val value: BigDecimal) {
+      def toDouble: Double = value.toDouble
+
+      def toLong: Long = value.toLong
+
+      def toInt: Int = value.toInt
+
+      def rounded: Result = new Result(this.value.rounded)
+
+      def +(that: Result): Result = new Result(this.value + that.value)
+
+      def -(that: Result): Result = new Result(this.value - that.value)
+
+      def *(that: Result): Result = new Result(this.value * that.value)
+
+      def /(that: Result): Result = try {
+        new Result(this.value / that.value)
+      } catch {
+        case c: java.lang.ArithmeticException => Result.NaN
+      }
+
+      def +[A: Numeric](that: A): Result = this + Result(that)
+
+      def -[A: Numeric](that: A): Result = this - Result(that)
+
+      def *[A: Numeric](that: A): Result = this * Result(that)
+
+      def /[A: Numeric](that: A): Result = this / Result(that)
+
+      override def toString = value.toString()
+    }
+    
+    object Result {
+
+      case object Zero extends Result(0)
+
+      // For "N/A" results
+      case object NaN extends Result(0) {
+
+        override def +(that: Result) = NaN
+
+        override def -(that: Result) = NaN
+
+        override def *(that: Result) = NaN
+
+        override def /(that: Result) = NaN
+      }
+
+      object Formats {
+        val WholeNumber = "#,###"
+        val FractionalNumber = "#,###.##"
+        val Nan = "N/A"
+        val Currency = "\u00A4#,##0.00"
+
+        def guessFormat(v: BigDecimal): String = {
+          if (v.isWhole()) Formats.WholeNumber
+          else Formats.FractionalNumber
+        }
+      }
+
+      def apply[A: Numeric](value: A): Result = value match {
+        case v: Double => new Result(v)
+        case v: Float => new Result(v.toDouble)
+        case v: Long => new Result(v)
+        case v: Int => new Result(v)
+        case v: BigDecimal => new Result(v)
+        case v: Result => new Result(v.value)
+        case v => new Result(BigDecimal(v.toString))
+      }
+
+      object implicits {
+
+        // Not used right now, but keeping formatting logic around just in case.
+        implicit class FormatResult(res: Result) {
+          def format(fmt: String) = res match {
+            case Result.NaN => Formats.Nan
+            case _ =>
+              val decimalFormatter = new DecimalFormat(fmt)
+              decimalFormatter.format(res.value)
+          }
+          def formatted = res match {
+            case Result.NaN => Formats.Nan
+            case _ =>
+              val decimalFormatter = new DecimalFormat(Formats.guessFormat(res.value))
+              decimalFormatter.format(res.value)
+          }
+        }
+
+        import scala.math.Numeric
+
+        implicit class NumericToResult[A: Numeric](val a: A) {
+          def +(r: Result): Result = Result(a) + r
+
+          def -(r: Result): Result = Result(a) - r
+
+          def *(r: Result): Result = Result(a) * r
+
+          def /(r: Result): Result = Result(a) / r
+        }
+
+        implicit object ResultNumeric extends Numeric[Result] {
+
+          override def plus(x: Result, y: Result): Result = x + y
+
+          override def toDouble(x: Result): Double = x.toDouble
+
+          override def toFloat(x: Result): Float = x.toFloat
+
+          override def toInt(x: Result): Int = x.toInt
+
+          override def negate(x: Result): Result = new Result(-x.value)
+
+          override def fromInt(x: Int): Result = new Result(x)
+
+          override def toLong(x: Result): Long = x.toLong
+
+          override def times(x: Result, y: Result): Result = x * y
+
+          override def minus(x: Result, y: Result): Result = x - y
+
+          override def compare(x: Result, y: Result): Int = x.value.compare(y.value)
+        }
+
+      }
+
+    }
   }
 
   import reporting.models.Fees.FeesLookup
   import reporting.models.Fees.{ServingFees => MServingFees}
   import reporting.models.Fees.{AgencyFees => MAgencyFees}
 
-  class EvaluationCxt[R](val report: Report)(implicit servingFeesLookup: FeesLookup[MServingFees], agencyFeesLookup: FeesLookup[MAgencyFees]) {
+  class EvaluationCxt[R](val report: Report)
+                        (implicit servingFeesLookup: FeesLookup[MServingFees],
+                         agencyFeesLookup: FeesLookup[MAgencyFees]) {
 
-    case class Sum(count: Long, sum: Result) {
-      def +(that: Sum): Sum = Sum(this.count + that.count, this.sum + that.sum)
-    }
+    import EvaluationCxt.Sum
+    import EvaluationCxt.Result
 
     // Represents the current row being processed
     case class RowCxt(date: DateTime)(implicit report: Report) extends EvaluationCxt.Row {
@@ -69,7 +207,10 @@ object FormulaEvaluator {
 
       def values = rowVals.toMap
 
-      def formattedValues = values.map({case (k,v) => k -> v.formatted})
+      def formattedValues = {
+        import Result.implicits._
+        values.map({case (k,v) => k -> v.formatted})
+      }
 
       def apply(key: String): Result = rowVals(key)
 
@@ -104,21 +245,6 @@ object FormulaEvaluator {
       sums(key) = sums.get(key).map(s => s.copy(count = s.count + 1, sum = s.sum + value)).getOrElse(Sum(1, value))
     }
 
-    // TODO: Actually connect to getting the fees
-    object ServingFees {
-      def cpm = 0d
-
-      def cpc = 0d
-    }
-
-    object AgencyFees {
-      def fees(label: String) = monthlySums(label).values.reduce(_ + _).sum //agencyFeesLookup()
-
-      def monthly = 0d // agencyFeesLookup(row.month)
-
-      def percentileMonthly(impressions: Int) = 0d //agencyFeesLookup(row.month, Some(impressions))
-    }
-
     // TODO: Use date range from Row, not report!
     import reporting.engine.AST.Fees.ServingFeeTypes.ServingFeeType
     import reporting.engine.AST.Fees.ServingFeeTypes
@@ -140,7 +266,7 @@ object FormulaEvaluator {
         case ServingFeeTypes.Cpm => rowCxt(df.label) * ll(s).head.cpm / 1000
       }
       //import Result.implicits._
-      fees.getOrElse(Result(0))//.sum(Result.implicits.ResultNumeric)
+      fees.getOrElse(Result.Zero)//.sum(Result.implicits.ResultNumeric)
     }
 
     def agencyFees(label: String, rowCxt: EvaluationCxt.Row, spend: AST.Term, impressions: AST.Term) = {
@@ -166,165 +292,44 @@ object FormulaEvaluator {
     }
   }
 
+  import EvaluationCxt.Result.implicits._
+  import EvaluationCxt.Result
   import reporting.engine.AST._
-
-  class Result(val value: BigDecimal, val format: Option[String]) {
-    def toDouble: Double = value.toDouble
-
-    def toLong: Long = value.toLong
-
-    def toInt: Int = value.toInt
-
-    def asFractional: Result = {
-      new Result(this.value + 0.0, format)
-    }
-
-    def rounded: Result = {
-      new Result(this.value.rounded, format)
-    }
-
-    def withFormat(format2: String): Result = new Result(value, Some(format2))
-
-    val dfOpt = format.map(f => new java.text.DecimalFormat(f))
-
-    def formatted = dfOpt.map(_.format(value)).getOrElse(value.rounded.toString())
-
-    def +(that: Result): Result = new Result(this.value + that.value, this.format orElse that.format)
-
-    def -(that: Result): Result = new Result(this.value - that.value, this.format orElse that.format)
-
-    def *(that: Result): Result = new Result(this.value * that.value, this.format orElse that.format)
-
-    def /(that: Result): Result = try {
-      new Result(this.value / that.value, this.format orElse that.format)
-    } catch {
-      case c: java.lang.ArithmeticException => NoResult
-    }
-
-    def +[A: Numeric](that: A): Result = this + Result(that)
-
-    def -[A: Numeric](that: A): Result = this - Result(that)
-
-    def *[A: Numeric](that: A): Result = this * Result(that)
-
-    def /[A: Numeric](that: A): Result = this / Result(that)
-
-    override def toString = formatted
-  }
-
-  case object NoResult extends Result(0, None) {
-
-    override def formatted = "N/A"
-
-    override def withFormat(format2: String): Result = this
-
-    override def +(that: Result) = NoResult
-
-    override def -(that: Result) = NoResult
-
-    override def *(that: Result) = NoResult
-
-    override def /(that: Result) = NoResult
-  }
-
-  object Result {
-
-    case object Zero extends Result(0, None)
-
-    object Formats {
-      val WholeNumber = "#,###"
-      val FractionalNumber = "#,###.##"
-      val Nan = "N/A"
-      val Currency = "\u00A4#,##0.00"
-    }
-
-    //def
-    //bd.signum() == 0 || bd.scale() <= 0 || bd.stripTrailingZeros().scale() <= 0
-    def guessFormat(v: BigDecimal): String = {
-
-      if (v.isWhole()) Formats.WholeNumber
-      else Formats.FractionalNumber
-
-      //if (v.isValidInt) Formats.WholeNumber
-      //else if (v.isValidLong) Formats.WholeNumber
-      //else if (v.isExactFloat) Formats.FractionalNumber
-      //else if (v.isExactDouble) Formats.FractionalNumber
-      //else Formats.FractionalNumber
-    }
-
-    def apply[A: Numeric](value: A, format: Option[String] = None): Result = value match {
-      case v: Double => new Result(v, format orElse Some(Formats.FractionalNumber))
-      case v: Float => new Result(v.toDouble, format orElse Some(Formats.FractionalNumber))
-      case v: Long => new Result(v, format orElse Some(Formats.WholeNumber))
-      case v: Int => new Result(v, format orElse Some(Formats.WholeNumber))
-      case v: BigDecimal => new Result(v, format orElse Some(guessFormat(v)))
-      case v: Result => new Result(v.value, format orElse v.format)
-      case v => new Result(BigDecimal(v.toString), format)
-    }
-
-    object implicits {
-      import scala.math.Numeric
-      implicit class NumericToResult[A: Numeric](val a: A) {
-        def +(r: Result): Result = Result(a) + r
-        def -(r: Result): Result = Result(a) - r
-        def *(r: Result): Result = Result(a) * r
-        def /(r: Result): Result = Result(a) / r
-      }
-
-      implicit object ResultNumeric extends Numeric[Result] {
-
-        override def plus(x: Result, y: Result): Result = x + y
-
-        override def toDouble(x: Result): Double = x.toDouble
-
-        override def toFloat(x: Result): Float = x.toFloat
-
-        override def toInt(x: Result): Int = x.toInt
-
-        override def negate(x: Result): Result = new Result(-x.value, x.format)
-
-        override def fromInt(x: Int): Result = new Result(x, Some(Formats.WholeNumber))
-
-        override def toLong(x: Result): Long = x.toLong
-
-        override def times(x: Result, y: Result): Result = x * y
-
-        override def minus(x: Result, y: Result): Result = x - y
-
-        override def compare(x: Result, y: Result): Int = x.value.compare(y.value)
-      }
-    }
-  }
-
-  import Result.implicits._
   import reporting.engine.AST.Fees
 
   def eval[A](term: Term)(implicit cxt: EvaluationCxt[A], rcxt: EvaluationCxt.Row): Result = term match {
+
     case t@Constant(v) => Result(t.toDouble)
+
     // Operators
     case Add(left, right) => eval(left) + eval(right)
     case Subtract(left, right) => eval(left) - eval(right)
     case Divide(left, right) => eval(left) / eval(right)
     case Multiply(left, right) => eval(left) * eval(right)
+
     // Deferred lookup
     case Variable(label) => rcxt(label)
+
     // Row functions
     case AST.Row.TotalDaysInMonth => Result(rcxt.totalDaysInMonth)
     case AST.Row.ReportDaysInMonth => Result(rcxt.reportDaysInMonth)
+
     // Month functions
     case Month.Sum(n) => Result(cxt.monthlySum(rcxt)(n.label))
     // case MonthlyAvg(n) => cxt.monthlySum(n.label) / cxt.monthlyCount(n.label)
-    case ForcedDependancy(n, _) => eval(n) // Ignore dep entirely, just there for ordering
+
+    // Ignore dep entirely, just there for ordering
+    case ForcedDependancy(n, _) => eval(n)
+
     // Global functions
-    case t@WholeNumber(n) => eval(n).rounded.withFormat(Result.Formats.WholeNumber)
-    case t@FractionalNumber(n) => eval(n).asFractional.withFormat(Result.Formats.FractionalNumber)
-    case t@Format(n, fmt) => eval(n).withFormat(fmt)
+    case Round(n) => eval(n).rounded
     case Sum(n) => cxt.sum(n.label)
     // case Avg(n) => cxt.sum(n.label) / cxt.count(n.label)
-    case Max(left, right) => Result(eval(left).value.max(eval(right).value)) // loses format
+    case Max(left, right) => Result(eval(left).value.max(eval(right).value))
+
     // Fees
-    case t@Fees.ServingFee(label, ft, ref) => cxt.servingFees(label, rcxt, ref, ft)
-    case t@Fees.AgencyFee(label, spend, impressions) => cxt.agencyFees(label, rcxt, spend, impressions)
+    case Fees.ServingFee(label, ft, ref) => cxt.servingFees(label, rcxt, ref, ft)
+    case Fees.AgencyFee(label, spend, impressions) => cxt.agencyFees(label, rcxt, spend, impressions)
   }
 
   def eval[R](row: R, date: DateTime, orderedTerms: List[LabeledTerm])(implicit cxt: EvaluationCxt[R]): Map[String, Result] = {
@@ -336,4 +341,3 @@ object FormulaEvaluator {
     }).toMap
   }
 }
-

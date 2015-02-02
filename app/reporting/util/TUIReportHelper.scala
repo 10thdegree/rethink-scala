@@ -97,37 +97,66 @@ object TUIReportHelper {
       validUntil = None
     ))
 
-    val currency = FormatTypes.Currency.some
-    val numberWhole = FormatTypes.WholeNumber.some
-    val numberFrac = FormatTypes.FractionalNumber.some
-    val percent = FormatTypes.Percentage.some
 
-    val summation = FooterTypes.Summation.some
-    val average = FooterTypes.Average.some
+    val fields = {
+      import Field._
 
-    val fields = List(
-      Field(randUUID, None, "spend", None, currency, summation),
-      // Spend = [Cost] + ([Clicks]f * [PpcTrackingRate])
-      Field(randUUID, None, "cpcFees",
-        "currency(fees.serving(\"banner\").cpc(clicks))".some, currency, summation),
-      Field(randUUID, None, "cpmFees",
-        "currency(fees.serving(\"banner\").cpm(impressions))".some, currency, summation),
-      Field(randUUID, None, "dispFees",
-        "currency(fees.agency(\"display\").monthly(spend, impressions))".some, currency, summation),
-      Field(randUUID, "Total Spend".some, "totalSpend", "currency(spend + cpcFees + cpmFees + dispFees)".some, currency, summation),
-      Field(randUUID, None, "impressions", None, numberWhole, summation),
-      Field(randUUID, None, "clicks", None, numberWhole, summation),
-      Field(randUUID, None, "ctr", "percentage(clicks / impressions)".some, percent, average),
-      Field(randUUID, None, "cpc", "currency(totalSpend / clicks)".some, currency, average),
-      //Field(randUUID, "AvgPosition", None),
-      Field(randUUID, None, "contact", None, numberWhole, summation),
-      Field(randUUID, None, "inquiries", None, numberWhole, summation),
-      Field(randUUID, None, "apps", None, numberWhole, summation),
-      Field(randUUID, None, "calls", "0".some, numberWhole, summation),
-      Field(randUUID, "Total Leads".some, "totalLeads", "contact + inquiries + apps + calls".some, numberWhole, summation),
-      Field(randUUID, None, "cpl", "currency(totalSpend / totalLeads)".some, currency, average),
-      Field(randUUID, None, "ssc", "percentage(totalLeads / clicks)".some, percent, average)
-    )
+      val currency = FormatTypes.Currency
+      val numberWhole = FormatTypes.WholeNumber
+      val numberFrac = FormatTypes.FractionalNumber
+      val percent = FormatTypes.Percentage
+
+      val summation = FooterTypes.Summation.some
+      val average = FooterTypes.Average.some
+
+      List(
+        // Bound fields
+        Field(randUUID, "spend", None, Display(None, currency, summation).some),
+        Field(randUUID, "contact", None, Display(None, numberWhole, summation).some),
+        Field(randUUID, "inquiries", None, Display(None, numberWhole, summation).some),
+        Field(randUUID, "apps", None, Display(None, numberWhole, summation).some),
+        Field(randUUID, "calls", Formula("0").some, Display(None, numberWhole, summation).some),
+        Field(randUUID, "impressions", None, Display(None, numberWhole, summation).some),
+        Field(randUUID, "clicks", None, Display(None, numberWhole, summation).some),
+        // Derived fields (raw transform)
+        Field(randUUID, "avgPos_"),
+        Field(randUUID, "avgPosSUMPROD", Formula("avgPos_ * impressions", isRawTransform = true).some),
+        // Derived fields
+        Field(randUUID, "cpcFees",
+          Formula("""fees.serving("banner").cpc(clicks)""").some,
+          Display(None, currency, summation).some),
+        Field(randUUID, "cpmFees",
+          Formula("""fees.serving("banner").cpm(impressions)""").some,
+          Display(None, currency, summation).some),
+        Field(randUUID, "dispFees",
+          Formula("""fees.agency("display").monthly(spend, impressions)""").some,
+          Display(None, currency, summation).some),
+        Field(randUUID, "avgPos",
+          Formula("avgPosSUMPROD / impressions").some,
+          Display("Avg. Pos.".some, numberFrac, average).some),
+        Field(randUUID, "totalSpend",
+          Formula("spend + cpcFees + cpmFees + dispFees").some,
+          Display("Total Spend".some, currency, summation).some),
+        Field(randUUID, "ctr",
+          Formula("clicks / impressions").some,
+          Display(None, percent, average).some),
+        Field(randUUID, "cpc",
+          Formula("totalSpend / clicks").some,
+          Display(None, currency, average).some),
+        //Field(randUUID, "AvgPosition", None),
+        Field(randUUID, "totalLeads",
+          Formula("contact + inquiries + apps + calls").some,
+          Display("Total Leads".some, numberWhole, summation).some),
+        Field(randUUID, "cpl",
+          Formula("totalSpend / totalLeads").some,
+          Display(None, currency, average).some),
+        Field(randUUID, "ssc",
+          Formula("totalLeads / clicks").some,
+          Display(None, percent, average).some)
+      )
+        // For now let's ignore the avgPos related fields until we finish that.
+        .filterNot(_.varName.contains("avgPos"))
+    }
     val fieldsLookup = fields.map(f => f.varName -> f).toMap
 
     val template = Template(randUUID, "Search Performance", fields.map(_.id).flatten)
@@ -139,7 +168,11 @@ object TUIReportHelper {
       fields.filterNot(_.varName == "spend123").map(_.id).flatten,
       fields.find(_.varName == "totalSpend").map(f => FieldSort(f.id.get, false)),
       List(),
-      List())
+      List(
+        Chart.Pie("Visitors by Category", fieldsLookup("impressions").id.get),
+        Chart.Pie("Leads by Category", fieldsLookup("totalLeads").id.get),
+        Chart.Bar("Cost per Visitor", fieldsLookup("cpc").id.get),
+        Chart.Bar("Cost by Category", fieldsLookup("totalSpend").id.get)))
 
     // XXX(dk): this can't be serialised as is!!
     val keySelector = new ds.KeySelector {
@@ -193,6 +226,8 @@ object TUIReportHelper {
     )
 
     val fieldBindings = List(
+      //new FieldBinding(fieldsLookup("avgPos_").id.get, dartDs.dsId.get,
+      //  "Paid Search Average Position"),
       new FieldBinding(fieldsLookup("spend").id.get, dartDs.dsId.get,
         "Paid Search Cost"),
       new FieldBinding(fieldsLookup("impressions").id.get, dartDs.dsId.get,

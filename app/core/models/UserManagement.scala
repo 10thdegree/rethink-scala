@@ -39,7 +39,7 @@ case class MailTokens(email: String,
                       creationTime: String,
                       expirationTime: String,
                       isSignUp: Boolean,
-                      id: Option[UUID] = None) extends Document {
+                      id: Option[String] = None) extends Document {
   def toMailToken: MailToken = new MailToken(id.toString, email, new DateTime(creationTime), new DateTime(expirationTime), isSignUp)
 }
 

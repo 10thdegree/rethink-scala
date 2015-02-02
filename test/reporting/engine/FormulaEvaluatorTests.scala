@@ -18,7 +18,7 @@ object FormulaEvaluatorTests {
   val bar = "bar" -> None
   //AST.Variable("bar")
   val fooAndBar = "fooAndBar" -> AST.Add(AST.Variable("foo"), AST.Variable("bar")).some
-  val fooAndBar2 = "fooAndBar2" -> AST.WholeNumber(AST.Max(AST.Variable("foo"), AST.Variable("fooAndBar"))).some
+  val fooAndBar2 = "fooAndBar2" -> AST.Round(AST.Max(AST.Variable("foo"), AST.Variable("fooAndBar"))).some
   val fooAndBar3 = "fooAndBar3" -> AST.Sum(AST.Variable("fooAndBar")).some
   val fooBarMax2 = "fooBarMax2" -> AST.Max(AST.Variable("fooAndBar"), AST.Variable("fooAndBar3")).some
 
@@ -35,7 +35,6 @@ object FormulaEvaluatorTests {
     Set(fooBarMax2)
   )
 }
-
 
 import FormulaEvaluatorTests._
 
@@ -82,9 +81,7 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
         //"agencyFees1" -> Some("fees.agency(\"FOO\").monthly(bar, foo)"),
         "servingFeesCpc" -> Some("fees.serving(\"BAZ\").cpc(foo)"),
         "fooBarInt" -> Some("round(fooBar)"),
-        "barMoney" -> Some("currency(bar)"),
         "rowDays" -> Some("row.totalDaysInMonth"),
-        "fooBarFormat" -> Some("func.format(fooBar, \"#,###\")"),
         "fooBarMonthSum" -> Some("month.sum(fooBar)"),
         "fooBarMax" -> Some("max(foo, bar)"),
         "fooBarMax2" -> Some("max(fooBarMax, fooBarMonthSum)")
@@ -96,10 +93,8 @@ class FormulaEvaluatorTests extends Specification with org.specs2.matcher.Thrown
         "fooBarSum" -> Some(AST.Sum(AST.Variable("fooBar"))),
         //"agencyFees1" -> Some(AST.Fees.AgencyFee("FOO", AST.Fees.AgencyFeeTypes.Monthly)),
         "servingFeesCpc" -> Some(AST.ForcedDependancy(AST.Fees.ServingFee("BAZ", AST.Fees.ServingFeeTypes.Cpc, Some(AST.Variable("foo"))),AST.Sum(AST.Variable("foo")))),
-        "fooBarInt" -> Some(AST.WholeNumber(AST.Variable("fooBar"))),
-        "barMoney" -> Some(AST.Format(AST.Variable("bar"), AST.Functions.CurrencyFormat)),
+        "fooBarInt" -> Some(AST.Round(AST.Variable("fooBar"))),
         "rowDays" -> Some(AST.Row.TotalDaysInMonth),
-        "fooBarFormat" -> Some(AST.Format(AST.Variable("fooBar"), "#,###")),
         "fooBarMonthSum" -> Some(AST.Month.Sum(AST.Variable("fooBar"))),
         "fooBarMax" -> Some(AST.Max(AST.Variable("foo"), AST.Variable("bar"))),
         "fooBarMax2" -> Some(AST.Max(AST.Variable("fooBarMax"), AST.Variable("fooBarMonthSum")))

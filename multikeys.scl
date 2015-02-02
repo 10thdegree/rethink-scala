@@ -1,0 +1,76 @@
+
+// We start out with a List[DSRow]
+val dsRows = dses.flatMap(_.rows)
+// This list mixes data from different DSes; this doens't matter.
+// There may be many rows for the same key/date; also doesn't matter.
+
+// At this point each row has a collection of Attributes/values
+// Since the formula engine and evaluation cxt use Fields/values, 
+// we need to map them:
+val cxtRows = 
+  for { dsRow <- dsRows } yield {
+    val cxtRow = mkFieldsFromAttributes(attrsToFields)(dsRow)
+
+    // There are a few attributes/fields that aren't additive, 
+    // like "Average Position"; to handle that, we have an 
+    // early formula evaluation phase that can transform these
+    // values into something that _is_ additive.
+    cxtRow.map(rawTransforms)
+  }
+
+// At this point, we have a bunch of CxtRows that still possibly 
+// represent the same key/date; but the Attributes from DSes
+// are gone and have been mapped over to Fields; good.
+
+// ===========================
+// Start mutates state
+// ===========================
+
+// Copy rows into the cxt so they get nested hierarchically.
+// This hierarchy looks like:
+//
+// ROOT
+//   \
+// Month(s): one node per month 
+//   \
+// Partial Keys: one level for each partial key
+//   \
+// CxtRows: each partial key level may have leaf nodes with data
+val cxt = new EvaluationCxt(cxtRows)
+
+// Collect aggregates for simple bound fields.
+// We do this because we need to know sums so
+// we can next break down distributable fields.
+cxt.rollUp(boundFields)
+
+// Push down values based on dependencies
+cxt.breakDown(dependentFields)
+
+// Collect aggregates for these fields too so
+// they can be used in monthly sums.
+cxt.rollUp(dependentFields)
+
+// At this point we should now have all the data 
+// Fields from the DSes properly distributed and 
+// aggregated across all months for the report.
+// Next we need to "flatten" the data so we can 
+// run the formulae engine on it and get a report!
+
+// Get a flattened view of the data to pass to the formulae engine
+reportType match {
+	case ByKey => cxt.flattenByKey()
+	case ByDate => cxt.flattenByDate()
+	case ByDateAndKey => cxt.flattenByDateAndKey()
+}
+
+// Run the engine on the flattened view
+// Note that the flattened cxt still has access to the nested data
+// like month totals
+formulaeEngine.run(cxt)
+
+// Pull out the completed report
+val finalRows = cxt.rows()
+
+// ===========================
+// End mutates state
+// ===========================

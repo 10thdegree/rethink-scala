@@ -3,7 +3,7 @@ package reporting.engine
 import org.joda.time.DateTime
 import reporting.models.ds.DataSource
 import DataSource.{BasicRow, Attributes}
-import reporting.models.{Fees, FieldBinding, Field, Report}
+import reporting.models._
 
 import scala.collection.SortedMap
 
@@ -14,7 +14,7 @@ class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servin
   val allFields = fields
   val allFieldsLookup = allFields.map(f => f.id.get -> f).toMap
   val compiler = new FormulaCompiler(allFields.map(_.varName): _*)
-  val compiledFields = allFields.map(f => f -> f.formula.map(compiler.apply))
+  val compiledFields = allFields.map(f => f -> f.formulaValue.map(compiler.apply))
   val labeledTerms = compiledFields.map({ case (field, term) => field.varName -> term}).toMap
   val labeledFields = compiledFields.map({ case (field, term) => field.varName -> field}).toMap
   val groupedTerms = FormulaCompiler.segment(labeledTerms.toList: _*)(labeledTerms)
@@ -66,17 +66,17 @@ class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servin
       FormulaEvaluator.eval[BasicRow](row, date, groupTerms.toList)(cxt)
     }
 
-    // TODO: Compute footers
-
     // Extract the map of values from each row
     for {
       (row, computed) <- cxt.allRows.toList
-      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> GeneratedReport.FieldValue(vv.value, vv.formatted) })
+      attrs = computed.values.map({ case (kk,vv) => labeledFields(kk) -> GeneratedReport.FieldValue(vv.value, vv.toString) })
     } yield GeneratedReport.Row(row.keys, row.date, fields = attrs)
   }
 }
 
-case class GeneratedReport(fields: List[Field], rows: List[GeneratedReport.Row]) {
+case class GeneratedReport(fields: List[Field],
+                           rows: List[GeneratedReport.Row],
+                           charts: List[Chart]) {
 
   var fieldsLookup = fields.map(f => f.id.get -> f).toMap
 
@@ -88,6 +88,8 @@ case class GeneratedReport(fields: List[Field], rows: List[GeneratedReport.Row])
       case Some((f, false)) => this.copy(rows = this.rows.sortBy(r => r.fields(f)).reverse)
       case _ => this.copy(rows = this.rows.sortBy(r => r.keys.mkString("-")))
     }
+
+  lazy val filteredRows = rows.map(_.filterFields(fields))
 }
 
 object GeneratedReport {
@@ -98,6 +100,10 @@ object GeneratedReport {
     def orderedFields(visible: List[Field]) = {
       val fieldOrder = visible.zipWithIndex.toMap
       SortedMap[Field, FieldValue](fields.filter(x => visible.contains(x._1)).toSeq:_*)(Ordering.by(f => fieldOrder(f)))
+    }
+
+    def filterFields(visible: List[Field]) = {
+      this.copy(fields = orderedFields(visible).toMap)
     }
   }
 

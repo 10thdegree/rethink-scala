@@ -38,6 +38,7 @@ class ReportDayLaws extends Spec {
 
 
 object DartAPITest extends Properties("Dart API test") {
+<<<<<<< HEAD
  
  
   property("nonblocking test") = forAll { (r: DownloadedReport) => 
@@ -49,11 +50,20 @@ object DartAPITest extends Properties("Dart API test") {
     val result = Await.result(future, scala.concurrent.duration.Duration(1, SECONDS) )
     true
  } 
+=======
+  
+  property("nonblocking test") = forAll { (i:Int) =>
+   val reportCall = Dart.getReport(444, new DateTime(), new DateTime())
+   val future = reportCall.run.run(config)
+   val result = Await.result(future, scala.concurrent.duration.Duration(10, SECONDS) )
+   true
+  }
+>>>>>>> 6b9559dd8ae6faa357988568ebda1e14b4609d08
 
   property("test Cache") = forAll { (i: Int) =>
     val reportCall = Dart.getReport(1, new DateTime(), new DateTime())
     val future = reportCall.run.run(config)
-    val result = Await.result(future, scala.concurrent.duration.Duration(1, SECONDS) )
+    val result = Await.result(future, scala.concurrent.duration.Duration(10, SECONDS) )
     result._2.fold(l => false, r => {
       true
     })
