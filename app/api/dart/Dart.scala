@@ -14,24 +14,43 @@ object Dart {
   import scala.annotation.tailrec
   import bravo.api.dart.Data._
   import scala.concurrent.{Future,Await}
-     
-  def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
-    c.cache(reportId.toString, startDate, endDate) match {
-      case h :: tail => 
-        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, h :: tail))        
-      case Nil =>
-        for {
+  import org.joda.time.format._
+  import org.joda.time._
+  import bravo.core._
+  import bravo.api.dart.DateUtil._
+
+  def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => {
+    val reportIdCache = c.cache(reportId)  
+    val cachedDays = DateUtil.findLargestRange(reportIdCache, startDate, endDate)
+    
+    DateUtil.findMissingDates(cachedDays, startDate.toLocalDate(), endDate.toLocalDate()) match {
+      case Some((newStart, newEnd)) =>
+         for {
           dfa <- c.api.getDartAuth
-          _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
+          _   <- c.api.updateDartReport(dfa, c.clientId, reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
           id  <- c.api.runDartReport(dfa, c.clientId, reportId)
           rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
-          rep = ReportParser.parse(rs)
-          _   <- put(c.updateCache(reportId.toString, startDate, endDate, rep))
+          rep = groupDates(ReportParser.parse(rs))
+          _   <- put(c.updateCache(reportId, rep))
         } yield {
           DownloadedReport(reportId, startDate, endDate, rep)
-        }
-    }).toBravoM
+        }       
+      case None => //we already have everything!
+        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, cachedDays) )
+
+    }
+    //we have a cached daterange.
     
+    //we don't want to have to do two queries, so maybe we don't want contiguous... only contiguous at the boundaries? 
+      
+    //c.cache(reportId.toString, startDate, endDate) match {
+     // case h :: tail => 
+     //   Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, h :: tail))        
+     // case Nil =>
+
+    }).toBravoM
+
+
   private def fulfillReport(dfa: Dfareporting, reportId: Long, fileId: Long, delayMultiplier: Int): BravoM[String] = ((c:Config) => {
     //not tailrec but we're not going that deep
     def rec(attempts: Int): BravoM[String] =  

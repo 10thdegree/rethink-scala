@@ -6,7 +6,9 @@ object Util {
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
   import bravo.api.dart._ 
+  import bravo.api.dart.Data._
   import org.joda.time._
+  
   /*
   *  Kleisli is the equivalent of Function1, so this 
   *  reprsents a computation of type 
@@ -22,14 +24,24 @@ object Util {
   type BravoM[A] = EitherT[SFuture, JazelError, A]
 
   case class JazelError(ex: Option[Throwable], msg: String) 
-
-  //This is not so modular. we should think about how to define the individual configs in each module, then combime them
-  //at the instantiation site.  
+  
+  //This is not so modular. we should think about how to define the individual configs in each module, then combine them
+  // the instantiation site. ugh, F bound polymorphism with the 'update cache' thing, we need to fix. typeclass? 
   trait Config extends GoogleConfig with MarchexConfig {
+    
     val api: DartInternalAPI
-    def cache(id: String, s: DateTime,e: DateTime): List[Map[String,String]] // 
-    def updateCache(id: String, s: DateTime, e: DateTime, d: List[Map[String,String]]):  Config
-    val m: Map[String, List[Map[String,String]]]
+    
+    val m: Map[Long, List[ReportDay]]
+    
+    protected def updateCache(m: Map[Long, List[ReportDay]]): Config 
+    
+    def cache(id: Long) = 
+      m.get(id).getOrElse(List[ReportDay]())
+    
+    def updateCache(id: Long, drs: List[ReportDay]): Config = {
+      val merged = m.get(id).fold(drs)(old => old |+| drs)
+      updateCache(m + (id -> merged))
+   }    
   }
   
   trait GoogleConfig {
@@ -86,6 +98,7 @@ object Util {
       val (c2,b) = s.run(c)
       (c2, b.right[JazelError]) 
     } ) 
+  
   /*
   * Lifting to BravoM and related  
   * converions
