@@ -26,7 +26,10 @@ object LiveTest {
       val marchexurl: String = "http://api.voicestar.com/api/xmlrpc/1",
       val marchexuser: String = "urp@10thdegree.com",
       val m: Map[Long, List[ReportDay]] = Map()
-    ) extends Config 
+    ) extends Config {
+      override def updateCache(m: Map[Long, List[ReportDay]]): Config =
+        this.copy(m = m)
+    }
 
     val prodConfig = new ProdConfig()
 

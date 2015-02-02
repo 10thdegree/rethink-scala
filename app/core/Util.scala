@@ -26,17 +26,22 @@ object Util {
   case class JazelError(ex: Option[Throwable], msg: String) 
   
   //This is not so modular. we should think about how to define the individual configs in each module, then combine them
-  //at the instantiation site.  
+  // the instantiation site. ugh, F bound polymorphism with the 'update cache' thing, we need to fix. typeclass? 
   trait Config extends GoogleConfig with MarchexConfig {
+    
     val api: DartInternalAPI
+    
     val m: Map[Long, List[ReportDay]]
+    
+    protected def updateCache(m: Map[Long, List[ReportDay]]): Config 
     
     def cache(id: Long) = 
       m.get(id).getOrElse(List[ReportDay]())
     
     def updateCache(id: Long, drs: List[ReportDay]): Config = {
-      this
-    }    
+      val merged = m.get(id).fold(drs)(old => old |+| drs)
+      updateCache(m + (id -> merged))
+   }    
   }
   
   trait GoogleConfig {
@@ -93,6 +98,7 @@ object Util {
       val (c2,b) = s.run(c)
       (c2, b.right[JazelError]) 
     } ) 
+  
   /*
   * Lifting to BravoM and related  
   * converions

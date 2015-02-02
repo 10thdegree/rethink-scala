@@ -40,12 +40,15 @@ class ReportDayLaws extends Spec {
 object DartAPITest extends Properties("Dart API test") {
  
  
-  property("nonblocking test") = forAll { (i:Int) =>
-   val reportCall = Dart.getReport(444, new DateTime(), new DateTime())
-   val future = reportCall.run.run(config)
-   val result = Await.result(future, scala.concurrent.duration.Duration(1, SECONDS) )
-   true
-  }
+  property("nonblocking test") = forAll { (r: DownloadedReport) => 
+    val size = r.data.size
+
+    val reportCall = Dart.getReport(444, new DateTime(), new DateTime())
+    val mockedConfig = config.copy(api = internal( toDartReportString(r) ) )  
+    val future = reportCall.run.run(mockedConfig) 
+    val result = Await.result(future, scala.concurrent.duration.Duration(1, SECONDS) )
+    true
+ } 
 
   property("test Cache") = forAll { (i: Int) =>
     val reportCall = Dart.getReport(1, new DateTime(), new DateTime())
@@ -57,7 +60,7 @@ object DartAPITest extends Properties("Dart API test") {
   }
 
   case class TestConfig(
-    val api: DartInternalAPI  = internal(),
+    val api: DartInternalAPI  = internal(""),
     val filePath: String = "",
     val accountId: String = "",
     val userAccount: String = "",
@@ -66,11 +69,15 @@ object DartAPITest extends Properties("Dart API test") {
     val marchexpass: String = "",
     val marchexurl: String = "",
     val m: Map[Long, List[ReportDay]] = Map[Long, List[ReportDay]]() //Map[String, List[Map[String,String]]]("1" -> List[Map[String,String]]( Map[String,String]("asdf" -> "blah"))) 
-    ) extends Config   
+    ) extends Config {
+      override def updateCache(m: Map[Long, List[ReportDay]]) =
+        this.copy(m = m)
+    }
 
   val config = TestConfig()
 
-  def internal():DartInternalAPI = new DartInternalAPI {
+  //mocks a download call and returns a string as a report
+  def internal(s: String):DartInternalAPI = new DartInternalAPI {
    
     def getDartAuth: BravoM[Dfareporting] = Monad[BravoM].point(null)
 
@@ -80,14 +87,9 @@ object DartAPITest extends Properties("Dart API test") {
 
     def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[Long] = Monad[BravoM].point(1L)
 
-    def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[String] = Monad[BravoM].point("asdf,blah\\r\\na,b")
-  
-  }
+    def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[String] = Monad[BravoM].point(s)
+  }  
 
-  def dartCacheTest() {
-      //Data/
-
-  }
 
 }
 

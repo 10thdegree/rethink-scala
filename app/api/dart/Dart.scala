@@ -20,8 +20,26 @@ object Dart {
   import bravo.api.dart.DateUtil._
 
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => {
-    val reportIdCache = c.cache(reportId)  //v.toList.join //s 
-    val dates = DateUtil.findLargestRange(reportIdCache, startDate, endDate)
+    val reportIdCache = c.cache(reportId)  
+    val cachedDays = DateUtil.findLargestRange(reportIdCache, startDate, endDate)
+    
+    DateUtil.findMissingDates(cachedDays, startDate.toLocalDate(), endDate.toLocalDate()) match {
+      case Some((newStart, newEnd)) =>
+         for {
+          dfa <- c.api.getDartAuth
+          _   <- c.api.updateDartReport(dfa, c.clientId, reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
+          id  <- c.api.runDartReport(dfa, c.clientId, reportId)
+          rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
+          rep = groupDates(ReportParser.parse(rs))
+          _   <- put(c.updateCache(reportId, rep))
+        } yield {
+          DownloadedReport(reportId, startDate, endDate, rep)
+        }       
+      case None => //we already have everything!
+        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, cachedDays) )
+
+    }
+    //we have a cached daterange.
     
     //we don't want to have to do two queries, so maybe we don't want contiguous... only contiguous at the boundaries? 
       
@@ -29,16 +47,7 @@ object Dart {
      // case h :: tail => 
      //   Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, h :: tail))        
      // case Nil =>
-        for {
-          dfa <- c.api.getDartAuth
-          _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
-          id  <- c.api.runDartReport(dfa, c.clientId, reportId)
-          rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
-          rep = groupDates(ReportParser.parse(rs))
-          //_   <- put(c.updateCache(reportId, startDate, endDate, rep))
-        } yield {
-          DownloadedReport(reportId, startDate, endDate, rep)
-        }
+
     }).toBravoM
 
 
