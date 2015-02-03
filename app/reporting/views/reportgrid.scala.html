@@ -12,6 +12,8 @@
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("d3.min.js"))"></script>
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("c3.min.js"))"></script>
         <link rel="stylesheet" type="text/css" href="@reporting.controllers.routes.Assets.at("stylesheets/ui-grid.css")">
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap-datepicker.js"))"></script>
+        <link rel="stylesheet" type="text/css" href="@routes.WebJarAssets.at(WebJarAssets.locate("datepicker3.css"))">
         <style type="text/css">
             .glyphicon-refresh-animate {
                 -animation: spin .7s infinite linear;
@@ -30,21 +32,26 @@
         </style>
     </head>
     <body>
-        <form>
-            <input type="hidden" id="startDate" name="startDate" value="@startDate"/>
-            <input type="hidden" id="endDate" name="endDate" value="@endDate"/>
-        </form>
         <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/lrDragNDrop.js")"></script>
         <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportGridApp.js")"></script>
         <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportsService.js")"></script>
         <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportCtrl.js")"></script>
         <div ng-controller="ReportCtrl as report" style="padding-left: 10px; padding-right: 10px">
-            <div id="reportLoading" style="text-align: center; padding-top: 20px" ng-show="report.isLoading" class="container">
+            <div id="reportLoading" style="padding-top: 20px" ng-show="report.isLoading" class="container">
                 <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading Report...
             </div>
             <div id="report" ng-show="!report.isLoading">
-                <div style="text-align: center">
-                    <h2>{{report.reportTitle}}</h2>
+                <div style="padding: 10px; border: 1px solid #ddd; margin-top: 10px">
+                    <div>
+                        <div style="display: inline-block">
+                            <div class="input-daterange input-group" id="datepicker">
+                                <input ng-model='report.range.start' ng-init='report.range.start="@startDate"' id="startDate" type="text" class="input-sm form-control" name="startDate" />
+                                <span  class="input-group-addon">to</span>
+                                <input ng-model='report.range.end' ng-init='report.range.end="@endDate"' id="endDate" type="text" class="input-sm form-control" name="endDate" />
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" style='margin-top:-23px' ng-click="report.reloadForView()">Fetch</button>
+                    </div>
                     <select ng-model="report.selectedView"
                             ng-show="report.views.length > 0"
                             ng-options="value.uuid as value.label for value in report.views"
@@ -87,5 +94,11 @@
                 </table>
             </div>
         </div>
+        <script type="text/javascript">
+            $('#report .input-daterange').datepicker({
+                format: "yyyy-mm-dd",
+                todayHighlight: true
+            });
+        </script>
     </body>
 </html>

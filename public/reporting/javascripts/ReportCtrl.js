@@ -4,8 +4,8 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
     vm.isLoading = true;
 
     vm.range = {
-        start: $("#startDate").val(),
-        end: $("#endDate").val()
+        start: '',
+        end: ''
     };
 
     vm.columns = [];
@@ -168,7 +168,18 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
 
     function loadReport(viewId) {
         vm.isLoading = true;
-        $timeout(function() { reports.getReport(viewId, vm.range.start, vm.range.end, reportLoadedCallback); }, 1);
+        $timeout(function() {
+            if (vm.range.start == "") {
+                var d = new Date();
+                d.setDate(1);
+                vm.range.start = $filter('date')(d,'yyyy-MM-dd');
+            }
+            if (vm.range.end == "") {
+                vm.range.end = $filter('date')(new Date(),'yyyy-MM-dd');
+            }
+            console.log("start/end: " + vm.range.start + "/" + vm.range.end)
+            reports.getReport(viewId, vm.range.start, vm.range.end, reportLoadedCallback);
+        }, 1);
     }
 
     loadReport("");

@@ -67,6 +67,7 @@ lazy val otherDeps = Seq(
   //
   // Bootstrap
   "org.webjars" % "bootstrap" % "3.1.1-2",
+  "org.webjars" % "bootstrap-datepicker" % "1.3.1",
   //
   // Play Stylus
   //"com.typesafe.sbt" % "sbt-stylus" % "1.0.0",
