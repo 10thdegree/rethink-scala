@@ -231,9 +231,6 @@ package object ds {
 
       def flattenByKeysAndDate(rows: T*): List[T]
 
-      def apply(rows: T*): List[T]
-
-      def aggregate(rows: T*) = apply(rows:_*)
     }
 
     object DataSourceAggregators {
@@ -263,12 +260,12 @@ package object ds {
               .toList
           }
 
-          def apply(rows: NestedRow*) = nestAndCoalesce(rows:_*)
         }
 
         implicit object DataSourceAggregatorBasicRows extends DataSourceAggregator[BasicRow] {
 
           // Merge all values for unique keys (so dates get merged together)
+          // For reports by key
           def flattenByKeys(rows: BasicRow*) = {
             rows
               .groupBy(r => r.keys)
@@ -277,6 +274,7 @@ package object ds {
           }
 
           // Merge values for any rows that have matching keys/dates
+          // For reports by date (keys are still separate though)
           def flattenByKeysAndDate(rows: BasicRow*) = {
             rows
               .groupBy(r => r.keys -> r.date)
@@ -284,7 +282,6 @@ package object ds {
               .toList
           }
 
-          def apply(rows: BasicRow*): List[BasicRow] = flattenByKeys(rows:_*)
         }
       }
     }

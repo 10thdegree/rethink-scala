@@ -38,7 +38,7 @@ class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servin
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
     val rowsByDate = dsa
       .groupByDate(ds -> dsRows)
-      .map({case (date, rows) => date -> dsa.aggregate(rows: _*)})
+      .map({case (date, rows) => date -> dsa.flattenByKeys(rows: _*)})
 
     // Do K iterations over all rows, where K = groupedLabels.length
     // Each of K groups separates dependencies, so we must process A before B where B depends on A.
