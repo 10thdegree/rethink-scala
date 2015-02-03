@@ -19,38 +19,40 @@ object Dart {
   import bravo.core._
   import bravo.api.dart.DateUtil._
 
-  def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => {
+  def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c: Config) => {
     val reportIdCache = c.cache(reportId)  
-    
     val cachedDays = DateUtil.findLargestRange(reportIdCache, startDate, endDate)
-    
-    DateUtil.findMissingDates(cachedDays, startDate.toLocalDate(), endDate.toLocalDate()) match {
+    val missingDays = DateUtil.findMissingDates(cachedDays, startDate.toLocalDate(), endDate.toLocalDate())
+    missingDays match {
       case Some((newStart, newEnd)) =>
-         for {
+        println("we are missing " + newStart + " and " + newEnd + "!")
+        for {
+          report <- getReportUncached(reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
+          _     <- put(c.updateCache(reportId, report.data))
+        } yield {
+           DownloadedReport(reportId, startDate, endDate, report.data) 
+          }
+      case None =>
+        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, cachedDays) )
+    }
+    
+   } ).toBravoM
+  
+  
+  def getReportUncached(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
+        for {
           dfa <- c.api.getDartAuth
-          _   <- c.api.updateDartReport(dfa, c.clientId, reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
+          _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
           id  <- c.api.runDartReport(dfa, c.clientId, reportId)
           rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
           parsed = ReportParser.parse(rs)
-          rep = groupDates(parsed)
-          _   <- put(c.updateCache(reportId, rep))
+          rep    = groupDates(parsed)
+          //_   <- put(c.updateCache(reportId, rep))
         } yield {
           DownloadedReport(reportId, startDate, endDate, rep)
         }       
-      case None => //we already have everything!
-        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, cachedDays) )
 
-    }
-    //we have a cached daterange.
-    
-    //we don't want to have to do two queries, so maybe we don't want contiguous... only contiguous at the boundaries? 
-      
-    //c.cache(reportId.toString, startDate, endDate) match {
-     // case h :: tail => 
-     //   Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, h :: tail))        
-     // case Nil =>
-
-    }).toBravoM
+    ).toBravoM
 
 
   private def fulfillReport(dfa: Dfareporting, reportId: Long, fileId: Long, delayMultiplier: Int): BravoM[String] = ((c:Config) => {

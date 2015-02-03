@@ -70,7 +70,7 @@ object TuiReportController extends Controller {
   }
 
   def reportAsync(startDate: String, endDate: String): Future[\/[String, JsValue]] = {
-    Logger.error( cache.get.size + " is the cache size") 
+    Logger.error( cache.get.values.map(_.size) + " is the cache size") 
     
     val config = LiveTest.prodConfig.copy(m = cache.get)
 

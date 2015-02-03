@@ -8,22 +8,16 @@ import bravo.api.dart.Data._
 
 object DateUtil {
 
+  implicit val localDateOrd = new scala.math.Ordering[LocalDate] {
+    def compare(a: LocalDate, b: LocalDate): Int = 
+      a compareTo b
+  }
+
   def mkDateTime(str: String, fmt: String = "yyyy-MM-dd") =
     DateTime.parse(str, DateTimeFormat.forPattern(fmt))
 
   def groupDates(li: List[Map[String,String]]): List[ReportDay] = {
-    val t = li.map(m => {
-    try {
-        val dates = mkDateTime(m("Date"))
-    } catch {
-      case ex: Exception => 
-        println("ex = " + m.get("Date") )
-        println(" Ex = " + ex) //println("Error parsing date = " + m("Date"))     
-        ex.printStackTrace
-    }
-    })
-    li.map(m => (mkDateTime(m("Date")).toLocalDate, m)).groupBy(_._1).toList.map(t => ReportDay(new DateTime(), t._1, t._2.map(_._2)))
-  
+    li.map(m => (mkDateTime(m("Date")).toLocalDate, m)).groupBy(_._1).toList.map(t => ReportDay(new DateTime(), t._1, t._2.map(_._2))).sortBy(rd => rd.rowDate)
   }
 
   def ungroupDates(li: List[ReportDay]): List[Map[String,String]] = 
@@ -38,10 +32,14 @@ object DateUtil {
   def findLargestRange(cache: List[ReportDay], startDate: DateTime, endDate: DateTime): List[ReportDay] = {
     val sd = startDate.toLocalDate
     val ed = endDate.toLocalDate
+    //println("cache size = " + cache.size)
     val trimmedCache = cache.filter(l => (l.rowDate compareTo sd) != -1 && (l.rowDate compareTo ed) != 1)   
+    //println("trimmed cache = " + trimmedCache.size)
     val groups = slidingGroup[ReportDay](trimmedCache, (a,b) => Math.abs(Days.daysBetween(a.rowDate, b.rowDate).getDays()) == 1)
+    println("groups size = " + groups.size)
     val groupsAtBoundaries = groups.filter(l => l.headOption.fold(false)((rd: ReportDay) => (rd.rowDate equals sd)) || l.reverse.headOption.fold(false)((rd: ReportDay) => rd.rowDate equals ed))
     val bestCache = groupsAtBoundaries.sortWith((a,b) => a.size == b.size).headOption.toList.flatten
+    println("bestCache size = " + bestCache.size)
     bestCache
   }
 

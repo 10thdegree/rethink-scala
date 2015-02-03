@@ -45,7 +45,7 @@ lazy val otherDeps = Seq(
   "org.scalaz" %% "scalaz-scalacheck-binding" % "7.1.0",
   "org.typelevel" %% "scalaz-specs2" % "0.3.0" % "test",
   // Rethink-DB Driver
-  "com.rethinkscala" % "core_2.11" % "0.4.4-SNAPSHOT",
+  //"com.rethinkscala" % "core_2.11" % "0.4.4-SNAPSHOT",
   // Secure Social
   "ws.securesocial" %% "securesocial" % "master-SNAPSHOT",
   // Rethink-DB Driver using jar in lib

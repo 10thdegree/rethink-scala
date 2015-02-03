@@ -38,28 +38,38 @@ class ReportDayLaws extends Spec {
 
 
 object DartAPITest extends Properties("Dart API test") {
- 
+   
   property("nonblocking test") = forAll { (r: DownloadedReport) => 
     val size = r.data.size
-    
     val reportCall = Dart.getReport(444, new DateTime(), new DateTime())
     val mockedConfig = config.copy(api = internal( toDartReportString(r) ) )  
     val future = reportCall.run.run(mockedConfig) 
     val result = Await.result(future, scala.concurrent.duration.Duration(10, SECONDS) )
-    
     true
- }
-
-  /*
-  property("test Cache") = forAll { (i: Int) =>
-    val reportCall = Dart.getReport(1, new DateTime(), new DateTime())
-    val future = reportCall.run.run(config)
-    val result = Await.result(future, scala.concurrent.duration.Duration(10, SECONDS) )
-    result._2.fold(l => false, r => {
-      true
-    })
   }
-  */
+  
+
+  
+  property("test Cache") = forAll { (r: DownloadedReport) =>
+    if (r.data.size > 1) { 
+      val (la, lb) = r.data.splitAt(r.data.size/2)
+      //assert a is greater than b
+    
+      val startDate = r.data.head.rowDate
+      val endDate  = r.data.reverse.head.rowDate
+      val halfStart = la.head.rowDate
+
+      val isordered = ((startDate compareTo endDate) == -1 ) 
+      val cachedRange = DateUtil.findLargestRange(r.data, halfStart.toDateTimeAtCurrentTime, endDate.toDateTimeAtCurrentTime)
+      val missingrange = DateUtil.findMissingDates(cachedRange, halfStart, endDate)
+      val same = (missingrange == r.data)
+      //todo: compare missing ranges and original startDates to make sure we encompass the full amount
+      //println("Missing range is = " + missingrange.size + " original size = " + r.data.size)
+      isordered
+    } else 
+      true
+  }
+  
   case class TestConfig(
     val api: DartInternalAPI  = internal(""),
     val filePath: String = "",
