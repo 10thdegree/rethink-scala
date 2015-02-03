@@ -12,6 +12,16 @@ object DateUtil {
     DateTime.parse(str, DateTimeFormat.forPattern(fmt))
 
   def groupDates(li: List[Map[String,String]]): List[ReportDay] = {
+    val t = li.map(m => {
+    try {
+        val dates = mkDateTime(m("Date"))
+    } catch {
+      case ex: Exception => 
+        println("ex = " + m.get("Date") )
+        println(" Ex = " + ex) //println("Error parsing date = " + m("Date"))     
+        ex.printStackTrace
+    }
+    })
     li.map(m => (mkDateTime(m("Date")).toLocalDate, m)).groupBy(_._1).toList.map(t => ReportDay(new DateTime(), t._1, t._2.map(_._2)))
   
   }

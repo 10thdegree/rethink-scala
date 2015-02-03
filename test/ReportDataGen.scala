@@ -16,6 +16,7 @@ import java.util.Date
 import bravo.api.dart.DateUtil._
 import bravo.api.dart.Data._
 import scalaz.scalacheck.ScalazProperties._  
+import org.joda.time.format._
 
 object ReportDataGen {
   
@@ -27,7 +28,10 @@ object ReportDataGen {
       case 4 | 6 | 9 | 11 => 30
       case _ => 31
     })
-    hour <- Gen.choose(0, 23)
+    h <- Gen.choose(0, 23)
+    hour = h match { case 2 => 3 
+                    case _ => h
+                    }
     minute <- Gen.choose(0, 59)
     second <- Gen.choose(0, 59)
     start  = new DateTime(year, month, day, hour, minute, second)
@@ -52,12 +56,12 @@ object ReportDataGen {
   def sampleReportRowGen(startD: Long, endD: Long) = for {
       long      <- Gen.choose(startD, endD)
       date      = new DateTime(long)
-      paidSCamp <- arbitrary[BigDecimal]
-      paidSCost <- arbitrary[BigDecimal]
-      psrchImp  <- arbitrary[BigDecimal]
-      homepage  <- arbitrary[BigDecimal]
-      confirm   <- arbitrary[BigDecimal]
-      applyo    <- arbitrary[BigDecimal]
+      paidSCamp <- arbitrary[Int]
+      paidSCost <- arbitrary[Int]
+      psrchImp  <- arbitrary[Int]
+      homepage  <- arbitrary[Int]
+      confirm   <- arbitrary[Int]
+      applyo    <- arbitrary[Int]
     } yield {
       DartReportRow(date.toLocalDate(), paidSCamp, paidSCost, psrchImp, homepage, confirm, applyo)  
     }
@@ -71,16 +75,23 @@ object ReportDataGen {
 
   case class DartReportRow  (
     date: LocalDate,
-    paidSearchCampaign: BigDecimal,
-    paidSearchCost: BigDecimal,
-    paidSearchImpressions: BigDecimal,
-    tuiHomePage: BigDecimal, 
-    tuiConfirmation: BigDecimal,
-    tuiApplyOnline: BigDecimal
+    paidSearchCampaign: Int,
+    paidSearchCost: Int,
+    paidSearchImpressions: Int,
+    tuiHomePage: Int, 
+    tuiConfirmation: Int,
+    tuiApplyOnline:Int 
     ) {
-      def toMap: Map[String,String] = Map("Date" -> date.toString(), "Paid Search Campaign" -> paidSearchCampaign.toString, "Paid Search Cost" -> paidSearchCost.toString, 
+      def toMap: Map[String,String] = {
+        val m = Map("Date" -> date.toString(DateTimeFormat.forPattern("yyyy-MM-dd")), "Paid Search Campaign" -> paidSearchCampaign.toString, "Paid Search Cost" -> paidSearchCost.toString, 
                                        "paidSearchImpressions"-> paidSearchImpressions.toString, "TUI Home Page" -> tuiHomePage.toString, "TUI Confirmation" -> tuiConfirmation.toString,
                                        "TUI Apply Online" -> tuiApplyOnline.toString)
+        
+        if (!m.contains("Date"))
+          println("OK weird how did that happen!")
+        m
+     }
+    
     }
 
   case class RawDartReport(data: String)
@@ -92,16 +103,17 @@ object ReportDataGen {
       Option(a).fold("")(o => o.toString())
 
   }
-
+  
   def toDartReportString(downloadedReport: DownloadedReport): String = 
-    ungroupDates(downloadedReport.data) match {
+    toReportString(ungroupDates(downloadedReport.data))
+        
+  def toReportString(l: List[Map[String,String]]): String = 
+    l match {
       case x :: xs =>
         val headers = x.keys.toList.mkString(",")
-        val values:List[String] = headers :: (xs.map(m => x.keys.map(k => m(k)).mkString(",")))
-        val csvdata = values.mkString("\n")
-        downloadedReport.reportid.toString + "\nReport Fields\n" + csvdata
-      case Nil => "" 
+        val rawRows: List[String] = (x +: xs).map(m => m.keys.map(k => m(k)).mkString(",") )
+        headers + "\n" + rawRows.mkString("\n")
+      case Nil => ""
     }
-  
 
 }

@@ -18,12 +18,17 @@ import org.joda.time.DateTime
 object DartCSVParsingTest extends Properties("Dart Parsing Test") {
   import bravo.test.ReportDataGen._
   
-  property("Dart Parsing roundtrip") = forAll { (r: DownloadedReport) => {
+  property("DartParsing") = forAll { (r: DownloadedReport) => {
     val blah = ReportParser.parse(toDartReportString(r))
     true
     }
   }
- 
+  
+  property("RoundTrip grouping parsing") = forAll { (r: DownloadedReport) => {
+    val parsedString = toDartReportString(r)
+    val blah = DateUtil.groupDates(ReportParser.parse(toDartReportString(r)))
+    true
+  }}
 }
 
 

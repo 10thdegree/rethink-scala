@@ -21,6 +21,7 @@ object Dart {
 
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => {
     val reportIdCache = c.cache(reportId)  
+    
     val cachedDays = DateUtil.findLargestRange(reportIdCache, startDate, endDate)
     
     DateUtil.findMissingDates(cachedDays, startDate.toLocalDate(), endDate.toLocalDate()) match {
@@ -30,7 +31,8 @@ object Dart {
           _   <- c.api.updateDartReport(dfa, c.clientId, reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
           id  <- c.api.runDartReport(dfa, c.clientId, reportId)
           rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
-          rep = groupDates(ReportParser.parse(rs))
+          parsed = ReportParser.parse(rs)
+          rep = groupDates(parsed)
           _   <- put(c.updateCache(reportId, rep))
         } yield {
           DownloadedReport(reportId, startDate, endDate, rep)
