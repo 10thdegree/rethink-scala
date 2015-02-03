@@ -58,7 +58,7 @@ object TUIReportHelper {
                           account: Account,
                           fields: List[Field],
                           template: Template,
-                          view: View,
+                          views: List[View],
                           ds: DartDS,
                           fieldBindings: List[FieldBinding],
                           report: Report,
@@ -69,7 +69,9 @@ object TUIReportHelper {
     val fieldsLookupById = fields.map(f => f.id.get -> f).toMap
   }
 
-  def TUISearchPerformanceRO() = {
+  def TUISearchPerformanceRO() = searchPerformanceRO
+
+  lazy val searchPerformanceRO = {
 
     val account = Account(randUUID, "TUI")
 
@@ -119,9 +121,9 @@ object TUIReportHelper {
         Field(randUUID, "impressions", None, Display(None, numberWhole, summation).some),
         Field(randUUID, "clicks", None, Display(None, numberWhole, summation).some),
         // Derived fields (raw transform)
-        Field(randUUID, "avgPos_"),
-        Field(randUUID, "avgPosSUMPROD", Formula("avgPos_ * impressions", isRawTransform = true).some),
-        // Derived fields
+        //Field(randUUID, "avgPos_"),
+        //Field(randUUID, "avgPosSUMPROD", Formula("avgPos_ * impressions", isRawTransform = true).some),
+        // Derived fields (fees)
         Field(randUUID, "cpcFees",
           Formula("""fees.serving("banner").cpc(clicks)""").some,
           Display(None, currency, summation).some),
@@ -131,41 +133,95 @@ object TUIReportHelper {
         Field(randUUID, "dispFees",
           Formula("""fees.agency("display").monthly(spend, impressions)""").some,
           Display(None, currency, summation).some),
-        Field(randUUID, "avgPos",
-          Formula("avgPosSUMPROD / impressions").some,
-          Display("Avg. Pos.".some, numberFrac, average).some),
+        //Field(randUUID, "avgPos",
+        //  Formula("avgPosSUMPROD / impressions").some,
+        //  Display("Avg. Pos.".some, numberFrac, average).some),
+
+        // Derived fields (with fees)
+        Field(randUUID, "allFees",
+          Formula("cpcFees + cpmFees + dispFees").some,
+          Display("Fees".some, currency, summation).some),
         Field(randUUID, "totalSpend",
-          Formula("spend + cpcFees + cpmFees + dispFees").some,
+          Formula("spend + allFees").some,
           Display("Total Spend".some, currency, summation).some),
-        Field(randUUID, "ctr",
-          Formula("clicks / impressions").some,
-          Display(None, percent, average).some),
         Field(randUUID, "cpc",
           Formula("totalSpend / clicks").some,
           Display(None, currency, average).some),
         //Field(randUUID, "AvgPosition", None),
-        Field(randUUID, "totalLeads",
-          Formula("contact + inquiries + apps + calls").some,
-          Display("Total Leads".some, numberWhole, summation).some),
         Field(randUUID, "cpl",
           Formula("totalSpend / totalLeads").some,
           Display(None, currency, average).some),
+
+        // Derived fields (without fees)
+        Field(randUUID, "totalSpendNoFees",
+          Formula("spend").some,
+          Display("Total Spend (NoFees)".some, currency, summation).some),
+        Field(randUUID, "cpcNoFees",
+          Formula("totalSpendNoFees / clicks").some,
+          Display("CPC (NoFees)".some, currency, average).some),
+        Field(randUUID, "cpcDelta",
+          Formula("cpc - cpcNoFees").some,
+          Display("CPC (Markup)".some, currency, average).some),
+        //Field(randUUID, "AvgPosition", None),
+        Field(randUUID, "cplNoFees",
+          Formula("totalSpendNoFees / totalLeads").some,
+          Display("CPL (NoFees)".some, currency, average).some),
+
+        // Dervied fields (non-fee related)
+        Field(randUUID, "ctr",
+          Formula("clicks / impressions").some,
+          Display(None, percent, average).some),
+        Field(randUUID, "totalLeads",
+          Formula("contact + inquiries + apps + calls").some,
+          Display("Total Leads".some, numberWhole, summation).some),
         Field(randUUID, "ssc",
           Formula("totalLeads / clicks").some,
           Display(None, percent, average).some)
       )
-        // For now let's ignore the avgPos related fields until we finish that.
-        .filterNot(_.varName.contains("avgPos"))
     }
     val fieldsLookup = fields.map(f => f.varName -> f).toMap
 
     val template = Template(randUUID, "Search Performance", fields.map(_.id).flatten)
 
-    val view = View(
-      randUUID,
-      "General User",
+    val viewWithoutFees = View(
+      UUID.fromString("087f5861-cc16-4bc5-b00e-c43ac2f83203").some,
+      "Admin view (with and without fees)",
       template.id.get,
-      fields.filterNot(_.varName == "spend123").map(_.id).flatten,
+      List(
+        "totalSpendNoFees", "totalSpend", "allFees",
+        "impressions", "clicks", "ctr", "cpcNoFees", "cpc", "cpcDelta",
+        "contact", "inquiries", "apps", "totalLeads",
+        "cplNoFees", "cpl",
+        "ssc")
+        .map(fieldsLookup).map(_.id).flatten,
+      fields.find(_.varName == "totalSpendNoFees").map(f => FieldSort(f.id.get, false)),
+      List(),
+      List(
+        Chart.Pie("Visitors by Category", fieldsLookup("impressions").id.get),
+        Chart.Bar("Cost per Visitor", fieldsLookup("cpcNoFees").id.get)))
+
+    val viewWithFees = View(
+      UUID.fromString("1eca53d7-0867-4683-bfa1-20729a729345").some,
+      "Client view (with fees)",
+      template.id.get,
+      List(
+        "totalSpend", "impressions", "clicks", "ctr", "cpc",
+        "contact", "inquiries", "apps", "totalLeads", "cpl", "ssc")
+        .map(fieldsLookup).map(_.id).flatten,
+      fields.find(_.varName == "totalSpend").map(f => FieldSort(f.id.get, false)),
+      List(),
+      List(
+        Chart.Pie("Visitors by Category", fieldsLookup("impressions").id.get),
+        Chart.Bar("Cost per Visitor", fieldsLookup("cpc").id.get)))
+
+    val viewBoth = View(
+      UUID.fromString("57eb513a-a6fe-46f1-b929-b91ebfe6f08c").some,
+      "Client view (with fees + 4 charts)",
+      template.id.get,
+      List(
+        "totalSpend", "impressions", "clicks", "ctr", "cpc",
+        "contact", "inquiries", "apps", "totalLeads", "cpl", "ssc")
+        .map(fieldsLookup).map(_.id).flatten,
       fields.find(_.varName == "totalSpend").map(f => FieldSort(f.id.get, false)),
       List(),
       List(
@@ -173,6 +229,8 @@ object TUIReportHelper {
         Chart.Pie("Leads by Category", fieldsLookup("totalLeads").id.get),
         Chart.Bar("Cost per Visitor", fieldsLookup("cpc").id.get),
         Chart.Bar("Cost by Category", fieldsLookup("totalSpend").id.get)))
+
+    val views = List(viewWithoutFees, viewWithFees, viewBoth)
 
     // XXX(dk): this can't be serialised as is!!
     val keySelector = new ds.KeySelector {
@@ -255,7 +313,7 @@ object TUIReportHelper {
     val report = for {
       aid <- account.id
       tid <- template.id
-      vid <- view.id
+      vid <- views(0).id
       dsbid <- dartDs.dsId.map(id => DataSourceBinding(id))
     } yield Report(aid, tid, vid, List(dsbid), fieldBindings)
 
@@ -263,7 +321,7 @@ object TUIReportHelper {
       account,
       fields,
       template,
-      view,
+      views,
       dartDs,
       fieldBindings,
       report.get,

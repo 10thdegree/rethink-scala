@@ -295,7 +295,7 @@ package object ds {
       // Convert the map of values to DataSource.Rows, and merge duplicate keys' values
       // TODO: Currently expects all values to be either String or BigDecimal already
       def process(rows: Map[String, Any]*): List[BasicRow] = {
-        dsa.aggregate(rows.map(convertRow):_*).toList
+        dsa.flattenByKeys(rows.map(convertRow):_*).toList
       }
 
       // Converts all fields to BigDecimal, and leaves the rest as Strings.

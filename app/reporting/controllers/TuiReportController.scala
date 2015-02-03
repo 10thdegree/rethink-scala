@@ -45,7 +45,9 @@ object TuiReportController extends Controller {
         val json = Json.parse(msg)
         val startDate = (json \ "startDate").as[String]
         val endDate = (json \ "endDate").as[String] //TODO: option, then for comp, handle errors etc.
-        reportAsync(startDate, endDate)
+        val viewId = (json \ "viewId").as[String]
+        Logger.debug("Got view id: " + viewId)
+        reportAsync(viewId, startDate, endDate)
           //.map(_.fold(err => err,json => json.toString))
           .foreach({
             case -\/(err) =>
@@ -63,13 +65,19 @@ object TuiReportController extends Controller {
   /////////////////END ACTOR STUFF /////////////
 
   //18158200 Trident Report 
-  def reportDataRequest(startDate: String, endDate: String) = Action.async { 
-    val parsedReport = reportAsync(startDate, endDate)
+  def reportDataRequest(viewId: String, startDate: String, endDate: String) = Action.async {
+    val parsedReport = reportAsync(viewId, startDate, endDate)
     val futureResult = parsedReport.map(_.fold(errmsg => InternalServerError("ERROR: " + errmsg), r => Ok(r)))
     futureResult
   }
 
-  def reportAsync(startDate: String, endDate: String): Future[\/[String, JsValue]] = {
+  def reportViews() = Action {
+    import reporting.util.json.GeneratedReportWrites._
+    val ro = reporting.util.TUIReportHelper.TUISearchPerformanceRO()
+    Ok(Json.toJson(ro.views))
+  }
+
+  def reportAsync(viewId: String, startDate: String, endDate: String): Future[\/[String, JsValue]] = {
     Logger.error( cache.get.values.map(_.size) + " is the cache size") 
     
     val config = LiveTest.prodConfig.copy(m = cache.get)
@@ -86,7 +94,9 @@ object TuiReportController extends Controller {
     val gen = new SimpleReportGenerator(ro.report, ro.fields)
     Logger.debug("Building DS row factory...")
     val dsf = new ds.DataSource.DataSourceRowFactory(ro.ds) //factorys?
-    val viewFields = ro.view.fieldIds.map(ro.fieldsLookupById).toList
+    val view = ro.views.find(_.id.get.toString == viewId).getOrElse(ro.views(0))
+    Logger.debug(s"Will use view ${view.label}")
+    val viewFields = view.fieldIds.map(ro.fieldsLookupById).toList
 
     Logger.debug("Looking up required DS attributes...")
     // List of fields (numeric) that we need when generating the report.
@@ -111,7 +121,7 @@ object TuiReportController extends Controller {
         Logger.debug("Generating report...")
         val res = gen.getReport(ro.ds, dsRows)(start, end) //does this need start/end? we feed in the data?
         Logger.debug(s"Generated report with ${res.size} rows")
-        GeneratedReport(viewFields, res, ro.view.charts).sortRowsBy(ro.view.defaultFieldSort)
+        GeneratedReport(viewFields, res, view.charts).sortRowsBy(view.defaultFieldSort)
       }
     }
 
@@ -131,6 +141,8 @@ object TuiReportController extends Controller {
           res
       }) //feed in the cache again
       
-    parsedReport.map(_.leftMap(err => err.msg)) //we could return the transformer stack, but we want to see both erorr/not error so i think this is better?
+    val finalRes = parsedReport.map(_.leftMap(err => err.msg)) //we could return the transformer stack, but we want to see both erorr/not error so i think this is better?
+    Logger.debug("reportAsync(): finished.")
+    finalRes
   }
 }

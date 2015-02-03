@@ -43,7 +43,14 @@
                 <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading Report...
             </div>
             <div id="report" ng-show="!report.isLoading">
-                <div style="text-align: center"><h2>{{report.reportTitle}}</h2></div>
+                <div style="text-align: center">
+                    <h2>{{report.reportTitle}}</h2>
+                    <select ng-model="report.selectedView"
+                            ng-show="report.views.length > 0"
+                            ng-options="value.uuid as value.label for value in report.views"
+                            ng-change="report.reloadForView()">
+                    </select>
+                </div>
                 <div>
                     <div style="width: 48%; display: inline-block" ng-repeat="chart in report.charts">
                         <div ng-if="chart.type == 'Pie'">

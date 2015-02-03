@@ -1,4 +1,4 @@
-app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter', function ($timeout, reports, scope, $filter) {
+app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$scope', '$filter', function ($timeout, reports, views, scope, $filter) {
     var vm = this;
 
     vm.isLoading = true;
@@ -26,6 +26,13 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
     scope.$on('report.fetch.end', function () {
         console.log("Report done loading!");
         vm.isLoading = false;
+    });
+
+    vm.views = [];
+    views.getViews(function (viewList) {
+        vm.views = viewList;
+        vm.selectedView = viewList[0].uuid;
+        scope.$apply();
     });
 
     function ColumnDesc(uuid, name, display, sort, format, footerType) {
@@ -142,6 +149,16 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
         vm.columns = cols;
         vm.rows = flattened;
 
+        vm.reloadForView = function() {
+
+            vm.rows = [];
+            vm.columns = [];
+
+            scope.$apply();
+
+            loadReport(vm.selectedView);
+        };
+
         // Update watchers //
         scope.$apply();
         // Update watchers //
@@ -149,8 +166,29 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', '$scope', '$filter',
         console.log("Finished loading table and charts.");
     }
 
-    $timeout(function() { reports.getReport(vm.range.start, vm.range.end, reportLoadedCallback); }, 1);
+    function loadReport(viewId) {
+        vm.isLoading = true;
+        $timeout(function() { reports.getReport(viewId, vm.range.start, vm.range.end, reportLoadedCallback); }, 1);
+    }
+
+    loadReport("");
 }])
+    .service('ReportViews', ['$http', function ($http) {
+        this.getViews = function(callback) {
+            console.log("Fetching views for report...");
+            $http
+                .get('/reporting/reportViews')
+                .success(function(data, status, headers, config) {
+                    var json = data;//JSON.parse(data);
+                    console.log("Got views for report back.");
+                    console.log(json);
+                    callback(json);
+                })
+                .error(function(data, status, headers, config) {
+                   console.log("Unable to fetch views!");
+                });
+        }
+    }])
     .directive('bvoBarChart', ['$window', function ($window) {
         function link(scope, element, attrs) {
             var rowData = [];

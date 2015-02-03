@@ -3,14 +3,17 @@
 # ~~~~
 
 # Home page
-GET     /                           reporting.controllers.Application.index
+GET        /                                reporting.controllers.Application.index
 
-GET     /assets/*file               reporting.controllers.Assets.at(path="/public/reporting", file)
+GET        /assets/*file                    reporting.controllers.Assets.at(path="/public/reporting", file)
 
-GET     /reportDataRequest          reporting.controllers.TuiReportController.reportDataRequest(startDate: String, endDate: String)
-
-
-GET     /socket/reportDataRequest   reporting.controllers.TuiReportController.socket
+GET        /reportDataRequest               reporting.controllers.TuiReportController.reportDataRequest(viewId: String, startDate: String, endDate: String)
 
 
-GET     /reportGrid                 reporting.controllers.TuiReportController.reportGrid(startDate: String, endDate: String)
+GET        /socket/reportDataRequest        reporting.controllers.TuiReportController.socket
+
+
+GET        /reportGrid                      reporting.controllers.TuiReportController.reportGrid(startDate: String, endDate: String)
+
+GET        /reportViews                     reporting.controllers.TuiReportController.reportViews
+

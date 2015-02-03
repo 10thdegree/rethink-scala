@@ -5,7 +5,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Writes}
 import reporting.engine.GeneratedReport
-import reporting.models.Chart
+import reporting.models.{View, Chart}
 import reporting.models.Chart._
 
 object GeneratedReportWrites {
@@ -29,6 +29,12 @@ object GeneratedReportWrites {
     f.label,
     f.format.map(_.name).getOrElse(""),
     f.footer.map(_.name).getOrElse("")))
+
+
+  implicit val reportViewWrites: Writes[View] = (
+    (JsPath \ "uuid").write[String] and
+      (JsPath \ "label").write[String]
+    )((view: View) => (view.id.get.toString, view.label))
 
   implicit val generatedReportRowWrites: Writes[GeneratedReport.Row] = (
     (JsPath \ "key").write[String] and
