@@ -4,9 +4,15 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
     vm.isLoading = true;
 
     vm.range = {
-        start: '',
-        end: ''
+        start: moment().startOf("month").toDate(),
+        end: moment().toDate()
     };
+
+    scope.$watch('range', function (nv) {
+        console.log("W@TCH~");
+        console.log([nv, vm.range]);
+        vm.reportTitle = "Report for " + $filter('date')(vm.range.start,'MMM d, yyyy') + " to " + $filter('date')(vm.range.end,'MMM d, yyyy');
+    });
 
     vm.columns = [];
 
@@ -16,7 +22,6 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
 
     vm.charts = [];
 
-    vm.reportTitle = "Report for " + vm.range.start + " to " + vm.range.end;
 
     scope.$on('report.fetch.start', function () {
         console.log("Report will load...");
@@ -119,7 +124,6 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
                     };
             }
         });
-        console.log(vm.charts);
 
         vm.footers = cols.map(function (c, ci) {
             var ret = "";
@@ -154,7 +158,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
             vm.rows = [];
             vm.columns = [];
 
-            scope.$apply();
+            //scope.$apply();
 
             loadReport(vm.selectedView);
         };
@@ -168,17 +172,12 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
 
     function loadReport(viewId) {
         vm.isLoading = true;
+        vm.reportTitle = "Report for " + $filter('date')(vm.range.start,'MMM d, yyyy') + " to " + $filter('date')(vm.range.end,'MMM d, yyyy');
         $timeout(function() {
-            if (vm.range.start == "") {
-                var d = new Date();
-                d.setDate(1);
-                vm.range.start = $filter('date')(d,'yyyy-MM-dd');
-            }
-            if (vm.range.end == "") {
-                vm.range.end = $filter('date')(new Date(),'yyyy-MM-dd');
-            }
-            console.log("start/end: " + vm.range.start + "/" + vm.range.end)
-            reports.getReport(viewId, vm.range.start, vm.range.end, reportLoadedCallback);
+            var start = $filter('date')(vm.range.start,'yyyy-MM-dd');
+            var end = $filter('date')(vm.range.end,'yyyy-MM-dd');
+            console.log("start/end: " + start + "/" + end);
+            reports.getReport(viewId, start, end, reportLoadedCallback);
         }, 1);
     }
 
@@ -192,7 +191,6 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
                 .success(function(data, status, headers, config) {
                     var json = data;//JSON.parse(data);
                     console.log("Got views for report back.");
-                    console.log(json);
                     callback(json);
                 })
                 .error(function(data, status, headers, config) {
@@ -281,5 +279,53 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
             link: link,
             restrict: 'E',
             template: '<div id="{{id}}" style="{{style}}"></div>'
+        };
+    }])
+    .directive('bvoDateRangePicker', ['$window', '$timeout', '$filter', function ($window, $timeout, $filter) {
+        function link(scope, element, attrs, ngModel) {
+
+            function display() {
+                var range = ngModel.$modelValue;
+                var start = $filter('date')(range.start, 'MMMM d, yyyy');
+                var end = $filter('date')(range.end, 'MMMM d, yyyy');
+
+                scope.display = start +" - "+  end;//start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY');
+            }
+
+            $('#' + attrs.id).daterangepicker({
+                    ranges: {
+                        'Month to Date': [moment().startOf('month'), moment()],
+                        'This Week': [moment().startOf('week'), moment()],
+                        'Last Week': [moment().startOf('week' ).subtract(6, 'days'),
+                                      moment().startOf('week' ).subtract(1, 'days')],
+                        'Last Month': [moment().subtract(1, 'month').startOf('month'),
+                                       moment().subtract(1, 'month').endOf('month')]
+                    },
+                    startDate: moment().startOf('month'),
+                    endDate: moment()
+                },
+                function(start, end) {
+                    var range = ngModel.$modelValue;
+                    range.start = start.toDate();
+                    range.end = end.toDate();
+                    ngModel.$setViewValue(range);
+                    ngModel.$render();
+                    scope.$apply();
+                    $timeout(display, 1);
+                    scope.$eval(attrs.ngChange);
+                });
+            display();
+
+            scope.$watch('model', function() {
+                console.log("model updated!");
+                display();
+            });
+        }
+
+        return {
+            link: link,
+            restrict: 'E',
+            require: 'ngModel',
+            template: '<div id="{{id}}" class="btn btn-default"><span><span class="glyphicon glyphicon-calendar" span="margin-right: 10px"></span> {{display}}</span></div>'
         };
     }]);
