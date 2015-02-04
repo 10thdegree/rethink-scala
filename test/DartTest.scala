@@ -21,9 +21,7 @@ import Arbitrary.arbitrary
 import org.joda.time._
 
  
-import Scalaz._
 import org.specs2.scalaz._
-import scalaz._
 import scalaz.scalacheck.ScalazProperties._
 import scalaz.scalacheck.ScalazArbitrary._ 
 import bravo.api.dart.Data._  
@@ -35,21 +33,23 @@ class ReportDayLaws extends Spec {
   checkAll(semigroup.laws[ReportDaysWrapper])
 }
 
-
-
 object DartAPITest extends Properties("Dart API test") {
    
   property("nonblocking test") = forAll { (r: DownloadedReport) => 
     val size = r.data.size
     val reportCall = Dart.getReport(444, new DateTime(), new DateTime())
     val mockedConfig = config.copy(api = internal( toDartReportString(r) ) )  
-    val future = reportCall.run.run(mockedConfig) 
+    val future = reportCall.run.run(mockedConfig).map(_._2) 
     val result = Await.result(future, scala.concurrent.duration.Duration(10, SECONDS) )
-    true
+    //compare what we sent in (r.data set to what we got out)
+    val boolres = result.fold(l => false, apid => {
+       r.data.map(_.rows.toSet) equals apid.data.map(_.rows.toSet)
+      })
+    boolres
   }
   
 
-  
+ /* 
   property("test Cache") = forAll { (r: DownloadedReport) =>
     if (r.data.size > 1) { 
       val (la, lb) = r.data.splitAt(r.data.size/2)
@@ -69,7 +69,7 @@ object DartAPITest extends Properties("Dart API test") {
     } else 
       true
   }
-  
+  */
   case class TestConfig(
     val api: DartInternalAPI  = internal(""),
     val filePath: String = "",

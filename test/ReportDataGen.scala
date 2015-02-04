@@ -82,16 +82,10 @@ object ReportDataGen {
     tuiConfirmation: Int,
     tuiApplyOnline:Int 
     ) {
-      def toMap: Map[String,String] = {
-        val m = Map("Date" -> date.toString(DateTimeFormat.forPattern("yyyy-MM-dd")), "Paid Search Campaign" -> paidSearchCampaign.toString, "Paid Search Cost" -> paidSearchCost.toString, 
+      def toMap: Map[String,String] = 
+        Map("Date" -> date.toString(DateTimeFormat.forPattern("yyyy-MM-dd")), "Paid Search Campaign" -> paidSearchCampaign.toString, "Paid Search Cost" -> paidSearchCost.toString, 
                                        "paidSearchImpressions"-> paidSearchImpressions.toString, "TUI Home Page" -> tuiHomePage.toString, "TUI Confirmation" -> tuiConfirmation.toString,
                                        "TUI Apply Online" -> tuiApplyOnline.toString)
-        
-        if (!m.contains("Date"))
-          println("OK weird how did that happen!")
-        m
-     }
-    
     }
 
   case class RawDartReport(data: String)
@@ -110,10 +104,11 @@ object ReportDataGen {
   def toReportString(l: List[Map[String,String]]): String = 
     l match {
       case x :: xs =>
-        val headers = x.keys.toList.mkString(",")
-        val rawRows: List[String] = (x +: xs).map(m => m.keys.map(k => m(k)).mkString(",") )
-        headers + "\n" + rawRows.mkString("\n")
+        val ks = x.keys.toList
+        val headers = ks.mkString(",")
+        val rawRows: List[String] = (x +: xs).map(m => ks.map(k => m(k)).mkString(",") )
+        " Report Fields \n" + headers + "\n" + rawRows.mkString("\n")
       case Nil => ""
     }
-
+   //val blah = scala.tools.nsc.io.File("filename.csv").writeAll(s)
 }

@@ -25,9 +25,12 @@ object DartCSVParsingTest extends Properties("Dart Parsing Test") {
   }
   
   property("RoundTrip grouping parsing") = forAll { (r: DownloadedReport) => {
-    val parsedString = toDartReportString(r)
+    val stringified = toDartReportString(r)
+    val parsed = ReportParser.parse(stringified)
+    val ungroupedcount = DateUtil.ungroupDates(r.data) 
     val blah = DateUtil.groupDates(ReportParser.parse(toDartReportString(r)))
-    true
+    val eq =  r.data.map(_.rows.toSet) equals blah.map(_.rows.toSet)
+    eq
   }}
 }
 

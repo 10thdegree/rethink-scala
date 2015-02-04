@@ -42,6 +42,10 @@ object Data {
 
   case class GoogleAuthCred(filepath: String, accountId: String,  userAccount: String)
   
+  implicit val rdOrdering = new scala.math.Ordering[ReportDay] {
+    def compare(a: ReportDay, b: ReportDay): Int = 
+      a.rowDate compareTo b.rowDate
+  }
   
   case class ReportDaysWrapper(data: List[ReportDay])
 

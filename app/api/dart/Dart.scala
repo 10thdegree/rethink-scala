@@ -20,9 +20,9 @@ object Dart {
   import bravo.api.dart.DateUtil._
 
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c: Config) => {
-    val reportIdCache = c.cache(reportId)  
-    val cachedDays = DateUtil.findLargestRange(reportIdCache, startDate, endDate)
-    val missingDays = DateUtil.findMissingDates(cachedDays, startDate.toLocalDate(), endDate.toLocalDate())
+    val reportIdCache = DateUtil.toSortedSet(c.cache(reportId))
+    val cachedDays = DateUtil.findLargestRanges[ReportDay](reportIdCache, startDate, endDate, rd => rd.rowDate)
+    val missingDays = DateUtil.findMissingDates(cachedDays.map(_.rowDate).toList, startDate.toLocalDate(), endDate.toLocalDate())
     missingDays match {
       case Some((newStart, newEnd)) =>
         println("we are missing " + newStart + " and " + newEnd + "!")
@@ -33,7 +33,7 @@ object Dart {
            DownloadedReport(reportId, startDate, endDate, report.data) 
           }
       case None =>
-        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, cachedDays) )
+        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, cachedDays.toList) )
     }
     
    } ).toBravoM
@@ -47,7 +47,6 @@ object Dart {
           rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
           parsed = ReportParser.parse(rs)
           rep    = groupDates(parsed)
-          //_   <- put(c.updateCache(reportId, rep))
         } yield {
           DownloadedReport(reportId, startDate, endDate, rep)
         }       

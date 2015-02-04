@@ -13,7 +13,6 @@ object ReportParser {
   def parse(s: String): List[Map[String,String]] = {
     val list = s.split("\\r?\\n").toList        
     val table = findTable(list, "")
-    //println("table = " + table)
     val r = new StringReader(table)
     val rows = CSVReader.open(r).allWithHeaders()
     rows

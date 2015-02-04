@@ -5,6 +5,7 @@ import org.joda.time._
 import scalaz._
 import Scalaz._
 import bravo.api.dart.Data._
+import scala.collection.immutable.{TreeSet, SortedSet}
 
 object DateUtil {
 
@@ -29,32 +30,43 @@ object DateUtil {
   }
 
   //this finds the largest cached chunk that starts at the boundary of the range
+  /*
   def findLargestRange(cache: List[ReportDay], startDate: DateTime, endDate: DateTime): List[ReportDay] = {
     val sd = startDate.toLocalDate
     val ed = endDate.toLocalDate
-    //println("cache size = " + cache.size)
     val trimmedCache = cache.filter(l => (l.rowDate compareTo sd) != -1 && (l.rowDate compareTo ed) != 1)   
-    //println("trimmed cache = " + trimmedCache.size)
     val groups = slidingGroup[ReportDay](trimmedCache, (a,b) => Math.abs(Days.daysBetween(a.rowDate, b.rowDate).getDays()) == 1)
-    println("groups size = " + groups.size)
     val groupsAtBoundaries = groups.filter(l => l.headOption.fold(false)((rd: ReportDay) => (rd.rowDate equals sd)) || l.reverse.headOption.fold(false)((rd: ReportDay) => rd.rowDate equals ed))
-    val bestCache = groupsAtBoundaries.sortWith((a,b) => a.size == b.size).headOption.toList.flatten
-    println("bestCache size = " + bestCache.size)
+    //val bestCache = groupsAtBoundaries.sortWith((a,b) => a.size == b.size).headOption.toList.flatten
     bestCache
-  }
+  }*/
 
-  def findMissingDates(l: List[ReportDay], sd: LocalDate, ed: LocalDate): Option[(LocalDate, LocalDate)] = 
+  def findLargestRanges[A](cache: SortedSet[A], startDate: DateTime, endDate: DateTime, f: A => LocalDate)(implicit O: scala.math.Ordering[A]): SortedSet[A] = {
+    val sd = startDate.toLocalDate
+    val ed = endDate.toLocalDate
+    val trimmedCache = cache.filter(l => (f(l) compareTo sd) != -1 && (f(l) compareTo ed) != 1)   
+    val groups = slidingGroup[A](trimmedCache.toList, (a,b) => Math.abs(Days.daysBetween(f(a), f(b)).getDays()) == 1)
+    val groupsAtBoundaries = groups.filter(l => l.headOption.fold(false)((a: A) => (f(a) equals sd)) || l.reverse.headOption.fold(false)((a:A) => f(a) equals ed))
+    val bestCache = groupsAtBoundaries.sortWith((a,b) => a.size == b.size).headOption.toList.flatten
+    toSortedSet(bestCache)
+  }
+  
+  def toSortedSet[A](l: List[A])(implicit O: scala.math.Ordering[A]): SortedSet[A] =
+    l.foldLeft( TreeSet[A]() )( (a,b) => a + b )
+ 
+  def findMissingDates(l: List[LocalDate], sd: LocalDate, ed: LocalDate): Option[(LocalDate, LocalDate)] = 
     l match {
       case Nil => (sd, ed).some
       case _ => 
         val (s, e) = (l.head, l.reverse.head) 
-        ((s.rowDate equals sd),(e.rowDate equals ed)) match {
-          case (true, false) => (e.rowDate, ed).some
-          case (false, true) => (sd, s.rowDate).some
+        ((s equals sd),(e equals ed)) match {
+          case (true, false) => (e, ed).some
+          case (false, true) => (sd, s).some
           case _ => None
         }
     }
 
+  
   def slidingGroup[A](l: List[A], f: (A,A) => Boolean ): List[List[A]] = {
     l match {
       case h :: t =>
@@ -67,5 +79,6 @@ object DateUtil {
       case Nil => List[List[A]]()
     }
   }
+  
 }
 
