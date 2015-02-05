@@ -93,8 +93,8 @@ We could introduce named keys, so that each partial key has a label:
 
 Then we could maybe use these named keys to get impressions for a sub-path:
 
-    impressions.where("Creative Type", "Standard")
-    impressions.where("Creative Type", "InStream Default Ad")
+    impressions.where("Creative Type").is("Standard")
+    impressions.where("Creative Type").is("InStream Default Ad")
     impressions // or maybe impressions.all()
 
 Roll-up of metrics so they can be used in breaking down distributable fields now requires knowing the key-level used for flattening the final report in advance, otherwise we could not pre-sum these for use there.
@@ -105,7 +105,7 @@ We could do something stupid like:
 
     if(AdType == "InStreamDefaultAd").then(prependAll("video_")).else(nothing)
 
-This results in a non-binded field defintiion though; we'd need to extend EPRTs to allow this...
+This results in a non-binded field definition though; we'd need to extend EPRTs to allow this...
 
 ### Via early phase row transformations for each field
 

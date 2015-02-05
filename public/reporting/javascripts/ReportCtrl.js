@@ -11,7 +11,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
     scope.$watch('range', function (nv) {
         console.log("W@TCH~");
         console.log([nv, vm.range]);
-        vm.reportTitle = "Report for " + $filter('date')(vm.range.start,'MMM d, yyyy') + " to " + $filter('date')(vm.range.end,'MMM d, yyyy');
+        vm.reportTitle = "Report for " + $filter('date')(vm.range.start,'MMMM d, yyyy') + " to " + $filter('date')(vm.range.end,'MMMM d, yyyy');
     });
 
     vm.columns = [];
@@ -289,41 +289,51 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
                 var start = $filter('date')(range.start, 'MMMM d, yyyy');
                 var end = $filter('date')(range.end, 'MMMM d, yyyy');
 
-                scope.display = start +" - "+  end;//start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY');
+                scope.display = start +" - "+  end;
             }
 
             $('#' + attrs.id).daterangepicker({
-                    ranges: {
-                        'Month to Date': [moment().startOf('month'), moment()],
-                        'This Week': [moment().startOf('week'), moment()],
-                        'Last Week': [moment().startOf('week' ).subtract(6, 'days'),
-                                      moment().startOf('week' ).subtract(1, 'days')],
-                        'Last Month': [moment().subtract(1, 'month').startOf('month'),
-                                       moment().subtract(1, 'month').endOf('month')]
-                        // Today
-                        // Yesterday
-                        // Last 7 Days
-                        // Last 30 Days
-                        // Last 60 Days
-                        // Last 90 Days
-                    },
-                    startDate: moment().startOf('month'),
-                    endDate: moment()
+                ranges: {
+                    'MTD': [moment().startOf('month'), moment()],
+                    'This Week': [moment().startOf('week'), moment()],
+                    'Last Week': [moment().startOf('week').subtract(6, 'days'),
+                                  moment().startOf('week').subtract(1, 'days')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'),
+                                   moment().subtract(1, 'month').endOf('month')],
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment()],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(30, 'days'), moment()],
+                    'Last 60 Days': [moment().subtract(60, 'days'), moment()],
+                    'Last 90 Days': [moment().subtract(90, 'days'), moment()]
                 },
-                function(start, end) {
-                    var range = ngModel.$modelValue;
-                    range.start = start.toDate();
-                    range.end = end.toDate();
-                    ngModel.$setViewValue(range);
-                    ngModel.$render();
-                    scope.$apply();
-                    $timeout(display, 1);
-                    scope.$eval(attrs.ngChange);
-                });
+                startDate: function () {
+                    var m = moment(ngModel.$modelValue.start);
+                    console.log("got start:" + m.format('YYYY-MM-DD') + "; " + ngModel.$modelValue.start);
+                    return m;
+                },
+                endDate: function () {
+                    return moment(ngModel.$modelValue.end);
+                },
+                maxDate: moment() // Can't go beyond today!
+            },
+            function(start, end) {
+                var range = ngModel.$modelValue;
+                range.start = start.toDate();
+                range.end = end.toDate();
+                ngModel.$setViewValue(range);
+                ngModel.$render();
+                scope.$apply();
+                $timeout(display, 1);
+                scope.$eval(attrs.ngChange);
+            });
             display();
 
             scope.$watch('model', function() {
                 console.log("model updated!");
+                var drp = $('#' + attrs.id).data('daterangepicker');
+                drp.setStartDate(moment(ngModel.$modelValue.start));
+                drp.setEndDate(moment(ngModel.$modelValue.end));
                 display();
             });
         }
