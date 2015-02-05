@@ -1,0 +1,121 @@
+# Existing URP
+
+## Report information
+
+Report types, followed by number of key columns and report specific functionality.
+
+Search Performance
+- single: category
+
+Search Performance-Campaign
+- two: publisher, campaign
+
+Search Performance-Publisher
+- single: publisher
+
+Measurement
+- single: publisher
+
+Display Performance
+- can update to one of many: placement, publisher, creative, etc.
+- (for some reason placement shows 'roadblock' field)
+
+Display Measurement
+- can update to one of many: placement, publisher, creative, etc.
+- (for some reason placement shows 'roadblock' field)
+
+Where'd the trend reports go?
+- "Weren't working well, now disabled"
+
+## Call tracking
+
+- Call tracking may not have the same granularity of data available, e.g. search might have campaign level data available, but call tracking may only have publisher level data. 
+- URP today has some kind of hackery that distributes these values.
+
+## Video tracking
+
+- Currently these come over as separate rows in the same report!!
+- Only clicks are treated differently today;
+- Impressions and conversions are not distinguished today (or so it looks)
+
+## Avg. Position, Media Cost
+
+- A few fields are not additive, and must be treated differently. 
+- These fields must be "normalised" such that they can be summed like other fields.
+- Avg Pos can be multiplied by its impressions to become summable.
+- Media Cost can also be multiplied by impressions?
+
+
+# Thoughts about implementation
+
+## Call tracking
+
+We can make data from each provider into a DataSource; each datasource can define a multipart key for each row that it returns for a date range. We can use the multipart key to *align* the rows from the datasources, where we can consider each subsequent partial key in the multipart key going to the right, as a child of the partial key to its left:
+
+    (Publisher, Landing Page, Creative Size, Creative Type)
+
+Here we have four partial keys, with "Landing Page" being "within" or "a child of" "Publisher", and similarly for each partial key moving to the right. Then, if we have two data sources:
+
+    DS1: (Publisher, Landing Page, Creative Size, Creative Type)
+    DS2: (Publisher, Landing Page, *, *)
+
+Such as DS1 being Dart and DS2 being Marchex; We can take the data from DS2 and breakdown/distribute those metrics, either evenly, or proportionally based on some other dependent field, such as "impressions" to approximate having more granular data.
+
+## UI selection of "report dimension" / multiple key columns
+
+If we go the multipart key approach, we can simply "flatten" the data by any of these partial keys. E.g., if we selected "Publisher" then the metrics would be flattened into unique publishers; if we selected "Landing Page", then metrics from different publishers would be merged together to show synthetic metrics per unique landing page; if we selected "creative type", similarly metrics across publisher, landing page, and size would be merged together, showing synthetic metrics for unique creative types. 
+
+We can further extend this to allow selection of more than one partial key. This allows us to display multiple key columns, with metrics automatically being synthesised based on unique partial key sets. E.g., if we select "Publisher" and "Creative Type" we would see synthetic metrics for unique creative types within each publisher (the metrics across landing pages and creative sizes being merged); if we selected "Publisher" and "Landing Page" then we get synthesised metrics for unique Publisher-landing page combinations.
+
+## Non-summable fields
+
+We need an early phase row transformation that gets applied as Attributes get mapped to Fields; this can happen at the DS level or at the report level.
+
+## Multiple media types
+
+This is rather involved. Some ideas for how to achieve this are below. 
+
+### Via a "metric type" selector
+
+We could introduce a "metric type selector" that lets you specify a column such as media type. This would then internally take those rows and nest them. Eg. we could create formulae for fields that look like:
+	
+	impressions.forType("Standard")
+	impressions.forType("InStream Default Ad")
+	impressions // combined value
+
+Since these are in essence still simple sums, they could still be used for breaking down distributable fields, we just need to keep a nested value around so we know the sums for each type separately.
+
+### Via existing keys
+
+We could introduce named keys, so that each partial key has a label:
+
+	(Publisher, Landing Page, Creative Size, Creative Type)
+
+Then we could maybe use these named keys to get impressions for a sub-path:
+
+    impressions.where("Creative Type", "Standard")
+    impressions.where("Creative Type", "InStream Default Ad")
+    impressions // or maybe impressions.all()
+
+Roll-up of metrics so they can be used in breaking down distributable fields now requires knowing the key-level used for flattening the final report in advance, otherwise we could not pre-sum these for use there.
+
+### Via non-binded early phase row transformations (EPRTs)
+
+We could do something stupid like:
+
+    if(AdType == "InStreamDefaultAd").then(prependAll("video_")).else(nothing)
+
+This results in a non-binded field defintiion though; we'd need to extend EPRTs to allow this...
+
+### Via early phase row transformations for each field
+
+For "basicImpressions" field: 
+
+    if(adType == "Standard").then(impressions).else(0)
+
+For "videoImpressions" field: 
+
+    if(adType == "InStreamDefaultAd").then(impressions).else(0)
+
+The above will still temporarily be two separate rows, but they will get rolled up by key and become a single row eventually; however, there is currently no way to use string valued fields. Unfortunately this requires defining one of these for every metric we want to split out, which is not good!
+
