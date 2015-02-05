@@ -300,6 +300,12 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
                                       moment().startOf('week' ).subtract(1, 'days')],
                         'Last Month': [moment().subtract(1, 'month').startOf('month'),
                                        moment().subtract(1, 'month').endOf('month')]
+                        // Today
+                        // Yesterday
+                        // Last 7 Days
+                        // Last 30 Days
+                        // Last 60 Days
+                        // Last 90 Days
                     },
                     startDate: moment().startOf('month'),
                     endDate: moment()
