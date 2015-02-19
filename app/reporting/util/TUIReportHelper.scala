@@ -235,7 +235,7 @@ object TUIReportHelper {
     // XXX(dk): this can't be serialised as is!!
     val keySelector = new ds.KeySelector {
 
-      import util.matching.RegexOps.implicits._
+      import bravo.util.matching.RegexOps.implicits._
 
       def select(attrs: Map[String, String]): Option[String] = {
         val patterns = List[(String, String)](

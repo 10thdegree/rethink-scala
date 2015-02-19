@@ -1,16 +1,37 @@
 import sbt.Keys._
 
-name := """Bravo"""
 
-version := "1.0-SNAPSHOT"
+/**** 
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+common settings for all projects
 
-scalaVersion := "2.11.4"
+****/
 
-resolvers ++= Seq(
-  "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
-  "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/")
+lazy val coredeps = Seq(
+  //scalaz
+  "org.scalaz" % "scalaz-core_2.11" % "7.1.0",
+  "org.scalaz" %% "scalaz-scalacheck-binding" % "7.1.0",
+  "org.typelevel" %% "scalaz-specs2" % "0.3.0" % "test",
+  "joda-time" % "joda-time" % "2.5",
+  "org.scalaz" %% "scalaz-effect" % "7.1.0",
+  "org.specs2" % "specs2_2.11" % "2.4",
+  "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+  "org.joda" % "joda-convert" % "1.5"
+)
+
+lazy val commonSettings = Seq(
+  version := "1.0-SNAPSHOT",
+  scalaVersion := "2.11.4",
+  resolvers ++= Seq(
+    "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"),
+  libraryDependencies ++= coredeps,
+  initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.Future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
+)
+
+lazy val util = project.settings(commonSettings: _*)
+
+lazy val root = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util)
 
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 
@@ -23,8 +44,6 @@ lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
                 "com.github.tototoshi" %% "scala-csv" % "1.0.0",
                 "com.google.apis" % "google-api-services-doubleclicksearch" % "v2-rev37-1.19.0")
 
-
-
 lazy val angularDeps = Seq(// Angular-js
   "org.webjars" % "angularjs" % "1.3.10",
   "org.webjars" % "angular-ui" % "0.4.0-3"  exclude("org.webjars", "angularjs"),
@@ -33,25 +52,10 @@ lazy val angularDeps = Seq(// Angular-js
   "org.webjars" % "smart-table" % "1.4.8"
 )
 
-lazy val testingDeps = Seq(
-  "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"
-)
-
-initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.Future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
-
 lazy val otherDeps = Seq(
-  //scalaz
-  "org.scalaz" % "scalaz-core_2.11" % "7.1.0",
-  "org.scalaz" %% "scalaz-scalacheck-binding" % "7.1.0",
-  "org.typelevel" %% "scalaz-specs2" % "0.3.0" % "test",
-  // Rethink-DB Driver
-  //"com.rethinkscala" % "core_2.11" % "0.4.4-SNAPSHOT",
-  // Secure Social
+ // Secure Social
   "ws.securesocial" %% "securesocial" % "master-SNAPSHOT",
   // Rethink-DB Driver using jar in lib
-  //"com.rethinkscala" % "core_2.11" % "0.4.6-SNAPSHOT",
-  // Secure Social using jar in lib
-  //"ws.securesocial" %% "securesocial" % "3.0-M2" ,
   "org.slf4j" % "slf4j-api" % "1.7.7",
   "org.julienrf" %% "play-json-variants" % "1.1.0",
   // DI
@@ -60,8 +64,6 @@ lazy val otherDeps = Seq(
   "net.codingwell" % "scala-guice_2.11" % "4.0.0-beta4",
   // See: http://www.webjars.org
   "org.webjars" %% "webjars-play" % "2.3.0-2",
-  //"org.webjars" % "requirejs" % "2.1.11-1",
-  //"org.webjars" % "react" % "0.10.0",
   "org.webjars" % "jquery" % "2.1.0-2",
   //
   //
@@ -76,23 +78,17 @@ lazy val otherDeps = Seq(
   // D3.js
   "org.webjars" % "d3js" % "3.4.4-1",
   "org.webjars" % "c3" % "0.4.9", // exclude("org.webjars", "d3js"),
-  // Google-charts (simpler than D3 but less flexible)
-  //"org.webjars" % "angular-google-chart" % "0.0.8",
-  //
   // Slick
   // "com.typesafe.slick" %% "slick" % "2.1.0-M2",
-  "joda-time" % "joda-time" % "2.5",
   //"org.joda" % "joda-convert" % "1.5",
   "com.github.nscala-time" %% "nscala-time" % "1.6.0",
   // "com.github.tototoshi" %% "slick-joda-mapper" % "1.2.0-SNAPSHOT"
   //v
   // Rules Engine
-  "org.codehaus.groovy" % "groovy-jsr223" % "2.3.6",
+  "org.codehaus.groovy" % "groovy-jsr223" % "2.3.6"
   //"org.jruby" % "jruby-complete" % "1.7.13"
   //
-  "org.scalaz" %% "scalaz-effect" % "7.1.0",
-  "org.specs2" % "specs2_2.11" % "2.4"
-)
+  )
 
 lazy val securesocialDeps = Seq(
   cache,
@@ -117,10 +113,8 @@ def jackson = Seq(
 
 lazy val rethinklDeps = Seq(
   "org.scalatest" %% "scalatest" % "2.1.3" % "test",
-  //"com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
   "org.slf4j" % "slf4j-log4j12" % "1.7.6",
-
   "io.netty" % "netty" % "3.9.3.Final",
   "com.google.protobuf" % "protobuf-java" % "2.5.0",
   "joda-time" % "joda-time" % "2.3",
@@ -129,7 +123,7 @@ lazy val rethinklDeps = Seq(
   "org.scala-lang.modules" %% "scala-xml" % "1.0.1"  % "test"
 )
 
-libraryDependencies ++= (apiDeps ++ otherDeps ++ angularDeps ++ testingDeps ++ securesocialDeps ++ rethinklDeps ++ jackson)
+libraryDependencies ++= (apiDeps ++ otherDeps ++ angularDeps ++ securesocialDeps ++ rethinklDeps ++ jackson)
 
 
 

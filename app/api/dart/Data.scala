@@ -29,14 +29,13 @@ object Data {
   import org.joda.time._
   import scalaz._
   import Scalaz._
+  import bravo.util.Data._
 
   sealed trait DartReportData {
     def reportid: Long
   }
 
-  case class ReportDay(retrievedDate: DateTime = new DateTime(), rowDate: LocalDate, rows: List[Map[String,String]])
-  
-  case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
+    case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
 
   case class DownloadedReport(reportid: Long, startDate: DateTime, endDate: DateTime, data: List[ReportDay]) extends DartReportData
 

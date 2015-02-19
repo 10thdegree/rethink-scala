@@ -13,7 +13,8 @@ import org.scalacheck._
 import Gen._               
 import Arbitrary.arbitrary 
 import org.joda.time.DateTime
-
+import bravo.util._
+import bravo.util.Data._
 
 object DartCSVParsingTest extends Properties("Dart Parsing Test") {
   import bravo.test.ReportDataGen._

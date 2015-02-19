@@ -13,7 +13,7 @@ GET        /reportDataRequest               reporting.controllers.TuiReportContr
 GET        /socket/reportDataRequest        reporting.controllers.TuiReportController.socket
 
 
-GET        /reportGrid                      reporting.controllers.TuiReportController.reportGrid(startDate: String, endDate: String)
+GET        /reportGrid                      reporting.controllers.TuiReportController.reportGrid
 
 GET        /reportViews                     reporting.controllers.TuiReportController.reportViews
 

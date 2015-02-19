@@ -26,6 +26,7 @@ import scalaz.scalacheck.ScalazProperties._
 import scalaz.scalacheck.ScalazArbitrary._ 
 import bravo.api.dart.Data._  
 import ReportDataGen._
+import bravo.util.Data._
 
 class ReportDayLaws extends Spec {
   import bravo.api.dart.Data._

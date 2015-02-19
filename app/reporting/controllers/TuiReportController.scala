@@ -17,14 +17,15 @@ import scalaz.{-\/, \/, \/-}
 import akka.pattern.pipe
 import java.util.concurrent.atomic.AtomicReference
 import bravo.api.dart.Data._
-import bravo.api.dart.DateUtil._
+import bravo.util.DateUtil._
+import bravo.util.Data._
 
 object TuiReportController extends Controller {
   
   private val cache = new AtomicReference(Map[Long,List[ReportDay]]())
   
-  def reportGrid(startDate: String, endDate: String) = Action {
-    Ok(reporting.views.html.reportgrid(startDate, endDate))
+  def reportGrid() = Action {
+    Ok(reporting.views.html.reportgrid("",""))
   }
 
   /////////// ACTOR STUFF MOVE TO ANOTHER CLASS ///////////////////
@@ -66,6 +67,7 @@ object TuiReportController extends Controller {
 
   //18158200 Trident Report 
   def reportDataRequest(viewId: String, startDate: String, endDate: String) = Action.async {
+    Logger.error("startDate = " + startDate + " endDate  = " + endDate)
     val parsedReport = reportAsync(viewId, startDate, endDate)
     val futureResult = parsedReport.map(_.fold(errmsg => InternalServerError("ERROR: " + errmsg), r => Ok(r)))
     futureResult
@@ -78,6 +80,7 @@ object TuiReportController extends Controller {
   }
 
   def reportAsync(viewId: String, startDate: String, endDate: String): Future[\/[String, JsValue]] = {
+    Logger.error(" reportAsync startDate & endDate = " + startDate + " | " + endDate)
     Logger.error( cache.get.values.map(_.size) + " is the cache size") 
     
     val config = LiveTest.prodConfig.copy(m = cache.get)
@@ -129,7 +132,7 @@ object TuiReportController extends Controller {
 
     import reporting.util.json.GeneratedReportWrites._
     import play.api.libs.json._
-
+    Logger.error("about to fetch the eport from dart, " + start + " end = " + end)
     val report = Dart.getReport(ro.ds.queryId.toInt, start, end)
     val parsedReport = report
       .map(dr => convertResult(ungroupDates(dr.data))) //we can keep the grouping here and remove it from the other stuff

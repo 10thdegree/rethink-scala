@@ -1,13 +1,18 @@
-package bravo.api.dart
+package bravo.util
 
 import org.joda.time.format._
 import org.joda.time._
 import scalaz._
 import Scalaz._
-import bravo.api.dart.Data._
+//import bravo.api.dart.Data._
 import scala.collection.immutable.{TreeSet, SortedSet}
 
+object Data {
+  case class ReportDay(retrievedDate: DateTime = new DateTime(), rowDate: LocalDate, rows: List[Map[String,String]])
+}
+
 object DateUtil {
+  import Data._
 
   implicit val localDateOrd = new scala.math.Ordering[LocalDate] {
     def compare(a: LocalDate, b: LocalDate): Int = 
@@ -17,11 +22,12 @@ object DateUtil {
   def mkDateTime(str: String, fmt: String = "yyyy-MM-dd") =
     DateTime.parse(str, DateTimeFormat.forPattern(fmt))
 
+  
   def groupDates(li: List[Map[String,String]]): List[ReportDay] = {
     li.map(m => (mkDateTime(m("Date")).toLocalDate, m)).groupBy(_._1).toList.map(t => ReportDay(new DateTime(), t._1, t._2.map(_._2))).sortBy(rd => rd.rowDate)
   }
 
-  def ungroupDates(li: List[ReportDay]): List[Map[String,String]] = 
+  def ungroupDates[A](li: List[ReportDay]): List[Map[String,String]] = 
     li.map(_.rows).join  
 
   private def generateDatesFromDateRange(startDate: DateTime, endDate: DateTime): List[LocalDate] = {

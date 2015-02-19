@@ -8,8 +8,8 @@ object Util {
   import bravo.api.dart._ 
   import bravo.api.dart.Data._
   import org.joda.time._
- 
-
+  import bravo.util.Data._
+  
   /*
   *  Kleisli is the equivalent of Function1, so this 
   *  reprsents a computation of type 
@@ -132,7 +132,7 @@ object Util {
   case class KleisliAHolder[A](f: (Config) => A) {
     def toBravoM: BravoM[A] = fctry(f) 
   }
-  //implicit def toKBM(f: Kleisli[Confi^g,  
+  
   implicit def toKFH[A](f: Config => Future[\/[JazelError,A]]) = KleisliFHolder(f)
   implicit def toKH[A](f: Config => \/[JazelError,A]) = KleisliHolder(f)
   implicit def toKH[A](f: Config => BravoM[A]) = KleisliBHolder(f)
@@ -168,16 +168,13 @@ object Util {
   implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
 
   implicit def kfutureMonad: Monad[KFuture] = Kleisli.kleisliMonadReader[Future, Config]
- */
+  */ 
+  
   implicit def FutureMonad: Monad[Future] = new Monad[Future] {
     
     def point[A](a: => A) = scala.concurrent.Future.successful(a) //we should use the non-threaded future here...
     
     def bind[A, B](f: Future[A])(fmap: A => Future[B]) = f.flatMap(fmap(_))
-  }
-
-  implicit def FutureFunctor: Functor[Future] = new Functor[Future] {
-    def map[A, B](f: Future[A])(map: A => B): Future[B] = f.map(map(_))
   }
 
   //from scalaz

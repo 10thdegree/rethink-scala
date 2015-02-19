@@ -13,10 +13,10 @@ import Gen._
 import Arbitrary.arbitrary 
 import org.joda.time._
 import java.util.Date
-import bravo.api.dart.DateUtil._
-import bravo.api.dart.Data._
 import scalaz.scalacheck.ScalazProperties._  
 import org.joda.time.format._
+import bravo.util.Data._
+import bravo.util.DateUtil._
 
 object ReportDataGen {
   

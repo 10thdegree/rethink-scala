@@ -17,7 +17,9 @@ object Dart {
   import org.joda.time.format._
   import org.joda.time._
   import bravo.core._
-  import bravo.api.dart.DateUtil._
+  import bravo.util._
+  import bravo.util.Data._
+  import bravo.util.DateUtil._
 
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c: Config) => {
     val reportIdCache = DateUtil.toSortedSet(c.cache(reportId))
@@ -33,7 +35,7 @@ object Dart {
            DownloadedReport(reportId, startDate, endDate, report.data) 
           }
       case None =>
-        Monad[BravoM].point( DownloadedReport(reportId, startDate, endDate, cachedDays.toList) )
+        DownloadedReport(reportId, startDate, endDate, cachedDays.toList).point[BravoM] 
     }
     
    } ).toBravoM
@@ -96,7 +98,7 @@ object LiveDart extends DartInternalAPI {
       report <- fctry(c => reportApi.reports().get(c.clientId, rid).execute())
       activities = report.getCriteria().getActivities()
       names <-  if (activities.containsKey("metricNames")) {
-                  Monad[BravoM].point(activities.get("metricNames").asInstanceOf[ArrayList[Object]].toList.map(_.toString()))
+                  activities.get("metricNames").asInstanceOf[ArrayList[Object]].toList.map(_.toString()).point[BravoM]
                 } else 
                   ("Cannot find metriNames in activities for report " + rid).toJazelError.left[List[String]].toBravoM
     } yield {
