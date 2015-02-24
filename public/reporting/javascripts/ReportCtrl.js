@@ -5,7 +5,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
 
     vm.range = {
         start: moment().startOf("month").toDate(),
-        end: moment().toDate()
+        end: moment().subtract(1, "days").toDate()
     };
 
     scope.$watch('range', function (nv) {
@@ -315,7 +315,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
                 endDate: function () {
                     return moment(ngModel.$modelValue.end);
                 },
-                maxDate: moment() // Can't go beyond today!
+                maxDate: moment().subtract(1, 'days') // Can't go beyond yesterday, today isn't over!
             },
             function(start, end) {
                 var range = ngModel.$modelValue;
