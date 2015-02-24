@@ -18,11 +18,14 @@ object Util {
   *  through multiple methods chained together moandically
   */
  
-  type KFuture[A] = Kleisli[Future, Config, A]
+  trait TestConfig
+
+  //type KFuture[A] = Kleisli[Future, Config, A]
 
   type SFuture[A] = StateT[Future, Config, A]
 
-  type BravoM[A] = EitherT[SFuture, JazelError, A]
+  type BravoM[A] = EitherT[SFuture, JazelError, A] 
+  //type BravoM[A,B] = EitherT[({ type l[a] = SFuture[A,B]})#l, JazelError, A]
 
   case class JazelError(ex: Option[Throwable], msg: String) 
   
@@ -164,7 +167,7 @@ object Util {
   //implicit def kfutureMonad: Monad[SFuture] = Kleisli.kleisliMonadReader[Future, Config]
  
   /*implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
-
+i
   implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
 
   implicit def kfutureMonad: Monad[KFuture] = Kleisli.kleisliMonadReader[Future, Config]
@@ -177,7 +180,14 @@ object Util {
     def bind[A, B](f: Future[A])(fmap: A => Future[B]) = f.flatMap(fmap(_))
   }
 
-  //from scalaz
+}
+
+
+object Helper {
+  import scalaz._
+  import Scalaz._
+  
+//from scalaz
   def separateSequence[A, B, F[_], G[_]](g: G[EitherT[F, A, B]])(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): EitherT[F, A, (G[A],G[B])] = 
     EitherT(G.foldRight(g, F.point((M.empty[A],M.empty[B])))( (a, l) =>
       for {
@@ -199,7 +209,7 @@ object Util {
    )
 
   class FoldableExtensionOps[A, B, F[_], G[_]](value: G[EitherT[F, A, B]]) {
-    def separateSequence(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): EitherT[F, A, (G[A],G[B])] = Util.separateSequence[A, B, F, G](value)
+    def separateSequence(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): EitherT[F, A, (G[A],G[B])] = Helper.separateSequence[A, B, F, G](value)
   }
   
   implicit def toFoldableExtensions[A, B, F[_], G[_]](value: G[EitherT[F, A, B]])(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): FoldableExtensionOps[A, B, F, G] = new FoldableExtensionOps(value)

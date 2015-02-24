@@ -12,6 +12,7 @@ import java.math._
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.io.Source
+import bravo.core.Helper._
 
 case class ConversionRow(
     conversionTimestamp: DateTime,

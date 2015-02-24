@@ -33,6 +33,8 @@ lazy val util = project.settings(commonSettings: _*)
 
 lazy val root = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util)
 
+lazy val apitest = (project in file("apitest")).settings(commonSettings: _*).settings(libraryDependencies ++= apiDeps).dependsOn(util) 
+
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 
 lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
