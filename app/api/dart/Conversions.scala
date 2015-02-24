@@ -83,8 +83,6 @@ object Conversions {
    def intersect(set: ISet[String], rows: List[ConversionRow]): List[ConversionRow] =
     rows.filter(r => set.contains(r.identifier.toString))
      
-  
-
   def addConversions(reportPath: String, originationPath: String): \/[JazelError,(List[JazelError], List[ConversionRow])] = {
     val (failures, report) = readReport(reportPath).map(ConversionRow.toConversionRow(_)).separate
     val conkeys = getConversionIdentifiers(originationPath)

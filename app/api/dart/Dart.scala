@@ -20,6 +20,14 @@ object Dart {
   import bravo.util._
   import bravo.util.Data._
   import bravo.util.DateUtil._
+  /*
+  def testy(): Unit = {
+    val report = Conversions.readReport("tuireport.txt")
+    val grouped = groupDates(report)
+    val twoDays = grouped.take(3)
+    //run it through the cache? 
+  } 
+  */
 
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c: Config) => {
     val reportIdCache = DateUtil.toSortedSet(c.cache(reportId))
@@ -27,7 +35,6 @@ object Dart {
     val missingDays = DateUtil.findMissingDates(cachedDays.map(_.rowDate).toList, startDate.toLocalDate(), endDate.toLocalDate())
     missingDays match {
       case Some((newStart, newEnd)) =>
-        println("we are missing " + newStart + " and " + newEnd + "!")
         for {
           report <- getReportUncached(reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
           _     <- put(c.updateCache(reportId, report.data))
@@ -39,11 +46,11 @@ object Dart {
     }
     
    } ).toBravoM
-  
-  
+
   def getReportUncached(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
         for {
           dfa <- c.api.getDartAuth
+          _   = println("startDate = " + startDate + " | endDate = " + endDate)
           _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
           id  <- c.api.runDartReport(dfa, c.clientId, reportId)
           rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config

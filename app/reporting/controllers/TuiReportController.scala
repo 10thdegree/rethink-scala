@@ -85,10 +85,10 @@ object TuiReportController extends Controller {
     
     val config = LiveTest.prodConfig.copy(m = cache.get)
 
-    val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
+    val frmt = DateTimeFormat.forPattern("yyyy-MM-dd")
     val start = frmt.parseDateTime(startDate)
     val end = frmt.parseDateTime(endDate)
-
+    Logger.error("STart = " + start + " | end = " + end + " ~~~~!!")
     //val tui = reporting.util.TUIReportHelper
     val ro = reporting.util.TUIReportHelper.TUISearchPerformanceRO()
     implicit val servingFeesLookup = new Fees.FeesLookup(ro.servingFees)
