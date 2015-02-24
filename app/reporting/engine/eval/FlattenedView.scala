@@ -54,8 +54,6 @@ val flattener = new CxtFlattenerByKey(ReportTypes.ByKey(List(0)), flattenedView)
 val rows = flattener.flatten(orderedTermGroups)(evaluator)
 
 object CxtFlattener {
-
-  // We don't care about keys, only unique dates across all branches
   def flatten(orderedTermGroups: List[List[AST.LabeledTerm]]): Seq[CxtRow] = reportType match {
     case ReportTypes.ByDate() => flattenByDate(orderedTermGroups)
     case ReportTypes.ByDateAndKey(parts) => Seq.empty
@@ -64,6 +62,7 @@ object CxtFlattener {
 }
 */
 
+/*
 class CxtFlattenerByDate(reportType: ReportTypes.ByDate, fcxt: FlattenedView[LocalDate])(implicit cxt: RootCxt) {
 
   import Result.implicits._
@@ -116,6 +115,7 @@ class CxtFlattenerByDate(reportType: ReportTypes.ByDate, fcxt: FlattenedView[Loc
   }
 
 }
+*/
 
 class CxtFlattenerByKey(reportType: ReportTypes.ByKey, fcxt: FlattenedView[MultipartKey])(implicit cxt: RootCxt) {
 
@@ -157,10 +157,9 @@ class CxtFlattenerByKey(reportType: ReportTypes.ByKey, fcxt: FlattenedView[Multi
           // TODO(dk): handle distributable fields
           case (label, None) =>
             // iterate over context, and get summed values per month
-            val monthSums = for ((k, m) <- cxt.months) yield k -> m
-              .filterRowsByKey(_.matchesPattern(row.key))
-              .map(_.values(label))
-              .sum
+            val monthSums =
+              for ((k, m) <- cxt.months)
+                yield k -> m.sumForKey(row.key, label)
 
             // Update monthly totals for this row
             for ((k, v) <- monthSums) {
