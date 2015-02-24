@@ -192,6 +192,12 @@
             if (typeof options.endDate === 'object')
                 this.endDate = moment(options.endDate);
 
+            if (typeof options.startDate === 'function')
+                this.startDate = moment(options.startDate());
+
+            if (typeof options.endDate === 'function')
+                this.endDate = moment(options.endDate());
+
             if (typeof options.minDate === 'object')
                 this.minDate = moment(options.minDate);
 

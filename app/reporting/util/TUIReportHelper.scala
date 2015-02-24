@@ -78,8 +78,8 @@ object TUIReportHelper {
     val servingFeesList = List(Fees.ServingFees(
       accountId = None,
       label = "banner",
-      cpm = 1.0,
-      cpc = 0.25,
+      cpm = 0.25,
+      cpc = 0.05,
       validFrom = None,
       validUntil = None
     ))
