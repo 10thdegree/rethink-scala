@@ -85,7 +85,7 @@ object TuiReportController extends Controller {
     
     val config = LiveTest.prodConfig.copy(m = cache.get)
 
-    val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
+    val frmt = DateTimeFormat.forPattern("yyyy-MM-dd")
     val start = frmt.parseDateTime(startDate)
     val end = frmt.parseDateTime(endDate)
 
