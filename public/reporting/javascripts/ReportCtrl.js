@@ -56,7 +56,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
                 formatted = $filter('currency')(ret);
                 break;
             case "percentage":
-                formatted = $filter('number')(ret * 100, 0) + "%";
+                formatted = $filter('number')(ret * 100, 2) + "%";
                 break;
             case "fractional":
                 formatted = $filter('number')(ret, 2);
