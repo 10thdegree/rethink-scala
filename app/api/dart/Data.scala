@@ -35,7 +35,7 @@ object Data {
     def reportid: Long
   }
 
-    case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
+  case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
 
   case class DownloadedReport(reportid: Long, startDate: DateTime, endDate: DateTime, data: List[ReportDay]) extends DartReportData
 
