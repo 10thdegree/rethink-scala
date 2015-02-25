@@ -139,7 +139,7 @@ object TUIReportHelper {
 
         // Derived fields (with fees)
         Field(randUUID, "allFees",
-          Formula("cpcFees + cpmFees + dispFees").some,
+          Formula("cpcFees + cpmFees").some,
           Display("Fees".some, currency, summation).some),
         Field(randUUID, "totalSpend",
           Formula("spend + allFees").some,
