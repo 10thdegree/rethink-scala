@@ -31,7 +31,7 @@ lazy val commonSettings = Seq(
 
 lazy val util = project.settings(commonSettings: _*)
 
-lazy val root = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util)
+lazy val bravo = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util)
 
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 
