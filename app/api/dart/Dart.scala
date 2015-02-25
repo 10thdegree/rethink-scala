@@ -50,7 +50,6 @@ object Dart {
   def getReportUncached(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c:Config) => 
         for {
           dfa <- c.api.getDartAuth
-          _   = println("startDate = " + startDate + " | endDate = " + endDate)
           _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
           id  <- c.api.runDartReport(dfa, c.clientId, reportId)
           rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
