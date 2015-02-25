@@ -74,3 +74,4 @@ POST          /authenticate                           @core.controllers.CustomPr
 GET           /assets/*file                           controllers.Assets.at(path="/public/core", file)
 GET           /webjars/*file                          controllers.WebJarAssets.at(file)
 GET           /assets/*file                           securesocial.controllers.Assets.at(path = "/public/securesocial", file)
+
