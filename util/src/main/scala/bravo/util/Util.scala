@@ -47,10 +47,16 @@ object Util {
   case class FuncHolder[A,B](f: A => B) {
     def toBravoM: BravoM[A,B] = fctry(f, None)
   }
+
+  case class ReaderHolder[A,B](f: A => Future[\/[JazelError,B]]) {
+    def toBravoM: BravoM[A,B] = liftBravoM(f)
+  }
   
   implicit def toFH[A,B](f: A => B): FuncHolder[A,B] = FuncHolder(f)
 
   implicit def toBM[B](et: \/[JazelError, B]): EitherHolder[B] = EitherHolder(et) 
+
+  implicit def toRH[A,B](f: A => Future[\/[JazelError,B]]): ReaderHolder[A,B] = ReaderHolder(f)
   
   def btry[A](a: => A): \/[JazelError, A] = \/.fromTryCatchNonFatal(a).leftMap(e => JazelError(e.some, e.getMessage()))
 
