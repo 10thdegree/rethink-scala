@@ -79,6 +79,8 @@ package object ds {
       def apply(key: String) = map(key)
 
       def get(key: String) = map.get(key)
+
+      def getOrElse(key: String, alt: => BigDecimal) = map.getOrElse(key, alt)
     }
 
     object Attributes {
@@ -96,7 +98,7 @@ package object ds {
 
       def attributes: Attributes
 
-      def apply(attr: String): BigDecimal = attributes(attr)
+      def apply(attr: String): BigDecimal = attributes.getOrElse(attr, throw new Exception(s"$attr not found for $keys: " + attributes.map.keys))
 
       def get(attr: String): Option[BigDecimal] = attributes.get(attr)
 
