@@ -197,7 +197,7 @@ object TUIReportHelper {
       fields.find(_.varName == "totalSpendNoFees").map(f => FieldSort(f.id.get, false)),
       List(),
       List(
-        Chart.Pie("Visitors by Category", fieldsLookup("impressions").id.get),
+        Chart.Pie("Visitors by Category", fieldsLookup("clicks").id.get),
         Chart.Bar("Cost per Visitor", fieldsLookup("cpcNoFees").id.get)))
 
     val viewWithFees = View(
@@ -211,7 +211,7 @@ object TUIReportHelper {
       fields.find(_.varName == "totalSpend").map(f => FieldSort(f.id.get, false)),
       List(),
       List(
-        Chart.Pie("Visitors by Category", fieldsLookup("impressions").id.get),
+        Chart.Pie("Visitors by Category", fieldsLookup("clicks").id.get),
         Chart.Bar("Cost per Visitor", fieldsLookup("cpc").id.get)))
 
     val viewBoth = View(
@@ -225,7 +225,7 @@ object TUIReportHelper {
       fields.find(_.varName == "totalSpend").map(f => FieldSort(f.id.get, false)),
       List(),
       List(
-        Chart.Pie("Visitors by Category", fieldsLookup("impressions").id.get),
+        Chart.Pie("Visitors by Category", fieldsLookup("clicks").id.get),
         Chart.Pie("Leads by Category", fieldsLookup("totalLeads").id.get),
         Chart.Bar("Cost per Visitor", fieldsLookup("cpc").id.get),
         Chart.Bar("Cost by Category", fieldsLookup("totalSpend").id.get)))
@@ -293,16 +293,26 @@ object TUIReportHelper {
       new FieldBinding(fieldsLookup("clicks").id.get, dartDs.dsId.get,
         "Paid Search Clicks"),
       new FieldBinding(fieldsLookup("contact").id.get, dartDs.dsId.get,
-        "TUI  Home Page : Arrival: Paid Search Actions"),
+        "TUI Counter : Contact Us Confirmation: Paid Search Actions"),
 
-      // SHOULD BE:
       // Marketing LP Inquiry Confirmation
+      new FieldBinding(fieldsLookup("inquiries").id.get, dartDs.dsId.get,
+         "TUI Counter : Marketing LP Inquiry Confirmation: Paid Search Actions"),
       // Trident.edu Inquiry Confirmation
+      new FieldBinding(fieldsLookup("inquiries").id.get, dartDs.dsId.get,
+         "TUI Counter : Trident.edu Inquiry Confirmation: Paid Search Actions"),
       // Ph.D. Inquiry Confirmation
+      new FieldBinding(fieldsLookup("inquiries").id.get, dartDs.dsId.get,
+         "TUI Counter : Ph.D. Inquiry Confirmation: Paid Search Actions"),
       // Partnership Inquiry Confirmation
+      new FieldBinding(fieldsLookup("inquiries").id.get, dartDs.dsId.get,
+         "TUI Counter : Partnership Inquiry Confirmation: Paid Search Actions"),
       // Net Price Calculator Inquiry Confirmation
       new FieldBinding(fieldsLookup("inquiries").id.get, dartDs.dsId.get,
-        "TUI Confirmation : PHD Request Info: Paid Search Actions"),
+         "TUI Counter : Net Price Calculator Inquiry Confirmation: Paid Search Actions"),
+
+      //new FieldBinding(fieldsLookup("inquiries").id.get, dartDs.dsId.get,
+      //  "TUI Confirmation : PHD Request Info: Paid Search Actions"),
 
       // SHOULD BE: Step 3 (was step 4)
       new FieldBinding(fieldsLookup("apps").id.get, dartDs.dsId.get,
