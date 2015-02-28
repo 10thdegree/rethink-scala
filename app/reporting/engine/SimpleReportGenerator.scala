@@ -19,13 +19,12 @@ class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servin
   val labeledFields = compiledFields.map({ case (field, term) => field.varName -> field}).toMap
   val groupedTerms = FormulaCompiler.segment(labeledTerms.toList: _*)(labeledTerms)
   val groupedLabels = groupedTerms.map(grp => grp.map({ case (lbl, term) => lbl}))
-  val bindings = report.fieldBindings.map(b => b.fieldId -> b).toMap
-  val labeledBindings = allFields.map(f => f.varName -> bindings.get(f.id.get)).toMap
+  val bindings = report.fieldBindings.groupBy(b => b.fieldId)
+  val labeledBindings = allFields.map(f => f.varName -> bindings.getOrElse(f.id.get, List())).toMap
 
   lazy val requiredFieldBindings: List[(String, FieldBinding)] = labeledBindings
-      .map({case (k,vo) => vo.map(k -> _) })
-      .flatten
-      .toList
+    .toList
+    .flatMap({case (k,vo) => vo.map(k -> _) })
 
   def findMissingFieldBindings(foundAttributes: Set[String]): List[(String, FieldBinding)] = {
     requiredFieldBindings.filterNot(b => foundAttributes.contains(b._2.dataSourceAttribute))
@@ -38,16 +37,17 @@ class SimpleReportGenerator(report: Report, fields: List[Field])(implicit servin
     val dsa = DataSource.DataSourceAggregators.get[BasicRow]
     val rowsByDate = dsa
       .groupByDate(ds -> dsRows)
-      .map({case (date, rows) => date -> dsa.flattenByKeys(rows: _*)})
+      .map({ case (date, rows) => date -> dsa.flattenByKeys(rows: _*)})
 
     // Do K iterations over all rows, where K = groupedLabels.length
     // Each of K groups separates dependencies, so we must process A before B where B depends on A.
     val cxt = new FormulaEvaluator.EvaluationCxt[BasicRow](FormulaEvaluator.Report(start, end.withTimeAtEndOfDay))
 
-    def termFromBinding(nrow: BasicRow)(label: String) =
-      for (b <- labeledBindings(label)) yield {
-        nrow -> AST.Constant(nrow(b.dataSourceAttribute).toDouble)
-      }
+    def termFromBinding(nrow: BasicRow)(label: String) = if (labeledBindings(label).nonEmpty) {
+      Some(nrow -> AST.Constant((for (b <- labeledBindings(label)) yield {
+        nrow(b.dataSourceAttribute).toDouble
+      }).sum))
+    } else None
 
     val evals = for {
       (group, groupIdx) <- groupedLabels.zipWithIndex // Columns
