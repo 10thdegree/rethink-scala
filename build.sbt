@@ -53,8 +53,7 @@ lazy val angularDeps = Seq(// Angular-js
 )
 
 lazy val otherDeps = Seq(
- // Secure Social
-  "ws.securesocial" %% "securesocial" % "master-SNAPSHOT",
+  // Secure Social using jar in lib
   // Rethink-DB Driver using jar in lib
   "org.slf4j" % "slf4j-api" % "1.7.7",
   "org.julienrf" %% "play-json-variants" % "1.1.0",
