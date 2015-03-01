@@ -4,7 +4,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
     vm.isLoading = true;
 
     vm.range = {
-        start: moment().startOf("month").toDate(),
+        start: moment().subtract(1, "days").toDate(),
         end: moment().subtract(1, "days").toDate()
     };
 
