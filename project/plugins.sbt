@@ -1,5 +1,8 @@
 resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 
+resolvers += Resolver.url("scala-js-snapshots",
+  url("http://repo.scala-js.org/repo/snapshots/"))(Resolver.ivyStylePatterns)
+
 // The Play plugin
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.6")
 
@@ -16,3 +19,8 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-rjs" % "1.0.1")
 addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.0.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-mocha" % "1.0.0")
+
+// ScalaJS
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.1")
+
+addSbtPlugin("com.vmunier" % "sbt-play-scalajs" % "0.2.3")

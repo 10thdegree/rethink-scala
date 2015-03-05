@@ -1,3 +1,6 @@
+import org.scalajs.sbtplugin.ScalaJSPlugin
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
+import sbt.Project.projectToRef
 import sbt.Keys._
 
 
@@ -6,6 +9,7 @@ import sbt.Keys._
 common settings for all projects
 
 ****/
+lazy val clients = Seq(loginClient)
 
 lazy val coredeps = Seq(
   //scalaz
@@ -16,7 +20,8 @@ lazy val coredeps = Seq(
   "org.scalaz" %% "scalaz-effect" % "7.1.0",
   "org.specs2" % "specs2_2.11" % "2.4",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
-  "org.joda" % "joda-convert" % "1.5"
+  "org.joda" % "joda-convert" % "1.5",
+  "com.vmunier" %% "play-scalajs-scripts" % "0.1.0"
 )
 
 lazy val commonSettings = Seq(
@@ -24,14 +29,37 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.4",
   resolvers ++= Seq(
     "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
-    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"),
+    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+    "karchedon-repo" at "http://maven.karchedon.de/"),
   libraryDependencies ++= coredeps,
   initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.Future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
 )
 
 lazy val util = project.settings(commonSettings: _*)
 
-lazy val bravo = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util)
+lazy val bravo = (project in file("."))
+  .settings(commonSettings: _*)
+  .settings(
+    scalaJSProjects := clients,
+    pipelineStages := Seq(scalaJSProd)
+  )
+  .enablePlugins(PlayScala)
+  .aggregate(clients.map(projectToRef): _*)
+  .dependsOn(util)
+
+lazy val loginClient = (project in file("client/login")).settings(
+  scalaVersion := "2.11.4",
+  persistLauncher := true,
+  persistLauncher in Test := false,
+  artifactPath in (Compile, fastOptJS) := file("public/core/js/login.js"),
+  artifactPath in (Compile, packageScalaJSLauncher) := file("public/core/js/login-launcher.js"),
+  unmanagedSourceDirectories in Compile := Seq((scalaSource in Compile).value),
+  libraryDependencies ++= Seq(
+    "biz.enef" %%% "scalajs-angulate" % "0.1"
+  )).
+  enablePlugins(ScalaJSPlugin, ScalaJSPlay)
+
+onLoad in Global := (Command.process("project bravo", _: State)) compose (onLoad in Global).value
 
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 
