@@ -1,6 +1,6 @@
 package login
 
-import biz.enef.angular.Controller
+import biz.enef.angulate.Controller
 
 import scala.scalajs.js
 import scala.util.{Failure, Success}
@@ -27,11 +27,12 @@ class LoginCtrl(loginService: LoginService, $window: js.Dynamic) extends Control
   }
 
   private def addAlert(alert: Alert): Unit = {
-    alerts :+= alert
+    alerts :+ alert
   }
 
   def closeAlert(index: Int): Unit = {
     alerts.splice(index, 1)
+    alerts = alerts.zipWithIndex.filter(_._2 != index).map(_._1)
   }
 
   private def handleError(ex: Throwable): Unit = js.Dynamic.global.console.error(s"An error has occurred: $ex")

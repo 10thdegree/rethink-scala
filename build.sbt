@@ -9,7 +9,7 @@ import sbt.Keys._
 common settings for all projects
 
 ****/
-lazy val clients = Seq(loginClient)
+lazy val clients = Seq(loginClient, navClient)
 
 lazy val coredeps = Seq(
   //scalaz
@@ -51,11 +51,31 @@ lazy val loginClient = (project in file("client/login")).settings(
   scalaVersion := "2.11.4",
   persistLauncher := true,
   persistLauncher in Test := false,
-  artifactPath in (Compile, fastOptJS) := file("public/core/js/login.js"),
-  artifactPath in (Compile, packageScalaJSLauncher) := file("public/core/js/login-launcher.js"),
+  artifactPath in (Compile, fastOptJS) := file("public/core/js/target/login.js"),
+  artifactPath in (Compile, packageScalaJSLauncher) := file("public/core/js/target/login-launcher.js"),
   unmanagedSourceDirectories in Compile := Seq((scalaSource in Compile).value),
+  resolvers ++= Seq(
+    "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+  ),
   libraryDependencies ++= Seq(
-    "biz.enef" %%% "scalajs-angulate" % "0.1"
+    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT"
+  )).
+  enablePlugins(ScalaJSPlugin, ScalaJSPlay)
+
+lazy val navClient = (project in file("client/nav")).settings(
+  scalaVersion := "2.11.4",
+  persistLauncher := true,
+  persistLauncher in Test := false,
+  artifactPath in (Compile, fastOptJS) := file("public/core/js/target/nav.js"),
+  artifactPath in (Compile, packageScalaJSLauncher) := file("public/core/js/target/nav-launcher.js"),
+  unmanagedSourceDirectories in Compile := Seq((scalaSource in Compile).value),
+  resolvers ++= Seq(
+    "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+  ),
+  libraryDependencies ++= Seq(
+    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT"
   )).
   enablePlugins(ScalaJSPlugin, ScalaJSPlay)
 

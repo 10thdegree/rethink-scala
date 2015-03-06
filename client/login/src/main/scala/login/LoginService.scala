@@ -1,9 +1,9 @@
 package login
 
-import biz.enef.angular.Service
-import biz.enef.angular.core.{HttpPromise, HttpService, Location}
+import biz.enef.angulate.Service
+import biz.enef.angulate.core.{HttpPromise, HttpService}
 
-class LoginService($http: HttpService, $location: Location) extends Service {
+class LoginService($http: HttpService) extends Service {
 
   def authenticate(credential: Credential) : HttpPromise[Authenticated] = $http.post("/authenticate", credential)
 

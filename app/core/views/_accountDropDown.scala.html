@@ -1,13 +1,13 @@
 <form class="navbar-form navbar-right">
-    <div class="btn-group accountDropDown" ng-show="accounts.length > 1">
-        <button style="width : 250px; margin-top : 5px ;" type="button" class="btn dropdown-toggle dropdown-account" ng-class="{'btn-primary':selectedAccount.id != '', 'btn-danger':selectedAccount.id == ''}">
-            <span ng-model="selectedAccountLabel" style="font-size : 16px ; float : left ;" >
-                {{selectedAccount.label}}</span>
+    <div class="btn-group" dropdown ng-show="ctrl.accounts.length > 1">
+        <button dropdown-toggle style="width : 250px; margin-top : 5px ;" type="button" class="btn dropdown-toggle" ng-class="{'btn-primary':ctrl.selectedAccount.id != '', 'btn-danger':ctrl.selectedAccount.id == ''}">
+            <span ng-model="ctrl.selectedAccountLabel" style="font-size : 16px ; float : left ;" >
+                {{ctrl.selectedAccount.label}}</span>
             <span style="font-size : 20px ; float : right ;" class="glyphicon"
             ng-class="{'glyphicon-collapse-down': true}"></span>
         </button>
         <ul class="dropdown-menu" role="menu">
-            <li style="width : 250px ;" ng-click="accountSelected(account)" ng-repeat="account in accounts" ng-class="{'selectedAccount':selectedAccount.id == account.id}"><a href="#">
+            <li style="width : 250px ;" ng-click="ctrl.accountSelected(account)" ng-repeat="account in ctrl.accounts" ng-class="{'selectedAccount':ctrl.selectedAccount.id == account.id}"><a href="#">
                 {{account.label}}</a></li>
         </ul>
     </div>
