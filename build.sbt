@@ -9,7 +9,7 @@ import sbt.Keys._
 common settings for all projects
 
 ****/
-lazy val clients = Seq(loginClient, navClient)
+lazy val clients = Seq(loginClient, navClient, userManageClient)
 
 lazy val coredeps = Seq(
   //scalaz
@@ -47,12 +47,10 @@ lazy val bravo = (project in file("."))
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(util)
 
-lazy val loginClient = (project in file("client/login")).settings(
+lazy val commonClientSettings = Seq(
   scalaVersion := "2.11.4",
   persistLauncher := true,
   persistLauncher in Test := false,
-  artifactPath in (Compile, fastOptJS) := file("public/core/js/target/login.js"),
-  artifactPath in (Compile, packageScalaJSLauncher) := file("public/core/js/target/login-launcher.js"),
   unmanagedSourceDirectories in Compile := Seq((scalaSource in Compile).value),
   resolvers ++= Seq(
     "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
@@ -60,24 +58,23 @@ lazy val loginClient = (project in file("client/login")).settings(
   ),
   libraryDependencies ++= Seq(
     "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT"
-  )).
-  enablePlugins(ScalaJSPlugin, ScalaJSPlay)
+  )
+)
 
-lazy val navClient = (project in file("client/nav")).settings(
-  scalaVersion := "2.11.4",
-  persistLauncher := true,
-  persistLauncher in Test := false,
-  artifactPath in (Compile, fastOptJS) := file("public/core/js/target/nav.js"),
-  artifactPath in (Compile, packageScalaJSLauncher) := file("public/core/js/target/nav-launcher.js"),
-  unmanagedSourceDirectories in Compile := Seq((scalaSource in Compile).value),
-  resolvers ++= Seq(
-    "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
-    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
-  ),
-  libraryDependencies ++= Seq(
-    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT"
-  )).
-  enablePlugins(ScalaJSPlugin, ScalaJSPlay)
+def clientProject(project: Project, name: String): Project = {
+  project
+    .settings(commonClientSettings: _*)
+    .settings(
+      artifactPath in (Compile, fastOptJS) := file(s"public/core/js/target/$name.js"),
+      artifactPath in (Compile, packageScalaJSLauncher) := file(s"public/core/js/target/$name-launcher.js")
+    ).enablePlugins(ScalaJSPlugin, ScalaJSPlay)
+}
+
+lazy val loginClient = clientProject(project in file(s"client/login"),"login")
+
+lazy val navClient = clientProject(project in file(s"client/nav"),"nav")
+
+lazy val userManageClient = clientProject(project in file(s"client/userManage"),"userManage")
 
 onLoad in Global := (Command.process("project bravo", _: State)) compose (onLoad in Global).value
 
