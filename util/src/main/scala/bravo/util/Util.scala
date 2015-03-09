@@ -12,8 +12,6 @@ object Util {
 
   type BravoM[A,B] = EitherT[({ type l[a] = SFuture[A,a]})#l, JazelError, B]
 
-  //type BravoM[A,B] = EitherT[({ type l[a] = SFuture[A,B]})#l, JazelError, A]
-
   case class JazelError(ex: Option[Throwable], msg: String) 
     
   def ftry[A,B](b: => B): BravoM[A,B]= fctry((c:A) => b)
@@ -60,6 +58,14 @@ object Util {
   
   def btry[A](a: => A): \/[JazelError, A] = \/.fromTryCatchNonFatal(a).leftMap(e => JazelError(e.some, e.getMessage()))
 
+  implicit def toST[A,B](f: StateT[Future, A, \/[JazelError, B]]): BravoM[A,B] = 
+    EitherT[({ type l[a] = SFuture[A,a]})#l, JazelError, B](f)
+  
+  /****** OUR TYPE CLASSES *****/
+
+  implicit def BravoMonad[A]: Monad[({ type l[a] = BravoM[A,a]})#l] = 
+    EitherT.eitherTMonad[({ type l[a] = SFuture[A,a]})#l, JazelError]
+
   def sFutureMonad[A]() = Monad[({ type l[a] = SFuture[A,a]})#l]
 
   implicit def FutureMonad: Monad[Future] = new Monad[Future] {
@@ -68,4 +74,5 @@ object Util {
     
     def bind[A, B](f: Future[A])(fmap: A => Future[B]) = f.flatMap(fmap(_))
   }
+
 }

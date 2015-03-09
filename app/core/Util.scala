@@ -8,10 +8,10 @@ object Util {
   import bravo.api.dart._ 
   import bravo.api.dart.Data._
   import org.joda.time._
-  import bravo.util.Data._
+  import bravo.util.DateUtil._
   
   /*
-  *  Kleisli is the equivalent of Function1, so this 
+  *  Kleisli is the equivalent of Function1, so this
   *  reprsents a computation of type 
   *  (Config) => Future[\/[JazelError, A]] 
   *  Kleisli is useful for threading a 'config' (Di) 

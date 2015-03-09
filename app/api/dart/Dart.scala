@@ -18,7 +18,6 @@ object Dart {
   import org.joda.time._
   import bravo.core._
   import bravo.util._
-  import bravo.util.Data._
   import bravo.util.DateUtil._
 
   def getReport(reportId: Int, startDate: DateTime, endDate: DateTime): BravoM[DownloadedReport] = ((c: Config) => {
@@ -28,12 +27,20 @@ object Dart {
     missingDays match {
       case Some((newStart, newEnd)) =>
         println("we are missing " + newStart + " and " + newEnd + "!")
+        val reportM = getReportUncached(reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
+        val res = reportM.flatMap(r => {
+          val putval = put(c)
+          val i:BravoM[Unit] = putval
+          putval
+        })
+        //val s: String = res 
         for {
           report <- getReportUncached(reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
           _     <- put(c.updateCache(reportId, report.data))
+          //_   <- i
         } yield {
            DownloadedReport(reportId, startDate, endDate, report.data) 
-          }
+        }
       case None =>
         DownloadedReport(reportId, startDate, endDate, cachedDays.toList).point[BravoM] 
     }

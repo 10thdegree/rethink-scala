@@ -11,33 +11,37 @@ trait DartInternalAPI {
 
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 
-  def getDartAuth[A <: DartConfig]: BravoM[A, Dfareporting]
+  def getDartAuth: BravoM[DartConfig, Dfareporting]
   
-  def viewDartReports[A <: DartConfig](r: Dfareporting, userid: Int): BravoM[A, List[AvailableReport]]
+  def viewDartReports(r: Dfareporting, userid: Int): BravoM[DartConfig, List[AvailableReport]]
 
-  def updateDartReport[A <: DartConfig](r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[A, Unit]
+  def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit]
 
-  def runDartReport[A <: DartConfig](r: Dfareporting, userid: Int, rid: Long): BravoM[A, Long]
+  def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[DartConfig, Long]
 
-  def downloadReport[A <: DartConfig](r: Dfareporting, rid: Long, fid: Long): BravoM[A, String]
+  def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DartConfig, String]
 
   protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
     new com.google.api.client.util.DateTime(dt.toString(formatter)) 
 }
 
+
 object Data {
   import org.joda.time._
   import scalaz._
   import Scalaz._
-  import bravo.util.Data._
+  import bravo.util.DateUtil._
 
-  trait DartConfig {
-    val api: DartInternalAPI
-    val filePath: String
-    val accountId: String
-    val userAccount: String
-    val clientId: Int 
-  }
+  case class DartConfig(
+    api: DartInternalAPI,
+    filePath: String,
+    accountId: String,
+    userAccount: String,
+    clientId: Int,
+    reportCache: Map[Long, List[ReportDay]])
+   
+  
+  
 
   sealed trait DartReportData {
     def reportid: Long

@@ -19,19 +19,21 @@ lazy val coredeps = Seq(
   "org.joda" % "joda-convert" % "1.5"
 )
 
+
 lazy val commonSettings = Seq(
   version := "1.0-SNAPSHOT",
   scalaVersion := "2.11.4",
+  scalacOptions ++= Seq("-unchecked", "-deprecation", "feature"),
   resolvers ++= Seq(
     "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"),
   libraryDependencies ++= coredeps,
-  initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.Future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
+  initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.Future; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
 )
 
 lazy val util = project.settings(commonSettings: _*)
 
-lazy val root = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util)
+lazy val root = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util).dependsOn(apitest)
 
 lazy val apitest = (project in file("apitest")).settings(commonSettings: _*).settings(libraryDependencies ++= apiDeps).dependsOn(util) 
 

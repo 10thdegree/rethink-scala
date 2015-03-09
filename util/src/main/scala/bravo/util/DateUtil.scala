@@ -7,13 +7,11 @@ import Scalaz._
 //import bravo.api.dart.Data._
 import scala.collection.immutable.{TreeSet, SortedSet}
 
-object Data {
-  case class ReportDay(retrievedDate: DateTime = new DateTime(), rowDate: LocalDate, rows: List[Map[String,String]])
-}
 
 object DateUtil {
-  import Data._
 
+  case class ReportDay(retrievedDate: DateTime = new DateTime(), rowDate: LocalDate, rows: List[Map[String,String]])
+  
   implicit val localDateOrd = new scala.math.Ordering[LocalDate] {
     def compare(a: LocalDate, b: LocalDate): Int = 
       a compareTo b

@@ -18,7 +18,6 @@ import akka.pattern.pipe
 import java.util.concurrent.atomic.AtomicReference
 import bravo.api.dart.Data._
 import bravo.util.DateUtil._
-import bravo.util.Data._
 
 object TuiReportController extends Controller {
   

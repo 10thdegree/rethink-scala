@@ -29,7 +29,7 @@ object Data {
   import org.joda.time._
   import scalaz._
   import Scalaz._
-  import bravo.util.Data._
+  import bravo.util.DateUtil._
 
   sealed trait DartReportData {
     def reportid: Long
