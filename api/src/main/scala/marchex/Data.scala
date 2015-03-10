@@ -2,6 +2,11 @@ package bravo.api.marchex
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
+case class MarchexConfig( 
+    marchexurl: String,
+    marchexuser: String,
+    marchexpass: String)
+  
 
 trait DataCaster[A] {
   def cast(o: Object): A

@@ -1,7 +1,7 @@
 package bravo.core
-
+/*
 object Util {
-  import scalaz._
+import scalaz._
   import Scalaz._
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -10,14 +10,6 @@ object Util {
   import org.joda.time._
   import bravo.util.DateUtil._
   
-  /*
-  *  Kleisli is the equivalent of Function1, so this
-  *  reprsents a computation of type 
-  *  (Config) => Future[\/[JazelError, A]] 
-  *  Kleisli is useful for threading a 'config' (Di) 
-  *  through multiple methods chained together moandically
-  */
- 
   trait TestConfig
 
   //type KFuture[A] = Kleisli[Future, Config, A]
@@ -61,10 +53,10 @@ object Util {
     val marchexpass: String
 
   }  
-  /*
-  * For wrapping external APIs
-  * and executing them asynchronously 
-  */
+  
+  // For wrapping external APIs
+  // and executing them asynchronously 
+  
   def ftry[A](a: => A): BravoM[A] = fctry(c => a)
   
   def fctry[A](f: Config => A): BravoM[A] = fctry(f, None) 
@@ -103,10 +95,10 @@ object Util {
       (c2, b.right[JazelError]) 
     } ) 
   
-  /*
-  * Lifting to BravoM and related  
-  * converions
-  */
+  
+  //Lifting to BravoM and related  
+  // converions
+  //
   case class StringErrorOps(s: String) {
     def toJazelError: JazelError =  JazelError(None, s)
   }
@@ -145,9 +137,9 @@ object Util {
   implicit def toBM[A](et: \/[JazelError,A]) = EitherHolder(et) 
   implicit def toKH[A](f: Config => A) = KleisliAHolder(f)
   
-  /*
-  * General typeclass declarations so we can abstract over BravoM and Future 
-  */
+  
+  //General typeclass declarations so we can abstract over BravoM and Future 
+  
 
   //implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError]
   
@@ -166,12 +158,10 @@ object Util {
 
   //implicit def kfutureMonad: Monad[SFuture] = Kleisli.kleisliMonadReader[Future, Config]
  
-  /*implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
 i
   implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
 
-  implicit def kfutureMonad: Monad[KFuture] = Kleisli.kleisliMonadReader[Future, Config]
-  */ 
+   
   
   implicit def FutureMonad: Monad[Future] = new Monad[Future] {
     
@@ -181,7 +171,7 @@ i
   }
 
 }
-
+*/
 
 object Helper {
   import scalaz._

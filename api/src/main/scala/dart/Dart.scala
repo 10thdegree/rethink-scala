@@ -1,4 +1,4 @@
-package bravo.apitest.dart
+package bravo.api.dart
 
 import scalaz._
 import Scalaz._
@@ -13,18 +13,18 @@ Instead of polling for specific reports, we should just havea a queue of reports
 object Dart {
   import com.google.api.services.dfareporting.Dfareporting
   import scala.annotation.tailrec
-  import bravo.apitest.dart.Data._
+  import bravo.api.dart.Data._
   import scala.concurrent.{Future,Await}
   import org.joda.time.format._
   import org.joda.time._
   import bravo.util._
   import bravo.util.DateUtil._
     
-  implicit def myMonad: Monad[({type l[a] = BravoM[DartConfig,a]})#l] = Monad[({ type l[a] = BravoM[DartConfig, a]})#l]
+  implicit def dartMonad: Monad[({type l[a] = BravoM[DartConfig,a]})#l] = EitherT.eitherTMonad[({ type l[a] = SFuture[DartConfig,a]})#l, JazelError]
   
   type DSFuture[A] = SFuture[DartConfig,A]
 
-  def getReport(reportId: Long, startDate: DateTime, endDate: DateTime) = ((c: DartConfig) => {
+  def getReport(reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, DownloadedReport] = ((c: DartConfig) => {
     val currentReportDays  = c.reportCache.get(reportId).getOrElse(List[ReportDay]())
     val reportIdCache     = DateUtil.toSortedSet(currentReportDays)
     val cachedDays        = DateUtil.findLargestRanges[ReportDay](reportIdCache, startDate, endDate, rd => rd.rowDate)
@@ -36,15 +36,16 @@ object Dart {
           report    <- getReportUncached(reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
           merged    = c.reportCache.get(reportId).fold(report.data)(old => old |+| report.data) 
           newstate  = c.copy(reportCache = c.reportCache + (reportId -> merged)) 
-          //_         <- put(newstate) //need liftM or a way to go to the right type
+          //_         <- EitherT({ put(newstate) //need liftM or a way to go to the right type
         } yield {
            DownloadedReport(reportId, startDate, endDate, report.data) 
         }
         res
       case None =>
-        DownloadedReport(reportId, startDate, endDate, cachedDays.toList)
+        dartMonad.point(DownloadedReport(reportId, startDate, endDate, cachedDays.toList))
     }
-   })
+   }).toBravoM
+    .flatMap(x => x)
 
   def getReportUncached(reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, DownloadedReport] = ((c: DartConfig) => 
         for {
@@ -83,8 +84,8 @@ object LiveDart extends DartInternalAPI {
   import com.google.api.services.dfareporting.model._
   import java.io.InputStream
   import org.joda.time.format.DateTimeFormat
-  import bravo.apitest.dart.Data._
-  import bravo.apitest.dart._
+  import bravo.api.dart.Data._
+  import bravo.api.dart._
   import java.util.ArrayList
   import bravo.util.Util._
 

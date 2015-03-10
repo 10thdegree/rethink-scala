@@ -1,4 +1,4 @@
-package bravo.apitest.dart
+package bravo.api.dart
 
 object DartAuth {
   import scalaz._
@@ -16,17 +16,17 @@ object DartAuth {
   import com.google.api.client.util.store.{FileDataStoreFactory,DataStoreFactory}
   import scala.collection.JavaConversions._
   import com.google.api.services.dfareporting.{Dfareporting, DfareportingScopes} 
-  //import bravo.core.Util._
-  import bravo.apitest.dart._
-  import bravo.apitest.dart.Data._
+  import bravo.api.dart._
+  import bravo.api.dart.Data._
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
   import com.google.api.services.doubleclicksearch._
   import bravo.util.Util._
   
   /** Authorizes the installed application to access user's protected data.*/
-  //Generic Google Authorization.  
-  def getCredential[A <: DartConfig]: BravoM[A,(HttpTransport, JsonFactory, Credential)] = ((c: A) => Future {
+
+  //Generic Google Authorization.: BravoM[DartConfig, (HttpTransport, JsonFactory, Credential)]  
+  def getCredential: BravoM[DartConfig, (HttpTransport, JsonFactory, Credential)] = ((c: DartConfig) => Future {
       val jsonFactory = JacksonFactory.getDefaultInstance()
       val transport: HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
         try {
@@ -50,10 +50,11 @@ object DartAuth {
      }).toBravoM
 
   //specific to Dart reporting service
-  def getCredentialService[A <: DartConfig] = 
-    getCredential[A]
+  def getCredentialService: BravoM[DartConfig, Dfareporting] = 
+    getCredential
       .map(t => { 
           val (transport, jsonFactory, c) = t
           (new Dfareporting(transport, jsonFactory, c))
        })
+
 }

@@ -33,9 +33,9 @@ lazy val commonSettings = Seq(
 
 lazy val util = project.settings(commonSettings: _*)
 
-lazy val root = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util).dependsOn(apitest)
+lazy val root = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util).dependsOn(api)
 
-lazy val apitest = (project in file("apitest")).settings(commonSettings: _*).settings(libraryDependencies ++= apiDeps).dependsOn(util) 
+lazy val api = (project in file("api")).settings(commonSettings: _*).settings(libraryDependencies ++= apiDeps).dependsOn(util) 
 
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 

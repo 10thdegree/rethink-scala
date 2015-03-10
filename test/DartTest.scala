@@ -5,7 +5,7 @@ import bravo.api
 import org.joda.time._
 import com.google.api.services.dfareporting.Dfareporting
 import bravo.api.dart.Data._
-import bravo.core.Util._
+import bravo.util.Util._
 import scalaz._
 import Scalaz._
 import scala.concurrent.{Future,Await}
@@ -26,7 +26,7 @@ import scalaz.scalacheck.ScalazProperties._
 import scalaz.scalacheck.ScalazArbitrary._ 
 import bravo.api.dart.Data._  
 import ReportDataGen._
-import bravo.util.Data._
+import bravo.util.DateUtil._
 
 class ReportDayLaws extends Spec {
   import bravo.api.dart.Data._
@@ -71,35 +71,30 @@ object DartAPITest extends Properties("Dart API test") {
       true
   }
   */
-  case class TestConfig(
-    val api: DartInternalAPI  = internal(""),
-    val filePath: String = "",
-    val accountId: String = "",
-    val userAccount: String = "",
-    val clientId: Int = 0,
-    val marchexuser: String = "", 
-    val marchexpass: String = "",
-    val marchexurl: String = "",
-    val m: Map[Long, List[ReportDay]] = Map[Long, List[ReportDay]]() //Map[String, List[Map[String,String]]]("1" -> List[Map[String,String]]( Map[String,String]("asdf" -> "blah"))) 
-    ) extends Config {
-      override def updateCache(m: Map[Long, List[ReportDay]]) =
-        this.copy(m = m)
-    }
-
-  val config = TestConfig()
+  
+/*
+   case class DartConfig(
+    api: DartInternalAPI,
+    filePath: String,
+    accountId: String,
+    userAccount: String,
+    clientId: Int,
+    reportCache: Map[Long, List[ReportDay]] = Map[Long, List[ReportDay]]())
+*/  
+  val config = DartConfig(internal("asdf"), "", "", "", 4)
 
   //mocks a download call and returns a string as a report
   def internal(s: String):DartInternalAPI = new DartInternalAPI {
    
-    def getDartAuth: BravoM[Dfareporting] = Monad[BravoM].point(null)
+    def getDartAuth: BravoM[DartConfig, Dfareporting] = Dart.dartMonad.point(null)
 
-    def viewDartReports(r: Dfareporting, userid: Int): BravoM[List[AvailableReport]] = ???
+    def viewDartReports(r: Dfareporting, userid: Int): BravoM[DartConfig, List[AvailableReport]] = ???
 
-    def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[Unit] = Monad[BravoM].point(())
+    def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit] = Dart.dartMonad.point(())
 
-    def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[Long] = Monad[BravoM].point(1L)
+    def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[DartConfig, Long] = Dart.dartMonad.point(1L)
 
-    def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[String] = Monad[BravoM].point(s)
+    def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DartConfig, String] = Dart.dartMonad.point(s)
   }  
 
 

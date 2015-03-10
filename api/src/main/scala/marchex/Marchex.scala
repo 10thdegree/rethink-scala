@@ -18,7 +18,7 @@ import bravo.util.Util._
 object Marchex {
   // PUBLIC API
 
-  def getGroups[A <: MarchexConfig](accountid: String): BravoM[A, List[MarchexGroup]] = 
+  def getGroups(accountid: String): BravoM[MarchexConfig, List[MarchexGroup]] = 
     (for {
       results <- makeCall("group.list", List[Object](accountid))
       mapped <- results.map(o => parseGroup(o.asInstanceOf[HashMap[String,Object]])).toList.sequenceU.toBravoM
@@ -27,7 +27,7 @@ object Marchex {
     })
 
   
-  def getAccountsi[A <: MarchexConfig]: BravoM[A, List[MarchexAccount]] = 
+  def getAccounts: BravoM[MarchexConfig, List[MarchexAccount]] = 
     for {
       results <- makeCall("acct.list", List[Object]())
       mapped <- results.map(o => parseAccount(o.asInstanceOf[HashMap[String,Object]])).toList.sequenceU.toBravoM  
@@ -36,9 +36,9 @@ object Marchex {
       
   val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
 
-  def getCallLogs[A <: MarchexConfig](acctid: String, start: DateTime, end:DateTime): BravoM[A, List[CallLog]] = 
+  def getCallLogs(acctid: String, start: DateTime, end:DateTime): BravoM[MarchexConfig, List[CallLog]] = 
     for {
-      search <- fctry((c:A) => (Map[String,String]("start" -> start.toString(frmt),"end" -> end.toString(frmt))): java.util.Map[String,String] )
+      search <- fctry((c:MarchexConfig) => (Map[String,String]("start" -> start.toString(frmt),"end" -> end.toString(frmt))): java.util.Map[String,String] )
       results                              <- makeCall("call.search", List[Object](acctid, search))
       mapped <- results.map(o => parseCallLog(o.asInstanceOf[HashMap[String,Object]])).toList.sequenceU.toBravoM
     } yield 
@@ -46,7 +46,7 @@ object Marchex {
   
 
   //This is for roundtrips back to a format for XML-RPC.  We're using this for mocking/testing
-  protected def callLogToMap(c: CallLog): Map[String,Object] = {
+  def callLogToMap(c: CallLog): Map[String,Object] = {
     val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
     Map[String,Object](
     "acct" -> c.account,
@@ -70,7 +70,7 @@ object Marchex {
 
   //END PUBLIC API
 
-  private def makeCall[A <: MarchexConfig](methodcall: String, params: List[Object]): BravoM[A, Array[Object]] = ((c: A) => {
+  private def makeCall(methodcall: String, params: List[Object]): BravoM[MarchexConfig, Array[Object]] = ((c: MarchexConfig) => {
     val config = new XmlRpcClientConfigImpl()
     config.setServerURL(new URL(c.marchexurl))
     config.setBasicUserName(c.marchexuser)

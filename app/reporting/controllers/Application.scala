@@ -10,7 +10,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time._
 import bravo.api.dart._ 
 import org.joda.time.format.DateTimeFormat
-import bravo.core.Util._
+import bravo.util.Util._
 import play.api.libs.json._
 
 object Application extends Controller {

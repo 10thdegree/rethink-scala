@@ -1,4 +1,7 @@
-package bravo.apitest.dart 
+package bravo.api.dart 
+
+import bravo.util.DateUtil._
+
 
 trait DartInternalAPI {
   import com.google.api.services.dfareporting.{Dfareporting, DfareportingScopes} 
@@ -7,7 +10,7 @@ trait DartInternalAPI {
   import scala.concurrent.{Future,Promise}
   import org.joda.time.format.DateTimeFormat
   import org.joda.time._
-  import bravo.apitest.dart.Data._
+  import bravo.api.dart.Data._
 
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 
@@ -32,15 +35,13 @@ object Data {
   import Scalaz._
   import bravo.util.DateUtil._
 
-  case class DartConfig(
+   case class DartConfig(
     api: DartInternalAPI,
     filePath: String,
     accountId: String,
     userAccount: String,
     clientId: Int,
-    reportCache: Map[Long, List[ReportDay]])
-   
-  
+    reportCache: Map[Long, List[ReportDay]] = Map[Long, List[ReportDay]]())
   
 
   sealed trait DartReportData {

@@ -17,7 +17,7 @@ import org.apache.xmlrpc.server.XmlRpcServerConfigImpl
 import org.apache.xmlrpc.webserver.WebServer
 import org.apache.xmlrpc.server.PropertyHandlerMapping
 import scala.collection.JavaConversions._
-import bravo.core.Util._
+import bravo.util.Util._
 import scalaz._
 import Scalaz._
 
@@ -118,7 +118,7 @@ object MarchexAPITest extends Properties("Bravo API tests") {
       callLogs = cl
     })
     //val credentials = MarchexCredentials("http://localhost:"+port.toString +"/", "asdf", "asdf")
-    val config = DartAPITest.TestConfig()
+    val config = bravo.api.marchex.MarchexConfig("", "", "")
     
     val dt = DateTime.now()
     val result = Marchex.getCallLogs("asdf", dt.minusWeeks(1), dt)

@@ -8,15 +8,16 @@ import reporting.models.{Fees, ds}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global 
 import org.joda.time._
-import bravo.api.dart._ 
 import org.joda.time.format.DateTimeFormat
-import bravo.core.Util._
 import play.api.libs.json._
 import play.api.Play.current
 import scalaz.{-\/, \/, \/-}
 import akka.pattern.pipe
 import java.util.concurrent.atomic.AtomicReference
+//import bravo.api.dart.Data._
 import bravo.api.dart.Data._
+import bravo.api.dart._
+import bravo.util.Util._
 import bravo.util.DateUtil._
 
 object TuiReportController extends Controller {
@@ -82,7 +83,7 @@ object TuiReportController extends Controller {
     Logger.error(" reportAsync startDate & endDate = " + startDate + " | " + endDate)
     Logger.error( cache.get.values.map(_.size) + " is the cache size") 
     
-    val config = LiveTest.prodConfig.copy(m = cache.get)
+    val config = LiveTest.prodConfig.copy(reportCache = cache.get)
 
     val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
     val start = frmt.parseDateTime(startDate)
@@ -139,7 +140,7 @@ object TuiReportController extends Controller {
       .run.run(config)
       .map({
         case (cfg, res) =>
-          cache.set(cfg.m)
+          cache.set(cfg.reportCache)
           res
       }) //feed in the cache again
       
