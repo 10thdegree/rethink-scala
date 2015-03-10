@@ -80,20 +80,16 @@ object TuiReportController extends Controller {
   }
 
   def reportAsync(viewId: String, startDate: String, endDate: String): Future[\/[String, JsValue]] = {
-    Logger.error(" reportAsync startDate & endDate = " + startDate + " | " + endDate)
     Logger.error( cache.get.values.map(_.size) + " is the cache size") 
     
     val config = LiveTest.prodConfig.copy(reportCache = cache.get)
 
-    val frmt = DateTimeFormat.forPattern("yyyy-mm-dd")
+    val frmt = DateTimeFormat.forPattern("yyyy-MM-dd")
     val start = frmt.parseDateTime(startDate)
     val end = frmt.parseDateTime(endDate)
-
-    //val tui = reporting.util.TUIReportHelper
     val ro = reporting.util.TUIReportHelper.TUISearchPerformanceRO()
     implicit val servingFeesLookup = new Fees.FeesLookup(ro.servingFees)
     implicit val agencyFeesLookup = new Fees.FeesLookup(ro.agencyFees)
-    Logger.debug("Compiling report fields...")
     val gen = new SimpleReportGenerator(ro.report, ro.fields)
     Logger.debug("Building DS row factory...")
     val dsf = new ds.DataSource.DataSourceRowFactory(ro.ds) //factorys?
@@ -132,7 +128,6 @@ object TuiReportController extends Controller {
 
     import reporting.util.json.GeneratedReportWrites._
     import play.api.libs.json._
-    Logger.error("about to fetch the eport from dart, " + start + " end = " + end)
     val report = Dart.getReport(ro.ds.queryId.toInt, start, end)
     val parsedReport = report
       .map(dr => convertResult(ungroupDates(dr.data))) //we can keep the grouping here and remove it from the other stuff

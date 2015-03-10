@@ -78,10 +78,10 @@ This is rather involved. Some ideas for how to achieve this are below.
 ### Via a "metric type" selector
 
 We could introduce a "metric type selector" that lets you specify a column such as media type. This would then internally take those rows and nest them. Eg. we could create formulae for fields that look like:
-	
-	impressions.forType("Standard")
-	impressions.forType("InStream Default Ad")
-	impressions // combined value
+    
+    impressions.forType("Standard")
+    impressions.forType("InStream Default Ad")
+    impressions // combined value
 
 Since these are in essence still simple sums, they could still be used for breaking down distributable fields, we just need to keep a nested value around so we know the sums for each type separately.
 
@@ -89,12 +89,12 @@ Since these are in essence still simple sums, they could still be used for break
 
 We could introduce named keys, so that each partial key has a label:
 
-	(Publisher, Landing Page, Creative Size, Creative Type)
+    (Publisher, Landing Page, Creative Size, Creative Type)
 
 Then we could maybe use these named keys to get impressions for a sub-path:
 
-    impressions.where("Creative Type", "Standard")
-    impressions.where("Creative Type", "InStream Default Ad")
+    impressions.whereKey("Creative Type").is("Standard")
+    impressions.whereKey("Creative Type").is("InStream Default Ad")
     impressions // or maybe impressions.all()
 
 Roll-up of metrics so they can be used in breaking down distributable fields now requires knowing the key-level used for flattening the final report in advance, otherwise we could not pre-sum these for use there.
@@ -105,7 +105,7 @@ We could do something stupid like:
 
     if(AdType == "InStreamDefaultAd").then(prependAll("video_")).else(nothing)
 
-This results in a non-binded field defintiion though; we'd need to extend EPRTs to allow this...
+This results in a non-binded field definition though; we'd need to extend EPRTs to allow this...
 
 ### Via early phase row transformations for each field
 
