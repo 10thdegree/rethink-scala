@@ -19,10 +19,9 @@ object Dart {
   import org.joda.time._
   import bravo.util._
   import bravo.util.DateUtil._
+ 
     
   implicit def dartMonad: Monad[({type l[a] = BravoM[DartConfig,a]})#l] = EitherT.eitherTMonad[({ type l[a] = SFuture[DartConfig,a]})#l, JazelError]
-  
-  type DSFuture[A] = SFuture[DartConfig,A]
 
   def getReport(reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, DownloadedReport] = ((c: DartConfig) => {
     val currentReportDays  = c.reportCache.get(reportId).getOrElse(List[ReportDay]())
@@ -36,7 +35,7 @@ object Dart {
           report    <- getReportUncached(reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
           merged    = c.reportCache.get(reportId).fold(report.data)(old => old |+| report.data) 
           newstate  = c.copy(reportCache = c.reportCache + (reportId -> merged)) 
-          //_         <- EitherT({ put(newstate) //need liftM or a way to go to the right type
+          _         <- IndexedStateT.stateTMonadState[DartConfig, Future].put(newstate).liftM[BravoHoist]  //need liftM or a way to go to the right type
         } yield {
            DownloadedReport(reportId, startDate, endDate, report.data) 
         }

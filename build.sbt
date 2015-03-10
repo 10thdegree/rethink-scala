@@ -9,7 +9,7 @@ common settings for all projects
 
 lazy val coredeps = Seq(
   //scalaz
-  "org.scalaz" % "scalaz-core_2.11" % "7.1.0",
+  "org.scalaz" % "scalaz-core_2.11" % "7.1.1",
   "org.scalaz" %% "scalaz-scalacheck-binding" % "7.1.0",
   "org.typelevel" %% "scalaz-specs2" % "0.3.0" % "test",
   "joda-time" % "joda-time" % "2.5",

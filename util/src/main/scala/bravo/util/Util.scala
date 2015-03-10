@@ -12,6 +12,8 @@ object Util {
 
   type BravoM[A,B] = EitherT[({ type l[a] = SFuture[A,a]})#l, JazelError, B]
 
+  type BravoHoist[A[_],B] = EitherT[A, JazelError, B] //useful for lifting an SFuture to a BravoM with liftM[BravoHoist] 
+
   case class JazelError(ex: Option[Throwable], msg: String) 
     
   def ftry[A,B](b: => B): BravoM[A,B]= fctry((c:A) => b)
