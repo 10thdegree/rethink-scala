@@ -46,6 +46,14 @@ object Dart {
    }).toBravoM
     .flatMap(x => x)
 
+  def getActivities(startDate: DateTime, endDate: DateTime): BravoM[DartConfig, List[String]] = ((c: DartConfig) => 
+    for {
+      dfa <- c.api.getDartAuth
+      activities <- c.api.getActivities(dfa, startDate, endDate)
+    } yield
+      activities
+    ).toBravoM.flatMap(x => x)
+
   def getReportUncached(reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, DownloadedReport] = ((c: DartConfig) => 
         for {
           dfa <- c.api.getDartAuth
@@ -98,7 +106,22 @@ object LiveDart extends DartInternalAPI {
       file.getId()
     }
   
-   /* 
+  def getActivities(reportApi: Dfareporting, startDate: DateTime, endDate: DateTime) = getDimensions(reportApi, "dfa:activity", startDate, endDate)
+
+  def getDimensions(reportApi: Dfareporting, name: String, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, List[String]] = {
+    val req = new DimensionValueRequest()
+                .setStartDate(toGoogleDate(startDate))
+                .setEndDate(toGoogleDate(endDate))
+                .setDimensionName(name)
+    for {
+     res <- fctry((c: DartConfig) => reportApi.dimensionValues().query(c.clientId, req).execute())
+      items = (res.getItems(): java.util.List[DimensionValue])
+      //_     = items.toList.foreach(i => println(i.toString()))
+    } yield 
+      items.toList.map(_.getValue())  
+  }
+
+/*
   def getActivities[A <: DartConfig](reportApi: Dfareporting, rid: Long): BravoM[DartConfig, List[String]] =
     for {
       report <- fctry((c: A) => reportApi.reports().get(c.clientId, rid).execute())
@@ -112,6 +135,13 @@ object LiveDart extends DartInternalAPI {
       names
     }
     */
+  def viewUserProfiles(reportApi: Dfareporting): BravoM[DartConfig, List[DartProfile]] = 
+    for {
+      profileResp <- fctry((c:DartConfig) => reportApi.userProfiles().list().execute())
+      profiles    = (profileResp.getItems(): java.util.List[UserProfile])
+    } yield
+      profiles.toList.map(p => DartProfile(p.getAccountName(), p.getUserName(), p.getAccountId(), p.getProfileId()))
+      
   
   override def viewDartReports(reportApi: Dfareporting, userid: Int): BravoM[DartConfig, List[AvailableReport]] = 
     for {
