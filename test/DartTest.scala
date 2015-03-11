@@ -93,6 +93,8 @@ object DartAPITest extends Properties("Dart API test") {
   def internal(s: String):DartInternalAPI = new DartInternalAPI {
    
     def getDartAuth: BravoM[DartConfig, Dfareporting] = Dart.dartMonad.point(null)
+    
+    def getActivities(r: Dfareporting, s: DateTime, e: DateTime): BravoM[DartConfig, List[String]] = ???
 
     def viewDartReports(r: Dfareporting, userid: Int): BravoM[DartConfig, List[AvailableReport]] = ???
 
