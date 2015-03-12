@@ -25,7 +25,9 @@
                     <td ng-class="{'hidden': visibleUsers != 0 }">No Permissions Found.</td>
                 </tr>
             </table>
-            <pagination ng-class="{ 'hidden': visiblePermissions <= 10 }" items-per-page="numPerPage" boundary-links="true" total-items="visiblePermissions" page="currentPage" class="pagination-sm" previous-text="&lsaquo;" next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
+            <pagination ng-class="{ 'hidden': visiblePermissions <= numPerPage }" items-per-page="numPerPage" boundary-links="true"
+                        total-items="visiblePermissions" ng-model="currentPage" class="pagination-sm" previous-text="&lsaquo;"
+                        next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;"/>
         </div>
     </tab>
     <tab heading="Custom">

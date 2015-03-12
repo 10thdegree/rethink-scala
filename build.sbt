@@ -70,11 +70,11 @@ def clientProject(project: Project, name: String): Project = {
     ).enablePlugins(ScalaJSPlugin, ScalaJSPlay)
 }
 
-lazy val loginClient = clientProject(project in file(s"client/login"),"login")
+lazy val loginClient = clientProject(project in file("client/login"),"login")
 
-lazy val navClient = clientProject(project in file(s"client/nav"),"nav")
+lazy val navClient = clientProject(project in file("client/nav"),"nav")
 
-lazy val userManageClient = clientProject(project in file(s"client/userManage"),"userManage")
+lazy val userManageClient = clientProject(project in file("client/userManage"),"userManage")
 
 onLoad in Global := (Command.process("project bravo", _: State)) compose (onLoad in Global).value
 
@@ -92,7 +92,7 @@ lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
 lazy val angularDeps = Seq(// Angular-js
   "org.webjars" % "angularjs" % "1.3.10",
   "org.webjars" % "angular-ui" % "0.4.0-3"  exclude("org.webjars", "angularjs"),
-  "org.webjars" % "angular-ui-bootstrap" % "0.12.0"  exclude("org.webjars", "angularjs"),
+  "org.webjars" % "angular-ui-bootstrap" % "0.12.1"  exclude("org.webjars", "angularjs"),
   "org.webjars" % "angular-ui-router" % "0.2.13" exclude("org.webjars", "angularjs"),
   "org.webjars" % "smart-table" % "1.4.8"
 )
@@ -112,7 +112,7 @@ lazy val otherDeps = Seq(
   //
   //
   // Bootstrap
-  "org.webjars" % "bootstrap" % "3.1.1-2",
+  "org.webjars" % "bootstrap" % "3.3.2",
   "org.webjars" % "bootstrap-datepicker" % "1.3.1",
   "org.webjars" % "momentjs" % "2.9.0",
   //

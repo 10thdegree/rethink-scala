@@ -15,7 +15,7 @@ class NavCtrl(navService: NavService, $window: js.Dynamic) extends Controller {
       accounts = resp.accounts.sortWith(_.label < _.label)
       accounts.length match {
         case 0 => js.Dynamic.global.console.error("No available accounts")
-        case 1 => accountSelected(accounts.pop())
+        case 1 => accountSelected(accounts.apply(0))
         case _ => {
           navService.accountSelected() onComplete {
             case Success(sel) =>

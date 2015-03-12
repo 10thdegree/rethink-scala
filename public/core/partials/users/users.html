@@ -3,7 +3,7 @@
         <div>
             <div class="row panel-body">
                 <div class="col-lg-4">
-                    <input class="form-control" ng-model="form.searchUser" placeholder="Search..."/>
+                    <input class="form-control" ng-model="watch.searchUser" placeholder="Search..."/>
                 </div>
                 <!--<span class="badge">{{visibleUsers}}</span>-->
                 <button style="float:right;" class="btn btn-default" ng-click="inviteUser()">Invite User</button>
@@ -34,7 +34,9 @@
                     <td ng-class="{'hidden': visibleUsers != 0 }">No Users Found.</td>
                 </tr>
             </table>
-            <pagination ng-class="{ 'hidden': visibleUsers <= 10 }" items-per-page="numPerPage" boundary-links="true" total-items="visibleUsers" page="currentPage" class="pagination-sm" previous-text="&lsaquo;" next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
+            <pagination ng-class="{ 'hidden': visibleUsers <= numPerPage }" items-per-page="numPerPage" boundary-links="true"
+                        total-items="visibleUsers" ng-model="currentPage" class="pagination-sm" previous-text="&lsaquo;"
+                        next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
         </div>
     </tab>
     <tab>
@@ -45,7 +47,7 @@
             <div class="row panel-body">
                 <div class="col-lg-6">
                     <div class="input-group">
-                        <input ng-enter="invite()" class="form-control" type="text" ng-model="form.email" placeholder="Enter email to invite here."/>
+                        <input ng-enter="invite()" class="form-control" type="text" ng-model="watch.email" placeholder="Enter email to invite here."/>
                         <span class="input-group-btn">
                             <button class="btn btn-default" type="button" ng-click="invite()">Invite</button>
                         </span>

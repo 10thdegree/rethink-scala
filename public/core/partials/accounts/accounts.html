@@ -3,7 +3,7 @@
         <div>
             <div class="row panel-body">
                 <div class="col-lg-4">
-                    <input class="form-control" ng-model="form.searchAccount" placeholder="Search..."/>
+                    <input class="form-control" ng-model="watch.searchAccount" placeholder="Search..."/>
                 </div>
                 <!--<span class="badge">{{visibleAccounts}}</span>-->
                 <button style="float:right;" class="btn btn-default" ng-click="addAccount()">Add Account</button>
@@ -34,7 +34,10 @@
                    <td ng-class="{'hidden': visibleAccounts != 0 }">No Accounts Found.</td>
                 </tr>
             </table>
-            <pagination ng-class="{ 'hidden': visibleAccounts <= 10 }" items-per-page="numPerPage" boundary-links="true" total-items="visibleAccounts" page="currentPage" class="pagination-sm" previous-text="&lsaquo;" next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
+            <pagination ng-class="{ 'hidden': visibleAccounts <= numPerPage }" ng-model="watch.currentPage"
+                        items-per-page="numPerPage" boundary-links="true"
+                        total-items="visibleAccounts" class="pagination-sm" previous-text="&lsaquo;"
+                        next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
         </div>
     </tab>
 </tabset>
