@@ -46,10 +46,10 @@ object Dart {
    }).toBravoM
     .flatMap(x => x)
 
-  def getActivities(startDate: DateTime, endDate: DateTime): BravoM[DartConfig, List[String]] = ((c: DartConfig) => 
+  def getActivities(startDate: DateTime, endDate: DateTime, advertiserId: Option[Long]): BravoM[DartConfig, List[String]] = ((c: DartConfig) => 
     for {
       dfa <- c.api.getDartAuth
-      activities <- c.api.getActivities(dfa, startDate, endDate)
+      activities <- c.api.getDimensions(dfa, "dfa:activities", startDate, endDate, advertiserId)
     } yield
       activities
     ).toBravoM.flatMap(x => x)
@@ -106,19 +106,82 @@ object LiveDart extends DartInternalAPI {
       file.getId()
     }
   
-  def getActivities(reportApi: Dfareporting, startDate: DateTime, endDate: DateTime) = getDimensions(reportApi, "dfa:activity", startDate, endDate)
-
-  def getDimensions(reportApi: Dfareporting, name: String, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, List[String]] = {
-    val req = new DimensionValueRequest()
+  def getDimensions(reportApi: Dfareporting, name: String, startDate: DateTime, endDate: DateTime, advertId: Option[Long]): BravoM[DartConfig, List[String]] = {
+    val dreq = new DimensionValueRequest()
+    /*
+    val req =  advertId.cata(id => {
+                val filter = new DimensionFilter().set("dfa:advertiserId", advertId)
+                dreq.setFilters(List(filter))
+                dreq
+              }, dreq)
                 .setStartDate(toGoogleDate(startDate))
                 .setEndDate(toGoogleDate(endDate))
                 .setDimensionName(name)
+    */
+    val req = new DimensionValueRequest()
+      .setStartDate(toGoogleDate(startDate))
+      .setEndDate(toGoogleDate(endDate))
+      .setDimensionName("dfa:activity")
+      //.setFilters(List( new DimensionFilter().set("dfa:advertiserId", 3843776)) )
+
     for {
      res <- fctry((c: DartConfig) => reportApi.dimensionValues().query(c.clientId, req).execute())
       items = (res.getItems(): java.util.List[DimensionValue])
-      //_     = items.toList.foreach(i => println(i.toString()))
+      _     = items.toList.foreach(i => println(i.toString()))
     } yield 
       items.toList.map(_.getValue())  
+  }
+/*
+teRange dateRange = new DateRange();
+    dateRange.setRelativeDateRange("YESTERDAY");
+
+    // Create a dimension to report on.
+    SortedDimension dimension = new SortedDimension();
+    dimension.setName("dfa:campaign");
+
+    // Create the criteria for the report.
+    Criteria criteria = new Criteria();
+    criteria.setDateRange(dateRange);
+    criteria.setDimensions(ImmutableList.of(dimension));
+    criteria.setMetricNames(ImmutableList.of("dfa:clicks"));
+
+    // Create the report.
+    Report report = new Report();
+    report.setCriteria(criteria);
+    report.setName(reportName);
+    report.setType("STANDARD");
+
+    // Insert the report.
+    Report result = reporting.reports().insert(profileId, report).execute();
+*/
+
+  import com.google.api.services.dfareporting.model._
+  import com.google.api.services.dfareporting.model.Report._
+
+  def createReport(reportApi: Dfareporting, advertiserId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Long] = {
+    val dr = new DateRange()
+    dr.setRelativeDateRange("YESTERDAY")
+    val dimensions = new SortedDimension()
+    dimensions.setName("dfa:campaign")
+
+    val dimensionValue = new DimensionValue().set("dfa:advertiserId", advertiserId.toString) 
+    println("dimensionValue = " + dimensionValue)
+    val metricsList = List("dfa:paidSearchClicks", "dfa:clicks", "dfa:paidSearchImpressions", "dfa:clickRate")
+    val criteria = new Criteria()
+      .setDateRange(dr)
+      .setDimensions(List(dimensions))
+      .setMetricNames(metricsList)
+      //.setDimensionFilters( List(dimensionValue) ) //THIS BREAKS
+ 
+    val report = new Report()
+      .setCriteria(criteria)
+      .setName("test_API_latest")
+      .setType("STANDARD")
+
+    
+    for {
+      result <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, report).execute())
+    } yield result.getId()
   }
 
 /*
