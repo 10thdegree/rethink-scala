@@ -95,6 +95,8 @@ object LiveDart extends DartInternalAPI {
   import bravo.api.dart._
   import java.util.ArrayList
   import bravo.util.Util._
+  import com.google.api.services.dfareporting.model._
+  import com.google.api.services.dfareporting.model.Report._
 
   def getDartAuth: BravoM[DartConfig, Dfareporting] = DartAuth.getCredentialService
 
@@ -108,70 +110,35 @@ object LiveDart extends DartInternalAPI {
   
   def getDimensions(reportApi: Dfareporting, name: String, startDate: DateTime, endDate: DateTime, advertId: Option[Long]): BravoM[DartConfig, List[String]] = {
     val dreq = new DimensionValueRequest()
-    /*
+    
     val req =  advertId.cata(id => {
-                val filter = new DimensionFilter().set("dfa:advertiserId", advertId)
-                dreq.setFilters(List(filter))
-                dreq
+                dreq.setFilters(List(new DimensionFilter().setDimensionName("dfa:advertiser").setValue(id.toString)))
               }, dreq)
                 .setStartDate(toGoogleDate(startDate))
                 .setEndDate(toGoogleDate(endDate))
                 .setDimensionName(name)
-    */
-    val req = new DimensionValueRequest()
-      .setStartDate(toGoogleDate(startDate))
-      .setEndDate(toGoogleDate(endDate))
-      .setDimensionName("dfa:activity")
-      //.setFilters(List( new DimensionFilter().set("dfa:advertiserId", 3843776)) )
-
     for {
-     res <- fctry((c: DartConfig) => reportApi.dimensionValues().query(c.clientId, req).execute())
+      res <- fctry((c: DartConfig) => reportApi.dimensionValues().query(c.clientId, req).execute())
       items = (res.getItems(): java.util.List[DimensionValue])
       _     = items.toList.foreach(i => println(i.toString()))
     } yield 
       items.toList.map(_.getValue())  
   }
-/*
-teRange dateRange = new DateRange();
-    dateRange.setRelativeDateRange("YESTERDAY");
 
-    // Create a dimension to report on.
-    SortedDimension dimension = new SortedDimension();
-    dimension.setName("dfa:campaign");
-
-    // Create the criteria for the report.
-    Criteria criteria = new Criteria();
-    criteria.setDateRange(dateRange);
-    criteria.setDimensions(ImmutableList.of(dimension));
-    criteria.setMetricNames(ImmutableList.of("dfa:clicks"));
-
-    // Create the report.
-    Report report = new Report();
-    report.setCriteria(criteria);
-    report.setName(reportName);
-    report.setType("STANDARD");
-
-    // Insert the report.
-    Report result = reporting.reports().insert(profileId, report).execute();
-*/
-
-  import com.google.api.services.dfareporting.model._
-  import com.google.api.services.dfareporting.model.Report._
-
-  def createReport(reportApi: Dfareporting, advertiserId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Long] = {
+  def createReport(reportApi: Dfareporting, advertiserId: Long, activities: List[String]): BravoM[DartConfig, Long] = {
     val dr = new DateRange()
     dr.setRelativeDateRange("YESTERDAY")
     val dimensions = new SortedDimension()
     dimensions.setName("dfa:campaign")
 
-    val dimensionValue = new DimensionValue().set("dfa:advertiserId", advertiserId.toString) 
+    val dimensionValue = new DimensionValue().setDimensionName("dfa:advertiser").setId(advertiserId.toString) 
     println("dimensionValue = " + dimensionValue)
     val metricsList = List("dfa:paidSearchClicks", "dfa:clicks", "dfa:paidSearchImpressions", "dfa:clickRate")
     val criteria = new Criteria()
       .setDateRange(dr)
       .setDimensions(List(dimensions))
       .setMetricNames(metricsList)
-      //.setDimensionFilters( List(dimensionValue) ) //THIS BREAKS
+      .setDimensionFilters( List(dimensionValue) ) //THIS BREAKS
  
     val report = new Report()
       .setCriteria(criteria)
@@ -184,20 +151,28 @@ teRange dateRange = new DateRange();
     } yield result.getId()
   }
 
-/*
-  def getActivities[A <: DartConfig](reportApi: Dfareporting, rid: Long): BravoM[DartConfig, List[String]] =
+  
+  def getActivityFields(reportApi: Dfareporting, advertId: Long): BravoM[DartConfig, List[String]] = {
+    val fields = "nextPageToken,floodlightActivities(id,name)"
     for {
-      report <- fctry((c: A) => reportApi.reports().get(c.clientId, rid).execute())
-      activities = report.getCriteria().getActivities()
-      names <-  if (activities.containsKey("metricNames")) {
-                  ftry[DartConfig,List[String]](activities.get("metricNames").asInstanceOf[ArrayList[Object]].toList.map(_.toString()))
-                  //(sFutureMonad.point(activities.get("metricNames").asInstanceOf[ArrayList[Object]].toList.map(_.toString())))
-                } else 
-                  JazelError(None, "Cannot find metriNames in activities for report " + rid).left[List[String]].toBravoM
-    } yield {
-      names
-    }
-    */
+      fields <- fctry((c: DartConfig) => reportApi.floodlightActivities().list(c.clientId).setAdvertiserId(advertId)
+        .setFields(fields).execute())
+      _      = println("fields = " + fields)
+    } yield fields.toList.map(_._2.toString)
+  }
+ 
+
+/* Path to Conversion report with required dimensions.
+Report pathToConversionReport = new Report()
+  .setType("PATH_TO_CONVERSION")
+  .setPathToConversionCriteria(new Report.PathToConversionCriteria()
+  .setConversionDimensions(ImmutableList.of(new SortedDimension().setName("dfa:conversionId")))
+  .setPerInteractionDimensions(ImmutableList.of(
+    new SortedDimension().setName("dfa:interactionNumber"),
+    new SortedDimension().setName("dfa:interactionTime"))));
+CompatibleFields pathToConversionFields = reporting.reports().compatibleFields()
+*/
+
   def viewUserProfiles(reportApi: Dfareporting): BravoM[DartConfig, List[DartProfile]] = 
     for {
       profileResp <- fctry((c:DartConfig) => reportApi.userProfiles().list().execute())
