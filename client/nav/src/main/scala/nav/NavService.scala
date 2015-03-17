@@ -8,7 +8,6 @@ import shared.LastAccount
 
 class NavService($http: HttpService) extends Service {
 
-  implicit val http = $http
   implicit val lastAccountPickle = Unpickle[LastAccount]
 
   def selectAccount(accountId: String) : HttpPromise[Unit] = $http.post(s"/lastselectedaccount/$accountId")
