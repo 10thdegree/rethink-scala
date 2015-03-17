@@ -9,7 +9,7 @@ import sbt.Keys._
 common settings for all projects
 
 ****/
-lazy val clients = Seq(loginClient, navClient, userManageClient)
+lazy val clients = Seq(loginClient, navClient, userManageClient, reportGridClient)
 
 lazy val coredeps = Seq(
   //scalaz
@@ -75,6 +75,8 @@ lazy val loginClient = clientProject(project in file(s"client/login"),"login")
 lazy val navClient = clientProject(project in file(s"client/nav"),"nav")
 
 lazy val userManageClient = clientProject(project in file(s"client/userManage"),"userManage")
+
+lazy val reportGridClient = clientProject(project in file(s"client/reportGrid"),"reportGrid")
 
 onLoad in Global := (Command.process("project bravo", _: State)) compose (onLoad in Global).value
 
