@@ -2,19 +2,19 @@ package nav
 
 import biz.enef.angulate.Service
 import biz.enef.angulate.core.{HttpPromise, HttpService}
+import nav.PicklerHttpService._
 import prickle.Unpickle
 import scala.scalajs.js
-import shared.LastAccount
+import shared._
 
-class NavService($http: HttpService) extends Service {
+class NavService($http: PicklerHttpService) extends Service {
 
   implicit val lastAccountPickle = Unpickle[LastAccount]
+  implicit val accountsResponsePickle = Unpickle[AccountsResponse]
 
   def selectAccount(accountId: String) : HttpPromise[Unit] = $http.post(s"/lastselectedaccount/$accountId")
 
-  def accountSelected() : HttpPromise[js.Object] = $http.get("/lastselectedaccount")
+  def availableAccounts() : HttpPromise[AccountsResponse] = $http.getObject("/availableaccount")
 
-  def availableAccounts() : HttpPromise[AccountsResponse] = $http.get("/availableaccount")
-
-  def accountSelected2() : HttpPromise[LastAccount] = ConvertJsObject.convert[LastAccount]($http.get("/lastselectedaccount"))
+  def accountSelected() : HttpPromise[LastAccount] = $http.getObject("/lastselectedaccount")
 }
