@@ -23,7 +23,7 @@ lazy val coredeps = Seq(
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "org.joda" % "joda-convert" % "1.5",
   "com.vmunier" %% "play-scalajs-scripts" % "0.1.0",
-  "com.github.benhutchison" %% "prickle" % "1.1.4",
+  "com.github.benhutchison" %% "prickle" % "1.1.4"
 )
 
 lazy val commonSettings = Seq(
@@ -72,7 +72,7 @@ lazy val commonClientSettings = Seq(
   ),
   libraryDependencies ++= Seq(
     "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT",
-    "com.github.benhutchison" %%% "prickle" % "1.1.4",
+    "com.github.benhutchison" %%% "prickle" % "1.1.4"
   )
 )
 
