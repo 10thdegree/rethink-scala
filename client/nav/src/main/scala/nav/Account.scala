@@ -19,8 +19,8 @@ object Account {
   def apply(id: String, label: String) : Account =
     js.Dynamic.literal(id=id, label=label).asInstanceOf[Account]
 }
-
-trait LastAccount extends js.Object {
-  var status: String = js.native
-  var lastSelectedAccount: String = js.native
-}
+//
+//trait LastAccount extends js.Object {
+//  var status: String = js.native
+//  var lastSelectedAccount: String = js.native
+//}

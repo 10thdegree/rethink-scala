@@ -4,6 +4,7 @@ import biz.enef.angulate.Controller
 
 import scala.scalajs.js
 import scala.util.{Failure, Success}
+import shared.LastAccount
 
 class NavCtrl(navService: NavService, $window: js.Dynamic) extends Controller {
   var accounts = js.Array[Account]()
@@ -17,9 +18,10 @@ class NavCtrl(navService: NavService, $window: js.Dynamic) extends Controller {
         case 0 => js.Dynamic.global.console.error("No available accounts")
         case 1 => accountSelected(accounts.apply(0))
         case _ => {
-          navService.accountSelected() onComplete {
+          navService.accountSelected2() onComplete {
             case Success(sel) =>
-              accounts.find(_.id == sel.lastSelectedAccount) match {
+              val lastAccount = sel
+              accounts.find(_.id == lastAccount.lastSelectedAccount) match {
                 case Some(x) => selectedAccount = x
                 case _ => selectedAccount = emptyAccount
               }

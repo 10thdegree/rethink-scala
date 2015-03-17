@@ -2,6 +2,7 @@ import org.scalajs.sbtplugin.ScalaJSPlugin
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import sbt.Project.projectToRef
 import sbt.Keys._
+import sbt._
 
 
 /**** 
@@ -21,7 +22,8 @@ lazy val coredeps = Seq(
   "org.specs2" % "specs2_2.11" % "2.4",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "org.joda" % "joda-convert" % "1.5",
-  "com.vmunier" %% "play-scalajs-scripts" % "0.1.0"
+  "com.vmunier" %% "play-scalajs-scripts" % "0.1.0",
+  "com.github.benhutchison" %% "prickle" % "1.1.4",
 )
 
 lazy val commonSettings = Seq(
@@ -37,15 +39,27 @@ lazy val commonSettings = Seq(
 
 lazy val util = project.settings(commonSettings: _*)
 
+val sharedSrcDir = "shared"
+
+lazy val shared = (crossProject.crossType(CrossType.Pure) in file(sharedSrcDir)).
+  settings(scalaVersion := "2.11.4").
+  jsConfigure(_ enablePlugins ScalaJSPlay)
+
+lazy val sharedJVM = shared.jvm
+lazy val sharedJS = shared.js
+
 lazy val bravo = (project in file("."))
   .settings(commonSettings: _*)
   .settings(
     scalaJSProjects := clients,
-    pipelineStages := Seq(scalaJSProd)
+    pipelineStages := Seq(scalaJSProd),
+    // copy resources from the "shared" project
+    unmanagedResourceDirectories in Compile += file(".") / sharedSrcDir / "src" / "main" / "scala",
+    unmanagedResourceDirectories in Test += file(".") / sharedSrcDir / "src" / "test" / "scala"
   )
   .enablePlugins(PlayScala)
   .aggregate(clients.map(projectToRef): _*)
-  .dependsOn(util)
+  .dependsOn(util, sharedJVM)
 
 lazy val commonClientSettings = Seq(
   scalaVersion := "2.11.4",
@@ -57,7 +71,8 @@ lazy val commonClientSettings = Seq(
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
   ),
   libraryDependencies ++= Seq(
-    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT"
+    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT",
+    "com.github.benhutchison" %%% "prickle" % "1.1.4",
   )
 )
 
@@ -66,13 +81,15 @@ def clientProject(project: Project, name: String): Project = {
     .settings(commonClientSettings: _*)
     .settings(
       artifactPath in (Compile, fastOptJS) := file(s"public/core/js/target/$name.js"),
-      artifactPath in (Compile, packageScalaJSLauncher) := file(s"public/core/js/target/$name-launcher.js")
+      artifactPath in (Compile, packageScalaJSLauncher) := file(s"public/core/js/target/$name-launcher.js"),
+      unmanagedResourceDirectories in Compile += file(".") / sharedSrcDir / "src" / "main" / "scala",
+      unmanagedResourceDirectories in Test += file(".") / sharedSrcDir / "src" / "test" / "scala"
     ).enablePlugins(ScalaJSPlugin, ScalaJSPlay)
 }
 
 lazy val loginClient = clientProject(project in file("client/login"),"login")
 
-lazy val navClient = clientProject(project in file("client/nav"),"nav")
+lazy val navClient = clientProject(project in file("client/nav"),"nav").dependsOn(sharedJS)
 
 lazy val userManageClient = clientProject(project in file("client/userManage"),"userManage")
 
