@@ -1,4 +1,4 @@
-package shared
+package shared.models
 
 sealed trait Response {
   def status: String

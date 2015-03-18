@@ -16,7 +16,7 @@ import securesocial.core.services.{RoutesService, SaveMode}
 import securesocial.core.utils._
 
 import scala.concurrent.Future
-import shared.Authenticated
+import shared.models.Authenticated
 import prickle._
 
 class CustomLoginPage @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile]) extends BaseLoginPage[BasicProfile] {

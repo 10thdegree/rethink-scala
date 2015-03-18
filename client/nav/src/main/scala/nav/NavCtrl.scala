@@ -4,7 +4,7 @@ import biz.enef.angulate.Controller
 
 import scala.scalajs.js
 import scala.util.{Failure, Success}
-import shared._
+import shared.models._
 import js.JSConverters._
 
 class NavCtrl(navService: NavService, $window: js.Dynamic) extends Controller {

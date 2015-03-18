@@ -8,7 +8,7 @@ import core.models._
 import play.api.libs.{json => pjson}
 import play.api.mvc.{Action, BodyParsers}
 import securesocial.core.RuntimeEnvironment
-import shared.{LastAccount,AccountsResponse}
+import shared.models.{LastAccount,AccountsResponse}
 import prickle._
 
 class AccountController @Inject()(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
@@ -58,7 +58,7 @@ class AccountController @Inject()(override implicit val env: RuntimeEnvironment[
     } else {
       coreBroker.accountsTable.getAll(userPermissions: _*).run match {
         case Right(tx) => {
-          Ok(Pickle.intoString(AccountsResponse("Ok", tx.map((x: Account) => shared.Account(x.id.get.toString, x.label)))))
+          Ok(Pickle.intoString(AccountsResponse("Ok", tx.map((x: Account) => shared.models.Account(x.id.get.toString, x.label)))))
         }
         case Left(er) => BadRequest(pjson.Json.toJson(Map("error" -> er.getMessage)))
       }
