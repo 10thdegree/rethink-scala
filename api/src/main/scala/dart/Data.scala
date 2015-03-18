@@ -24,7 +24,7 @@ trait DartInternalAPI {
 
   def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DartConfig, String]
 
-  def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[String]]
+  def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[DimensionValue]]
 
   protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
     new com.google.api.client.util.DateTime(dt.toString(formatter)) 
