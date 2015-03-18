@@ -1,4 +1,4 @@
-package nav
+package client.core
 
 import biz.enef.angulate.core._
 import prickle.{Pickle, Pickler, UnpickledCurry, Unpickler}
@@ -6,7 +6,6 @@ import prickle.{Pickle, Pickler, UnpickledCurry, Unpickler}
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.{UndefOr, JSON}
-
 import scala.util.Try
 
 object ConvertJsObject {

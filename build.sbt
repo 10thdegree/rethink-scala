@@ -82,8 +82,14 @@ def clientProject(project: Project, name: String): Project = {
     .settings(
       artifactPath in (Compile, fastOptJS) := file(s"public/core/js/target/$name.js"),
       artifactPath in (Compile, packageScalaJSLauncher) := file(s"public/core/js/target/$name-launcher.js"),
-      unmanagedResourceDirectories in Compile += file(".") / sharedSrcDir / "src" / "main" / "scala",
-      unmanagedResourceDirectories in Test += file(".") / sharedSrcDir / "src" / "test" / "scala"
+      unmanagedSourceDirectories in Compile ++= Seq(
+				baseDirectory.value / ".." / ".." / sharedSrcDir / "src" / "main" / "scala",
+				baseDirectory.value / ".." / "core" / "src" / "main" / "scala"
+			),
+      unmanagedSourceDirectories in Test ++= Seq(
+				baseDirectory.value / ".." / ".." / sharedSrcDir / "src" / "test" / "scala",
+				baseDirectory.value / ".." / "core" / "src" / "test" / "scala"
+			)
     ).enablePlugins(ScalaJSPlugin, ScalaJSPlay)
 }
 

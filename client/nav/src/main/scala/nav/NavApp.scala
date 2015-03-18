@@ -1,4 +1,4 @@
-package nav
+package client.nav
 
 import biz.enef.angulate._
 import org.scalajs.dom
