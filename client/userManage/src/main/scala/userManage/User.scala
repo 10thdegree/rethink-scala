@@ -123,12 +123,10 @@ object UserIds {
 }
 
 trait UserWatch extends js.Object {
-  var searchUser: String = js.native
   var email: String = js.native
-  var currentPage: Int = js.native
 }
 
 object UserWatch {
   def apply(): UserWatch =
-    js.Dynamic.literal(searchUser = "", email = "", currentPage = 1).asInstanceOf[UserWatch]
+    js.Dynamic.literal(email = "").asInstanceOf[UserWatch]
 }

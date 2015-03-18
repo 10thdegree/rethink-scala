@@ -21,20 +21,6 @@ object Account {
     js.Dynamic.literal(id = id, label = label, permissions = permissions).asInstanceOf[Account]
 }
 
-
-trait AccountWatch extends js.Object {
-  var searchAccount: String = js.native
-  var currentPage: Int = js.native
-}
-
-object AccountWatch {
-  def apply(): AccountWatch =
-    js.Dynamic.literal(searchAccount = "", currentPage = 1).asInstanceOf[AccountWatch]
-
-  def apply(searchAccount: String, currentPage: Int): AccountWatch =
-    js.Dynamic.literal(searchAccount = searchAccount, currentPage = currentPage).asInstanceOf[AccountWatch]
-}
-
 trait AccountAdd extends js.Object {
   var label: String = js.native
   var permissions: js.Array[String] = js.native

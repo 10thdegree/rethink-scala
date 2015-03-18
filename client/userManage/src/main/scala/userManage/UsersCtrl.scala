@@ -5,16 +5,12 @@ import biz.enef.angulate.Scope
 import scala.scalajs.js
 import scala.util.{Failure, Success}
 
+import client.core.{CoreCtrl, SearchCtrl, SearchScope, ModalScope}
 
-trait UserScope extends Scope {
-  var filterUsers: js.Array[UserFull] = js.native
+trait UserScope  extends SearchScope[UserFull] {
+	var watchUser: UserWatch = js.native
   var invitedUsers: js.Array[UserInvite] = js.native
   var numInvitedUsers: Int = js.native
-  var watch: UserWatch = js.native
-  var numUsers: Int = js.native
-  var numPerPage: Int = js.native
-  var visibleUsers: Int = js.native
-  var paginate: js.Function = js.native
   var invite: js.Function = js.native
   var inviteUser: js.Function = js.native
   var deleteUser: js.Function = js.native
@@ -22,27 +18,20 @@ trait UserScope extends Scope {
   var permissionsUser: js.Function = js.native
 }
 
-class UsersCtrl(userService: UserService, $scope: UserScope, $modal: js.Dynamic, $filter: js.Dynamic) extends CoreCtrl {
-  var users = js.Array[UserFull]()
-  var searchUsers = js.Array[UserFull]()
-  $scope.filterUsers = js.Array[UserFull]()
-
+class UsersCtrl(userService: UserService, $scope: UserScope, $modal: js.Dynamic, $filter: js.Dynamic)
+extends SearchCtrl[UserFull]($scope: SearchScope[UserFull], $filter: js.Dynamic) {
   var usersLoaded = false
-
-  $scope.watch = UserWatch()
-  $scope.numUsers = 0
-  $scope.numPerPage = 10
-  $scope.visibleUsers = 10
-
+	$scope.watchUser = UserWatch()
+	
   def refresh(): Unit = {
     userService.all() onComplete {
       case Success(resp) =>
         usersLoaded = true
-        $scope.numUsers = resp.users.length
-        users = resp.users.sortWith(_.main.fullName < _.main.fullName)
-        searchUsers = $filter("filter")(users, $scope.watch.searchUser).asInstanceOf[js.Array[UserFull]]
-        $scope.visibleUsers = searchUsers.length
-        $scope.filterUsers = $filter("filter")(searchUsers, $scope.paginate).asInstanceOf[js.Array[UserFull]]
+        $scope.numListItems = resp.users.length
+        $scope.ogList = resp.users.sortWith(_.main.fullName < _.main.fullName)
+        $scope.searchList = $filter("filter")($scope.ogList, $scope.watch.searchTerm).asInstanceOf[js.Array[UserFull]]
+        $scope.visibleListItems = $scope.searchList.length
+        $scope.filterList = $filter("filter")($scope.searchList, $scope.paginate).asInstanceOf[js.Array[UserFull]]
       case Failure(ex) => handleError(ex)
     }
     userService.allInvited() onComplete {
@@ -55,17 +44,10 @@ class UsersCtrl(userService: UserService, $scope: UserScope, $modal: js.Dynamic,
 
   refresh()
 
-  $scope.paginate = (user: User) => {
-    val begin = ($scope.watch.currentPage - 1) * $scope.numPerPage
-    val end = begin + $scope.numPerPage
-    val index = searchUsers.indexOf(user)
-    begin <= index && index < end
-  }
-
   $scope.invite = () => {
-    userService.invite(Email($scope.watch.email)) onComplete {
+    userService.invite(Email($scope.watchUser.email)) onComplete {
       case Success(resp) =>
-        $scope.watch.email = ""
+        $scope.watchUser.email = ""
         refresh()
       case Failure(ex) => handleError(ex)
     }
@@ -119,18 +101,6 @@ class UsersCtrl(userService: UserService, $scope: UserScope, $modal: js.Dynamic,
       refresh()
     })
   }
-
-  $scope.$watch(() => $scope.watch.searchUser, (query: String) => {
-    searchUsers = $filter("filter")(users, $scope.watch.searchUser).asInstanceOf[js.Array[UserFull]]
-    if (!searchUsers.isEmpty) {
-      $scope.visibleUsers = searchUsers.length
-      $scope.filterUsers = $filter("filter")(searchUsers, $scope.paginate).asInstanceOf[js.Array[UserFull]]
-    }
-  })
-
-  $scope.$watch(() => $scope.watch.currentPage, () => {
-    $scope.filterUsers = $filter("filter")(searchUsers, $scope.paginate).asInstanceOf[js.Array[UserFull]]
-  })
 }
 
 trait UserInviteScope extends ModalScope {

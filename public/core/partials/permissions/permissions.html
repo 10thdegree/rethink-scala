@@ -12,7 +12,7 @@
                     <!--<th style="width: 125px;">Permissions</th>-->
                     <!--<th style="width: 10px;">ID</th>-->
                 <!--</tr>-->
-                <tr ng-repeat="permission in filterPermissions">
+                <tr ng-repeat="permission in filterList">
                     <td>{{permission.label}}</td>
                     <td style="width: 10px;">
                         <a ng-click="showId = !showId">
@@ -22,11 +22,11 @@
                     </td>
                 </tr>
                 <tr>
-                    <td ng-class="{'hidden': visibleUsers != 0 }">No Permissions Found.</td>
+                    <td ng-class="{'hidden': visibleListItems != 0 }">No Permissions Found.</td>
                 </tr>
             </table>
-            <pagination ng-class="{ 'hidden': visiblePermissions <= numPerPage }" items-per-page="numPerPage" boundary-links="true"
-                        total-items="visiblePermissions" ng-model="currentPage" class="pagination-sm" previous-text="&lsaquo;"
+            <pagination ng-class="{ 'hidden': visibleListItems <= numPerPage }" items-per-page="numPerPage" boundary-links="true"
+                        total-items="visibleListItems" ng-model="currentPage" class="pagination-sm" previous-text="&lsaquo;"
                         next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;"/>
         </div>
     </tab>

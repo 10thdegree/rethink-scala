@@ -5,13 +5,9 @@ import biz.enef.angulate.Scope
 import scala.scalajs.js
 import scala.util.{Failure, Success}
 
-trait AccountScope extends Scope {
-  var filterAccounts: js.Array[Account] = js.native
-  var watch: AccountWatch = js.native
-  var numAccounts: Int = js.native
-  var numPerPage: Int = js.native
-  var visibleAccounts: Int = js.native
-  var paginate: js.Function = js.native
+import client.core.{CoreCtrl, SearchCtrl, SearchScope, ModalScope}
+
+trait AccountScope extends SearchScope[Account] {
   var addAccount: js.Function = js.native
   var renameAccount: js.Function = js.native
   var deleteAccount: js.Function = js.native
@@ -19,39 +15,24 @@ trait AccountScope extends Scope {
   var usersAccount: js.Function = js.native
 }
 
-class AccountsCtrl(accountService: AccountService, $scope: AccountScope, $modal: js.Dynamic, $filter: js.Dynamic) extends CoreCtrl {
-  var accounts = js.Array[Account]()
-  var searchAccounts = js.Array[Account]()
-  $scope.filterAccounts = js.Array[Account]()
-
+class AccountsCtrl(accountService: AccountService, $scope: AccountScope, $modal: js.Dynamic, $filter: js.Dynamic) 
+extends SearchCtrl[Account]($scope: SearchScope[Account], $filter: js.Dynamic) {
   var accountsLoaded = false
-
-  $scope.watch = AccountWatch()
-  $scope.numAccounts = 0
-  $scope.numPerPage = 10
-  $scope.visibleAccounts = 10
 
   def refresh(): Unit = {
     accountService.all() onComplete {
       case Success(resp) =>
         accountsLoaded = true
-        $scope.numAccounts = resp.accounts.length
-        accounts = resp.accounts.sortWith(_.label < _.label)
-        searchAccounts = $filter("filter")(accounts, $scope.watch.searchAccount).asInstanceOf[js.Array[Account]]
-        $scope.visibleAccounts = searchAccounts.length
-        $scope.filterAccounts = $filter("filter")(searchAccounts, $scope.paginate).asInstanceOf[js.Array[Account]]
+        $scope.numListItems = resp.accounts.length
+        $scope.ogList = resp.accounts.sortWith(_.label < _.label)
+        $scope.searchList = $filter("filter")($scope.ogList, $scope.watch.searchTerm).asInstanceOf[js.Array[Account]]
+        $scope.visibleListItems = $scope.searchList.length
+        $scope.filterList = $filter("filter")($scope.searchList, $scope.paginate).asInstanceOf[js.Array[Account]]
       case Failure(ex) => handleError(ex)
     }
   }
 
   refresh()
-
-  $scope.paginate = (account: Account) => {
-    val begin = ($scope.watch.currentPage - 1) * $scope.numPerPage
-    val end = begin + $scope.numPerPage
-    val index = searchAccounts.indexOf(account)
-    begin <= index && index < end
-  }
 
   $scope.addAccount = () => {
     val modalInstance = $modal.open(js.Dictionary(
@@ -115,18 +96,6 @@ class AccountsCtrl(accountService: AccountService, $scope: AccountScope, $modal:
       refresh()
     })
   }
-
-  $scope.$watch(() => $scope.watch.searchAccount, (query: String) => {
-    searchAccounts = $filter("filter")(accounts, $scope.watch.searchAccount).asInstanceOf[js.Array[Account]]
-    if (!searchAccounts.isEmpty) {
-      $scope.visibleAccounts = searchAccounts.length
-      $scope.filterAccounts = $filter("filter")(searchAccounts, $scope.paginate).asInstanceOf[js.Array[Account]]
-    }
-  })
-
-  $scope.$watch(() => $scope.watch.currentPage, () => {
-    $scope.filterAccounts = $filter("filter")(searchAccounts, $scope.paginate).asInstanceOf[js.Array[Account]]
-  })
 }
 
 trait AccountAddScope extends ModalScope {

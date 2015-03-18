@@ -1,4 +1,4 @@
-package userManage
+package client.core
 
 import biz.enef.angulate._
 import biz.enef.angulate.core.{Timeout, Attributes, JQLite}
