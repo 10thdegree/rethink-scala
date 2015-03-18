@@ -8,10 +8,13 @@ import scala.scalajs.js
 import scala.scalajs.js.{UndefOr, JSON}
 import scala.util.Try
 
-object ConvertJsObject {
-  def convert[T](promise: HttpPromise[js.Object])(implicit unpickler: Unpickler[T]): HttpPromise[T] = {
+object ConvertHelpers {
+  def promiseJsObjToType[T](promise: HttpPromise[js.Object])(implicit unpickler: Unpickler[T]): HttpPromise[T] = {
     promise.map((x: js.Object) => UnpickledCurry[T](unpickler).fromString(JSON.stringify(x)).get)
   }
+	def typeToJsAny[T](convert: T)(implicit pickler: Pickler[T]): js.Any = {
+		JSON.parse(Pickle.intoString(convert))
+	}
 }
 
 trait PicklerHttpService extends js.Object {
@@ -30,9 +33,11 @@ trait PicklerHttpService extends js.Object {
 }
 
 object PicklerHttpService {
+	import ConvertHelpers._
   implicit class RichPicklerHttpService(val self: PicklerHttpService) extends AnyVal {
-    def some: String = "test"
     def getObject[T](url: String)(implicit unpickler: Unpickler[T]): HttpPromise[T] =
-        ConvertJsObject.convert[T](self.get(url))
+        promiseJsObjToType[T](self.get(url))
+		def postObject[T,A](url: String, data: A)(implicit unpickler: Unpickler[T], pickler: Pickler[A]): HttpPromise[T] =
+		    promiseJsObjToType[T](self.post(url,typeToJsAny[A](data)))
   }
 }

@@ -16,6 +16,8 @@ import securesocial.core.services.{RoutesService, SaveMode}
 import securesocial.core.utils._
 
 import scala.concurrent.Future
+import shared.Authenticated
+import prickle._
 
 class CustomLoginPage @Inject() (override implicit val env: RuntimeEnvironment[BasicProfile]) extends BaseLoginPage[BasicProfile] {
   /**
@@ -131,6 +133,8 @@ trait BaseProviderController[U] extends SecureSocial[U]
 {
   import securesocial.controllers.ProviderControllerHelper.{logger, toUrl}
 
+  implicit val authenticatedPickler: Pickler[Authenticated] = Pickler.materializePickler[Authenticated]
+
   /**
    * The authentication entry point for GET requests
    *
@@ -203,7 +207,7 @@ trait BaseProviderController[U] extends SecureSocial[U]
               val sessionAfterEvents = Events.fire(evt).getOrElse(request.session)
               import scala.concurrent.ExecutionContext.Implicits.global
               builder().fromUser(userForAction).flatMap { authenticator =>
-                Ok(Json.toJson(Map("redirect" -> toUrl(sessionAfterEvents)))).withSession(sessionAfterEvents -
+                Ok(Pickle.intoString(Authenticated(toUrl(sessionAfterEvents)))).withSession(sessionAfterEvents -
                   SecureSocial.OriginalUrlKey -
                   IdentityProvider.SessionId -
                   OAuth1Provider.CacheKey).startingAuthenticator(authenticator)

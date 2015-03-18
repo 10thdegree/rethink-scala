@@ -4,6 +4,7 @@ import biz.enef.angulate.Controller
 
 import scala.scalajs.js
 import scala.util.{Failure, Success}
+import shared._
 
 class LoginCtrl(loginService: LoginService, $window: js.Dynamic) extends Controller {
   var alerts = js.Array[Alert]()

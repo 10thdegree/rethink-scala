@@ -5,6 +5,7 @@ import biz.enef.angulate.core.{HttpPromise, HttpService}
 import prickle.Unpickle
 import scala.scalajs.js
 import shared._
+import client.core.PicklerHttpService
 import client.core.PicklerHttpService._
 
 class NavService($http: PicklerHttpService) extends Service {

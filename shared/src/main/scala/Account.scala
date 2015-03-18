@@ -13,3 +13,7 @@ object Account {
 }
 
 case class AccountsResponse(status: String, accounts: Seq[Account]) extends Response
+
+case class Credential(username: String, password: String)
+
+case class Authenticated(redirect: String)

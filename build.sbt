@@ -53,9 +53,8 @@ lazy val bravo = (project in file("."))
   .settings(
     scalaJSProjects := clients,
     pipelineStages := Seq(scalaJSProd),
-    // copy resources from the "shared" project
-    unmanagedResourceDirectories in Compile += file(".") / sharedSrcDir / "src" / "main" / "scala",
-    unmanagedResourceDirectories in Test += file(".") / sharedSrcDir / "src" / "test" / "scala"
+    unmanagedSourceDirectories in Compile += baseDirectory.value / sharedSrcDir / "src" / "main" / "scala",
+    unmanagedSourceDirectories in Test += baseDirectory.value / sharedSrcDir / "src" / "test" / "scala"
   )
   .enablePlugins(PlayScala)
   .aggregate(clients.map(projectToRef): _*)
@@ -95,7 +94,7 @@ def clientProject(project: Project, name: String): Project = {
 
 lazy val loginClient = clientProject(project in file("client/login"),"login")
 
-lazy val navClient = clientProject(project in file("client/nav"),"nav").dependsOn(sharedJS)
+lazy val navClient = clientProject(project in file("client/nav"),"nav")
 
 lazy val userManageClient = clientProject(project in file("client/userManage"),"userManage")
 
