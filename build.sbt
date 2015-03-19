@@ -94,7 +94,7 @@ def clientProject(project: Project, name: String): Project = {
 
 lazy val loginClient = clientProject(project in file("client/login"),"login")
 
-lazy val navClient = clientProject(project in file("client/nav"),"nav")
+lazy val navClient = clientProject(project in file("client/nav"),"nav").dependsOn(sharedJS)
 
 lazy val userManageClient = clientProject(project in file("client/userManage"),"userManage")
 
@@ -116,6 +116,7 @@ lazy val angularDeps = Seq(// Angular-js
   "org.webjars" % "angular-ui" % "0.4.0-3"  exclude("org.webjars", "angularjs"),
   "org.webjars" % "angular-ui-bootstrap" % "0.12.1"  exclude("org.webjars", "angularjs"),
   "org.webjars" % "angular-ui-router" % "0.2.13" exclude("org.webjars", "angularjs"),
+	"org.webjars" % "angular-chosen" % "1.0.6" exclude("org.webjars", "angularjs"),
   "org.webjars" % "smart-table" % "1.4.8"
 )
 

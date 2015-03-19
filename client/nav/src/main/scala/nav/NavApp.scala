@@ -8,7 +8,7 @@ import scala.scalajs.js.JSApp
 
 object NavApp extends JSApp {
   override def main(): Unit = {
-    val module = angular.createModule("navBar", Seq("ui.bootstrap"))
+    val module = angular.createModule("navBar", Seq("ui.bootstrap","ngCookies","localytics.directives"))
 
     module.controllerOf[NavCtrl]("NavCtrl")
 

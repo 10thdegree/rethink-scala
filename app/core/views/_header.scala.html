@@ -1,4 +1,4 @@
-@(showAccountPicker: Boolean = false)
+@(showAccountPicker: Boolean = false, singleAccountPicker: Boolean = false)
 <nav ng-controller="NavCtrl as ctrl" id="mainNavigation" class="navbar navbar-default navbar-fixed-top" role="navigation">
    <div class="container">
         <!-- Brand and toggle get grouped for better mobile display -->
@@ -29,7 +29,7 @@
                 </li>
             </ul>
             @if(showAccountPicker) {
-                @core.views.html._accountDropDown()
+                @core.views.html._accountDropDown(singleAccountPicker)
             }
         </div>
     </div>

@@ -23,3 +23,30 @@ body {
 .selectedAccount {
     background: #ccc;
 }
+
+.chosen-container input {
+	  font-style: italic;
+	  color: #5c5c5c;
+	  font-family: 'Open Sans',sans-serif;
+	  padding: 0px 0;
+	  font-weight: 300;
+}
+
+.chosen-container {
+	background-color: #000;
+	line-height: 30px;
+	font-size: 11pt;
+}
+
+.chosen-container li {
+	background-color:#FCFCFC;
+}
+
+.chosen-container-multi .chosen-choices {
+	border:0px solid #ccc;
+	border-width: 0 0 2px 0;
+	border-style: solid;
+  border-color: #5c5c5c;
+	background-color:#FCFCFC;
+	background-image: none;
+}

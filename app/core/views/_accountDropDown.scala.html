@@ -1,14 +1,14 @@
+@(singleAccountPicker: Boolean = false)
 <form class="navbar-form navbar-right">
-    <div class="btn-group" dropdown ng-show="ctrl.accounts.length > 1">
-        <button dropdown-toggle style="width : 250px; margin-top : 5px ;" type="button" class="btn dropdown-toggle" ng-class="{'btn-primary':ctrl.selectedAccount.id$1 != '', 'btn-danger':ctrl.selectedAccount.id$1 == ''}">
-            <span ng-model="ctrl.selectedAccountLabel" style="font-size : 16px ; float : left ;" >
-                {{ctrl.selectedAccount.label$1}}</span>
-            <span style="font-size : 20px ; float : right ;" class="glyphicon"
-            ng-class="{'glyphicon-collapse-down': true}"></span>
-        </button>
-        <ul class="dropdown-menu" role="menu">
-            <li style="width : 250px ;" ng-click="ctrl.accountSelected(account)" ng-repeat="account in ctrl.accounts" ng-class="{'selectedAccount':ctrl.selectedAccount.id$1 == account.id$1}"><a href="#">
-                {{account.label$1}}</a></li>
-        </ul>
-    </div>
+	<select 
+		@if(!singleAccountPicker) { multiple }
+		chosen
+		data-placeholder="Choose an Account"
+		no-results-text="'Could not find any accounts'"
+		ng-model="ctrl.selectedAccount"
+		ng-options="account.label$1 for account in ctrl.accounts track by account.id$1"
+		class="chosen-rtl"
+		style="width: 400px;"
+		ng-change="ctrl.accountsUpdated()">
+	</select>
 </form>
