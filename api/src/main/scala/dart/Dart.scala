@@ -168,11 +168,20 @@ object LiveDart extends DartInternalAPI {
         .setDimensions(List(dimensions))
         .setMetricNames(metricsList)
 
+      //Schedule should be run month to date 
+      val schedule = new Schedule()
+        .setRepeats("DAILY")
+        .setEvery(1)
+        .setExpirationDate(toGoogleDate(new DateTime().plusYears(2))) //???
+        .setStartDate(toGoogleDate(new DateTime().plusDays(-1)))
+        .setActive(true)
+      
       val report = new Report()
         .setCriteria(criteria)
         .setName("test_API_latest+"+advertiserId.toString)
         .setType("STANDARD")
-      
+        .setSchedule(schedule)
+
       for {
         result <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, report).execute())
       } yield result.getId()
@@ -222,9 +231,9 @@ object LiveDart extends DartInternalAPI {
   
   def getFilesForReport(reportApi: Dfareporting, reportid: Long): BravoM[DartConfig, List[AvailableFile]] = 
     for {
-      files   <- fctry((c:DartConfig) => reportApi.files().list(c.clientId).set("report_id", reportid.toString).execute())
+      files   <- fctry((c:DartConfig) => reportApi.reports().files().list(c.clientId, reportid).execute())
       _       = files.getItems.foreach(f => println(f.toString))
-    } yield files.getItems().map(f => AvailableFile(f.getId().toLong, f.getFileName(), new DateTime(f.getDateRange().getStartDate()), new DateTime(f.getDateRange().getEndDate()))).toList
+    } yield files.getItems().map(f => AvailableFile(f.getId().toLong, f.getFileName(), new DateTime(f.getDateRange().getStartDate().toString), new DateTime(f.getDateRange().getEndDate().toString))).toList
  
   override def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): BravoM[DartConfig, String] = 
     for {

@@ -104,7 +104,9 @@ object DartAPITest extends Properties("Dart API test") {
 
     def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DartConfig, String] = Dart.dartMonad.point(s)
     
-    def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[String]] = ???
+    def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[(String, Int)]] = ???
+  
+    def createDartReport(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long] = Dart.dartMonad.point(1L)
   }  
 
 
