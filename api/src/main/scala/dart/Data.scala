@@ -24,10 +24,13 @@ trait DartInternalAPI {
 
   def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DartConfig, String]
 
-  def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[DimensionValue]]
+  def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[(String, Int)]]
+
+  def createDartReport(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long]
 
   protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
     new com.google.api.client.util.DateTime(dt.toString(formatter)) 
+
 }
 
 
@@ -37,7 +40,7 @@ object Data {
   import Scalaz._
   import bravo.util.DateUtil._
 
-   case class DartConfig(
+  case class DartConfig(
     api: DartInternalAPI,
     filePath: String,
     accountId: String,
@@ -45,7 +48,7 @@ object Data {
     clientId: Int,
     reportCache: Map[Long, List[ReportDay]] = Map[Long, List[ReportDay]]())
  
- case class DartProfile(accountName: String, user: String, accountId: Long, profileId: Long)
+  case class DartProfile(accountName: String, user: String, accountId: Long, profileId: Long)
 
   sealed trait DartReportData {
     def reportid: Long
@@ -57,6 +60,8 @@ object Data {
 
   case class GoogleAuthCred(filepath: String, accountId: String,  userAccount: String)
   
+  case class AvailableFile(id: Long, name: String, startDate: DateTime, endDate: DateTime)
+
   implicit val rdOrdering = new scala.math.Ordering[ReportDay] {
     def compare(a: ReportDay, b: ReportDay): Int = 
       a.rowDate compareTo b.rowDate

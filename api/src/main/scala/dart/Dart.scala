@@ -10,6 +10,8 @@ import bravo.util.Util._
 Instead of polling for specific reports, we should just havea a queue of reports waiting to be fulfilled, get all the file handles, and then check them all at once? or no?
 */
 
+
+//FOR EXTERNAL USE.  THIS IS OUR API *TO* DART FROM OTHER APPLICATIONS
 object Dart {
   import com.google.api.services.dfareporting.Dfareporting
   import scala.annotation.tailrec
@@ -22,6 +24,21 @@ object Dart {
   import com.google.api.services.dfareporting.model._
     
   implicit def dartMonad: Monad[({type l[a] = BravoM[DartConfig,a]})#l] = EitherT.eitherTMonad[({ type l[a] = SFuture[DartConfig,a]})#l, JazelError]
+
+  def createReport(advertiserId: Long): BravoM[DartConfig, Long] = ((c:DartConfig) => { 
+    for {
+      dfa <- c.api.getDartAuth
+      reportId <- c.api.createDartReport(dfa, advertiserId)
+    } yield reportId
+  }).toBravoM.flatMap(x => x)
+    
+  
+  def getAdvertisers: BravoM[DartConfig, List[(String,Int)]] = ((c:DartConfig) => {
+    for {
+      dfa <- c.api.getDartAuth
+      advertisers <- c.api.getDimensions(dfa, "dfa:advertiser", new DateTime().plusDays(-365), new DateTime, None)
+    } yield advertisers 
+  }).toBravoM.flatMap(x => x)
 
   def getReport(reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, DownloadedReport] = ((c: DartConfig) => {
     val currentReportDays  = c.reportCache.get(reportId).getOrElse(List[ReportDay]())
@@ -46,13 +63,15 @@ object Dart {
    }).toBravoM
     .flatMap(x => x)
 
-  def getActivities(startDate: DateTime, endDate: DateTime, advertiserId: Option[Long]): BravoM[DartConfig, List[DimensionValue]] = ((c: DartConfig) => 
+  /*
+  def getActivities(startDate: DateTime, endDate: DateTime, advertiserId: Option[Long]): BravoM[DartConfig, List[Int]] = ((c: DartConfig) => 
     for {
       dfa <- c.api.getDartAuth
       activities <- c.api.getDimensions(dfa, "dfa:activities", startDate, endDate, advertiserId)
     } yield
       activities
     ).toBravoM.flatMap(x => x)
+  */
 
   def getReportUncached(reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, DownloadedReport] = ((c: DartConfig) => 
     for {
@@ -85,6 +104,8 @@ object Dart {
   }
 }
 
+
+/* NOT FOR EXTERNAL USE*/
 object LiveDart extends DartInternalAPI {
   import com.google.api.services.dfareporting.{Dfareporting, DfareportingScopes} 
   import scala.collection.JavaConversions._
@@ -108,13 +129,9 @@ object LiveDart extends DartInternalAPI {
       file.getId()
     }
  
-
-  //def getAdvertisers(reportId: 
-
-  def getDimensions(reportApi: Dfareporting, name: String, startDate: DateTime, endDate: DateTime, advertId: Option[Long]): BravoM[DartConfig, List[DimensionValue]] = {
+  override def getDimensions(reportApi: Dfareporting, name: String, startDate: DateTime, endDate: DateTime, advertId: Option[Long]): BravoM[DartConfig, List[(String,Int)]] = {
     val dreq = new DimensionValueRequest()
     
-    //val dimensionValue = new DimensionValue().setDimensionName("dfa:advertiser").setId(advertiserId.toString) 
     val req =  advertId.cata(id => {
                 dreq.setFilters(List(new DimensionFilter().setDimensionName("dfa:advertiser").setValue(id.toString)))
               }, dreq)
@@ -124,48 +141,25 @@ object LiveDart extends DartInternalAPI {
     for {
       res <- fctry((c: DartConfig) => reportApi.dimensionValues().query(c.clientId, req).execute())
       items = (res.getItems(): java.util.List[DimensionValue])
-      _     = items.toList.foreach(i => println(i.toString()))
+      //_     = items.toList.foreach(i => println(i.toString()))
     } yield 
-      items.toList  
+      items.toList.map(dv => (dv.getValue(), dv.getId().toInt))  
   }
 
-  def createReport(reportApi: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long] = 
+  override def createDartReport(reportApi: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long] = 
     for {
       floodlights <- getActivityFields(reportApi, advertiserId)
       reportId    <- createReport(reportApi, advertiserId, floodlights.map(_._2))
     } yield 
       reportId
-/*
-  def createReport(reportApi: Dfareporting, advertiserId: Long, activities: List[String]): BravoM[DartConfig, Long] = {
-    val dr = new DateRange()
-    dr.setRelativeDateRange("YESTERDAY")
-    val dimensions = new SortedDimension()
-    dimensions.setName("dfa:campaign")
-    val dimensionValue = new DimensionValue().setDimensionName("dfa:advertiser").setId(advertiserId.toString) 
-    val metricsList = List("dfa:paidSearchClicks", "dfa:clicks", "dfa:paidSearchImpressions", "dfa:clickRate")
-    val criteria = new Criteria()
-      .setDateRange(dr)
-      .setDimensions(List(dimensions))
-      .setMetricNames(metricsList)
-      .setDimensionFilters( List(dimensionValue) ) 
-      .setActivities(new Activities().setMetricNames(List("TUIU International Students")))
 
-    val report = new Report()
-      .setCriteria(criteria)
-      .setName("test_API_latest+"+advertiserId.toString)
-      .setType("STANDARD")
-    
-    for {
-      result <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, report).execute())
-    } yield result.getId()
-  }
-*/
-  def createReport(reportApi: Dfareporting, advertiserId: Long, activities: List[DimensionValue]): BravoM[DartConfig, Long] = {
+  //we will want to add various report types here
+  def createReport(reportApi: Dfareporting, advertiserId: Long, activityIds: List[Int]): BravoM[DartConfig, Long] = {
       val dr = new DateRange()
       dr.setRelativeDateRange("YESTERDAY")
       val dimensions = new SortedDimension()
       dimensions.setName("dfa:campaign")
-      val mappedActivities = activities.map(dv => new DimensionValue().setDimensionName("dfa:activity").setId(dv.getValue()))
+      val mappedActivities = activityIds.map(dv => new DimensionValue().setDimensionName("dfa:activity").setId(dv.toString))
       val dimensionValue = new DimensionValue().setDimensionName("dfa:advertiser").setId(advertiserId.toString) 
       val metricsList = List("dfa:paidSearchAveragePosition", "dfa:paidSearchClickRate", "dfa:paidSearchClicks", "dfa:paidSearchImpressions", "dfa:paidSearchCost", "dfa:paidSearchVisits", "dfa:paidSearchActions")
       val criteria = new Criteria()
@@ -173,7 +167,6 @@ object LiveDart extends DartInternalAPI {
         .setActivities( new Activities().setMetricNames(List("dfa:paidSearchActions")).setFilters(mappedActivities))
         .setDimensions(List(dimensions))
         .setMetricNames(metricsList)
-        //.setActivities(new Activities().setMetricNames(List("TUIU International Students")))
 
       val report = new Report()
         .setCriteria(criteria)
@@ -186,31 +179,14 @@ object LiveDart extends DartInternalAPI {
     }
 
    //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getDartReport(dfa, rid)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
-   // Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getActivityFields(dfa, advertId)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
+   //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getActivityFields(dfa, advertId)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
 
-   def getActivityFields(reportApi: Dfareporting, advertId: Long): BravoM[DartConfig, List[(String, DimensionValue)]] = {
-    val fields = "nextPageToken,floodlightActivities(id,name)"
+   def getActivityFields(reportApi: Dfareporting, advertId: Long): BravoM[DartConfig, List[(String, Int)]] = 
     for {
       fields <- fctry((c: DartConfig) => reportApi.floodlightActivities().list(c.clientId).setAdvertiserId(advertId).execute())
-        //.setFields(fields).execute())
-      //_     = println("fields = " + fields )
       activities  = fields.getFloodlightActivities(): java.util.List[FloodlightActivity]
-      _      = activities.foreach(act => println(act.getName() + "|" + act.getFloodlightActivityGroupName() + " | " + act.getFloodlightActivityGroupType()  + "|" + act.getIdDimensionValue()))
-    } yield activities.map(act => (act.getName(), act.getIdDimensionValue())).toList
-  }
- 
-
-/* Path to Conversion report with required dimensions.
-Report pathToConversionReport = new Report()
-  .setType("PATH_TO_CONVERSION")
-  .setPathToConversionCriteria(new Report.PathToConversionCriteria()
-  .setConversionDimensions(ImmutableList.of(new SortedDimension().setName("dfa:conversionId")))
-  .setPerInteractionDimensions(ImmutableList.of(
-    new SortedDimension().setName("dfa:interactionNumber"),
-    new SortedDimension().setName("dfa:interactionTime"))));
-CompatibleFields pathToConversionFields = reporting.reports().compatibleFields()
-*/
-
+    } yield activities.map(act => (act.getName(), act.getIdDimensionValue().getValue().toInt)).toList
+  
   def viewUserProfiles(reportApi: Dfareporting): BravoM[DartConfig, List[DartProfile]] = 
     for {
       profileResp <- fctry((c:DartConfig) => reportApi.userProfiles().list().execute())
@@ -218,7 +194,6 @@ CompatibleFields pathToConversionFields = reporting.reports().compatibleFields()
     } yield
       profiles.toList.map(p => DartProfile(p.getAccountName(), p.getUserName(), p.getAccountId(), p.getProfileId()))
       
-  
   override def viewDartReports(reportApi: Dfareporting, userid: Int): BravoM[DartConfig, List[AvailableReport]] = 
     for {
       reports <- fctry((c:DartConfig) => reportApi.reports().list(userid).execute() )  
@@ -231,6 +206,8 @@ CompatibleFields pathToConversionFields = reporting.reports().compatibleFields()
       r <- fctry((c:DartConfig) => reportApi.reports().get(c.clientId, rid).execute())
     } yield r
 
+  //TODO: clone a report!
+  
   override def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Unit]= 
     for {
       report    <- fctry((c: DartConfig) => reportApi.reports().get(userid, rid).execute())
@@ -243,6 +220,12 @@ CompatibleFields pathToConversionFields = reporting.reports().compatibleFields()
       ()
   
   
+  def getFilesForReport(reportApi: Dfareporting, reportid: Long): BravoM[DartConfig, List[AvailableFile]] = 
+    for {
+      files   <- fctry((c:DartConfig) => reportApi.files().list(c.clientId).set("report_id", reportid.toString).execute())
+      _       = files.getItems.foreach(f => println(f.toString))
+    } yield files.getItems().map(f => AvailableFile(f.getId().toLong, f.getFileName(), new DateTime(f.getDateRange().getStartDate()), new DateTime(f.getDateRange().getEndDate()))).toList
+ 
   override def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): BravoM[DartConfig, String] = 
     for {
       filehandle  <- fctry((c:DartConfig) => reportApi.files().get(reportid, fid))
@@ -256,7 +239,6 @@ CompatibleFields pathToConversionFields = reporting.reports().compatibleFields()
       reportData
     }
   
-
   def toAvailableReport(r: Report):  AvailableReport = AvailableReport(r.getId(), 
     r.getName(), 
     r.getFormat(),
