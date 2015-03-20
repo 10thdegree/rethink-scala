@@ -28,6 +28,8 @@ trait DartInternalAPI {
 
   def getAvailableReports(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, List[AvailableReport]]
   
+  def getFilesForReport(r: Dfareporting, reportId: Long): BravoM[DartConfig, List[AvailableFile]]
+  
   protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
     new com.google.api.client.util.DateTime(dt.toString(formatter)) 
 

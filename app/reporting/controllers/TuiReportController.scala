@@ -135,6 +135,7 @@ object TuiReportController extends Controller {
       .run.run(config)
       .map({
         case (cfg, res) =>
+          println(" SETTING THE CACHE")
           cache.set(cfg.reportCache)
           res
       }) //feed in the cache again

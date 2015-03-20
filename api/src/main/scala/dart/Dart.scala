@@ -32,7 +32,6 @@ object Dart {
     } yield reportId
   }).toBravoM.flatMap(x => x)
     
-  
   def getAdvertisers: BravoM[DartConfig, List[(String,Int)]] = ((c:DartConfig) => {
     for {
       dfa <- c.api.getDartAuth
@@ -56,12 +55,21 @@ object Dart {
       case Some((newStart, newEnd)) =>
         println("we are missing " + newStart + " and " + newEnd + "!")
         val res: BravoM[DartConfig, DownloadedReport] = for {
-          report    <- getReportUncached(reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
-          merged    = c.reportCache.get(reportId).fold(report.data)(old => old |+| report.data) 
+          dfa       <- c.api.getDartAuth 
+          files     <- c.api.getFilesForReport(dfa, reportId)
+          reportStr <- checkFulfilledReports(startDate, endDate, files) match {
+                        case Some(fileid) => 
+                          println("we found a file!")
+                          fulfillReport(dfa, reportId, fileid, 1) 
+                        case None => getReportUncached(dfa, reportId, newStart.toDateTimeAtStartOfDay, newEnd.toDateTimeAtStartOfDay)
+                      }
+          parsed    = ReportParser.parse(reportStr)
+          data      = groupDates(parsed)
+          merged    = c.reportCache.get(reportId).fold(data)(old => old |+| data) 
           newstate  = c.copy(reportCache = c.reportCache + (reportId -> merged)) 
           _         <- IndexedStateT.stateTMonadState[DartConfig, Future].put(newstate).liftM[BravoHoist]  //need liftM or a way to go to the right type
         } yield {
-           DownloadedReport(reportId, startDate, endDate, report.data) 
+           DownloadedReport(reportId, startDate, endDate, data) 
         }
         res
       case None =>
@@ -70,26 +78,16 @@ object Dart {
    }).toBravoM
     .flatMap(x => x)
 
-  /*
-  def getActivities(startDate: DateTime, endDate: DateTime, advertiserId: Option[Long]): BravoM[DartConfig, List[Int]] = ((c: DartConfig) => 
-    for {
-      dfa <- c.api.getDartAuth
-      activities <- c.api.getDimensions(dfa, "dfa:activities", startDate, endDate, advertiserId)
-    } yield
-      activities
-    ).toBravoM.flatMap(x => x)
-  */
+  private def checkFulfilledReports(startDate: DateTime, endDate: DateTime, files: List[AvailableFile]): Option[Long] = 
+    files.find(f => isBetween((startDate, endDate), (f.startDate, f.endDate))).map(f => f.id) 
 
-  def getReportUncached(reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, DownloadedReport] = ((c: DartConfig) => 
+  private def getReportUncached(dfa: Dfareporting, reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, String] = ((c: DartConfig) => 
     for {
-      dfa <- c.api.getDartAuth
       _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
       id  <- c.api.runDartReport(dfa, c.clientId, reportId)
       rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
-      parsed = ReportParser.parse(rs)
-      rep    = groupDates(parsed)
     } yield {
-      DownloadedReport(reportId, startDate, endDate, rep)
+        rs
     }       
   ).toBravoM.join
 
@@ -230,10 +228,9 @@ object LiveDart extends DartInternalAPI {
     } yield
       ()
   
-  def getFilesForReport(reportApi: Dfareporting, reportid: Long): BravoM[DartConfig, List[AvailableFile]] = 
+  override def getFilesForReport(reportApi: Dfareporting, reportid: Long): BravoM[DartConfig, List[AvailableFile]] = 
     for {
       files   <- fctry((c:DartConfig) => reportApi.reports().files().list(c.clientId, reportid).execute())
-      _       = files.getItems.foreach(f => println(f.toString))
     } yield files.getItems().map(f => AvailableFile(f.getId().toLong, f.getFileName(), new DateTime(f.getDateRange().getStartDate().toString), new DateTime(f.getDateRange().getEndDate().toString))).toList
  
   override def downloadReport(reportApi: Dfareporting, reportid: Long, fid: Long): BravoM[DartConfig, String] = 

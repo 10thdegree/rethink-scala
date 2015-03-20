@@ -19,7 +19,7 @@ object Util {
   def ftry[A,B](b: => B): BravoM[A,B]= fctry((c:A) => b)
   
   def fctry[A,B](f: A => B): BravoM[A,B] = fctry(f, None) 
-  
+ 
   def fctry[A,B](f: A => B, s: String): BravoM[A,B] = fctry(f, s.some)
   
   def fctry[A,B](f: A => B, s: Option[String]): BravoM[A,B] = 
