@@ -1,9 +1,12 @@
-package bravo.api.dart
+package bravo.api.dart 
+
+import bravo.util.DateUtil._
+
 
 trait DartInternalAPI {
   import com.google.api.services.dfareporting.{Dfareporting, DfareportingScopes} 
   import com.google.api.services.dfareporting.model._
-  import bravo.core.Util._
+  import bravo.util.Util._
   import scala.concurrent.{Future,Promise}
   import org.joda.time.format.DateTimeFormat
   import org.joda.time._
@@ -11,36 +14,54 @@ trait DartInternalAPI {
 
   private val formatter = DateTimeFormat.forPattern("yyyy-MM-dd")
 
-  def getDartAuth: BravoM[Dfareporting]
+  def getDartAuth: BravoM[DartConfig, Dfareporting]
   
-  def viewDartReports(r: Dfareporting, userid: Int): BravoM[List[AvailableReport]]
+  def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit]
 
-  def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[Unit]
+  def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[DartConfig, Long]
 
-  def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[Long]
+  def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[DartConfig, String]
 
-  def downloadReport(r: Dfareporting, rid: Long, fid: Long): BravoM[String]
+  def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[(String, Int)]]
 
+  def createDartReport(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long]
+
+  def getAvailableReports(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, List[AvailableReport]]
+  
   protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
     new com.google.api.client.util.DateTime(dt.toString(formatter)) 
+
 }
+
 
 object Data {
   import org.joda.time._
   import scalaz._
   import Scalaz._
-  import bravo.util.Data._
+  import bravo.util.DateUtil._
+
+  case class DartConfig(
+    api: DartInternalAPI,
+    filePath: String,
+    accountId: String,
+    userAccount: String,
+    clientId: Int,
+    reportCache: Map[Long, List[ReportDay]] = Map[Long, List[ReportDay]]())
+ 
+  case class DartProfile(accountName: String, user: String, accountId: Long, profileId: Long)
 
   sealed trait DartReportData {
     def reportid: Long
   }
 
-    case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
+  case class AvailableReport(reportid: Long, name: String, format: String, filename: String, startDate: DateTime, endDate: DateTime) extends DartReportData
 
   case class DownloadedReport(reportid: Long, startDate: DateTime, endDate: DateTime, data: List[ReportDay]) extends DartReportData
 
   case class GoogleAuthCred(filepath: String, accountId: String,  userAccount: String)
   
+  case class AvailableFile(id: Long, name: String, startDate: DateTime, endDate: DateTime)
+
   implicit val rdOrdering = new scala.math.Ordering[ReportDay] {
     def compare(a: ReportDay, b: ReportDay): Int = 
       a.rowDate compareTo b.rowDate
@@ -59,7 +80,6 @@ object Data {
   }
   
   implicit val reportDaySemigroup: Semigroup[ReportDay] = new Semigroup[ReportDay] {
-    
     override def append(a: ReportDay, b: => ReportDay): ReportDay = 
       a.retrievedDate compareTo b.retrievedDate match {
         case 1 => 

@@ -9,7 +9,7 @@ common settings for all projects
 
 lazy val coredeps = Seq(
   //scalaz
-  "org.scalaz" % "scalaz-core_2.11" % "7.1.0",
+  "org.scalaz" % "scalaz-core_2.11" % "7.1.1",
   "org.scalaz" %% "scalaz-scalacheck-binding" % "7.1.0",
   "org.typelevel" %% "scalaz-specs2" % "0.3.0" % "test",
   "joda-time" % "joda-time" % "2.5",
@@ -19,25 +19,29 @@ lazy val coredeps = Seq(
   "org.joda" % "joda-convert" % "1.5"
 )
 
+
 lazy val commonSettings = Seq(
   version := "1.0-SNAPSHOT",
   scalaVersion := "2.11.4",
+  scalacOptions ++= Seq("-unchecked", "-deprecation", "feature"),
   resolvers ++= Seq(
     "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"),
   libraryDependencies ++= coredeps,
-  initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.Future;import bravo.core.Util._; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
+  initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.Future; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
 )
 
 lazy val util = project.settings(commonSettings: _*)
 
-lazy val bravo = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util)
+lazy val bravo = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util).dependsOn(api) 
+
+lazy val api = (project in file("api")).settings(commonSettings: _*).settings(libraryDependencies ++= apiDeps).dependsOn(util) 
 
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 
 lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
                 "org.apache.xmlrpc" % "xmlrpc-server" % "3.1.3",
-                "com.google.apis" % "google-api-services-dfareporting" % "v1.3-rev27-1.19.0",
+                "com.google.apis" % "google-api-services-dfareporting" % "v2.0-rev4-1.19.1",
                 "com.google.api-client" % "google-api-client-java6" % "1.19.0",
                 "com.google.api-client" % "google-api-client-extensions" % "1.6.0-beta",
                 "com.google.oauth-client" % "google-oauth-client-jetty" % "1.19.0",

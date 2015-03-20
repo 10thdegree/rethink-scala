@@ -1,28 +1,23 @@
 package bravo.core
-
+/*
 object Util {
-  import scalaz._
+import scalaz._
   import Scalaz._
   import scala.concurrent.Future
   import scala.concurrent.ExecutionContext.Implicits.global
   import bravo.api.dart._ 
   import bravo.api.dart.Data._
   import org.joda.time._
-  import bravo.util.Data._
+  import bravo.util.DateUtil._
   
-  /*
-  *  Kleisli is the equivalent of Function1, so this 
-  *  reprsents a computation of type 
-  *  (Config) => Future[\/[JazelError, A]] 
-  *  Kleisli is useful for threading a 'config' (Di) 
-  *  through multiple methods chained together moandically
-  */
- 
-  type KFuture[A] = Kleisli[Future, Config, A]
+  trait TestConfig
+
+  //type KFuture[A] = Kleisli[Future, Config, A]
 
   type SFuture[A] = StateT[Future, Config, A]
 
-  type BravoM[A] = EitherT[SFuture, JazelError, A]
+  type BravoM[A] = EitherT[SFuture, JazelError, A] 
+  //type BravoM[A,B] = EitherT[({ type l[a] = SFuture[A,B]})#l, JazelError, A]
 
   case class JazelError(ex: Option[Throwable], msg: String) 
   
@@ -58,10 +53,10 @@ object Util {
     val marchexpass: String
 
   }  
-  /*
-  * For wrapping external APIs
-  * and executing them asynchronously 
-  */
+  
+  // For wrapping external APIs
+  // and executing them asynchronously 
+  
   def ftry[A](a: => A): BravoM[A] = fctry(c => a)
   
   def fctry[A](f: Config => A): BravoM[A] = fctry(f, None) 
@@ -100,10 +95,10 @@ object Util {
       (c2, b.right[JazelError]) 
     } ) 
   
-  /*
-  * Lifting to BravoM and related  
-  * converions
-  */
+  
+  //Lifting to BravoM and related  
+  // converions
+  //
   case class StringErrorOps(s: String) {
     def toJazelError: JazelError =  JazelError(None, s)
   }
@@ -142,9 +137,9 @@ object Util {
   implicit def toBM[A](et: \/[JazelError,A]) = EitherHolder(et) 
   implicit def toKH[A](f: Config => A) = KleisliAHolder(f)
   
-  /*
-  * General typeclass declarations so we can abstract over BravoM and Future 
-  */
+  
+  //General typeclass declarations so we can abstract over BravoM and Future 
+  
 
   //implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[({ type l[a] = Kleisli[Future, Config, a]})#l, JazelError]
   
@@ -163,12 +158,10 @@ object Util {
 
   //implicit def kfutureMonad: Monad[SFuture] = Kleisli.kleisliMonadReader[Future, Config]
  
-  /*implicit def bravoMonad: Monad[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
-
+i
   implicit def bravoBind: Bind[BravoM] = EitherT.eitherTMonad[KFuture, JazelError]
 
-  implicit def kfutureMonad: Monad[KFuture] = Kleisli.kleisliMonadReader[Future, Config]
-  */ 
+   
   
   implicit def FutureMonad: Monad[Future] = new Monad[Future] {
     
@@ -177,7 +170,14 @@ object Util {
     def bind[A, B](f: Future[A])(fmap: A => Future[B]) = f.flatMap(fmap(_))
   }
 
-  //from scalaz
+}
+*/
+
+object Helper {
+  import scalaz._
+  import Scalaz._
+  
+//from scalaz
   def separateSequence[A, B, F[_], G[_]](g: G[EitherT[F, A, B]])(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): EitherT[F, A, (G[A],G[B])] = 
     EitherT(G.foldRight(g, F.point((M.empty[A],M.empty[B])))( (a, l) =>
       for {
@@ -199,7 +199,7 @@ object Util {
    )
 
   class FoldableExtensionOps[A, B, F[_], G[_]](value: G[EitherT[F, A, B]]) {
-    def separateSequence(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): EitherT[F, A, (G[A],G[B])] = Util.separateSequence[A, B, F, G](value)
+    def separateSequence(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): EitherT[F, A, (G[A],G[B])] = Helper.separateSequence[A, B, F, G](value)
   }
   
   implicit def toFoldableExtensions[A, B, F[_], G[_]](value: G[EitherT[F, A, B]])(implicit F: Monad[F], G: Foldable[G], M: MonadPlus[G]): FoldableExtensionOps[A, B, F, G] = new FoldableExtensionOps(value)

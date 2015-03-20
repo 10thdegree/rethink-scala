@@ -1,40 +1,35 @@
 package bravo.api.dart
+
 import scalaz._
 import Scalaz._
 import org.joda.time.DateTime
 import scala.concurrent.ExecutionContext.Implicits.global
-import bravo.core.Util._
+import bravo.util.Util._
 import com.google.api.services.dfareporting.Dfareporting
 import scala.annotation.tailrec
-import bravo.api.dart.Data._
 import scala.concurrent.{Future,Await}
 import org.joda.time._
 import bravo.util.DateUtil._
-import bravo.util.Data._
-import play.Logger
-
+import bravo.api.dart.Data._
 
 object LiveTest {
   //  implicit def defaultC = MarchexCredentials("http://api.voicestar.com/api/xmlrpc/1", "urp@10thdegree.com", "10thdegreee")
-  case class ProdConfig(
-      val api: DartInternalAPI = LiveDart, 
-      val filePath: String = "conf/Bravo-44871094176f.p12",
-      val accountId: String = "399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com",
-      val userAccount: String = "bravo@10thdegree.com",
-      val clientId: Int =  1297324,
-      val marchexpass: String = "10thdegreee",
-      val marchexurl: String = "http://api.voicestar.com/api/xmlrpc/1",
-      val marchexuser: String = "urp@10thdegree.com",
-      val m: Map[Long, List[ReportDay]] = Map()
-    ) extends Config {
-      override def updateCache(m: Map[Long, List[ReportDay]]): Config =
-        this.copy(m = m)
-    }
+  
+  /*
+   */
 
-    val prodConfig = new ProdConfig()
-
+    val prodConfig = DartConfig(
+      api = LiveDart, 
+      filePath = "conf/Bravo-0ffe49230621.p12",
+      //filePath = "conf/Bravo-44871094176f.p12",
+      accountId = "399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com",
+      userAccount = "bravo@10thdegree.com",
+      clientId =  1297324,
+      reportCache = Map[Long, List[ReportDay]]() 
+    )
+ 
     import com.google.api.services.dfareporting.model._
-    
+/*`   
     def prodTest(): \/[JazelError,DownloadedReport] = {
       import scala.concurrent.duration._
       import org.joda.time.format._
@@ -68,4 +63,5 @@ object LiveTest {
       val onlyreport = ReportParser.findTable(report.split("\\r?\\n").toList,"")
       Files.write(Paths.get(filename), onlyreport.getBytes(StandardCharsets.UTF_8))
     }
+  */
 }
