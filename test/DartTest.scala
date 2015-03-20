@@ -96,7 +96,7 @@ object DartAPITest extends Properties("Dart API test") {
     
     def getActivities(r: Dfareporting, s: DateTime, e: DateTime): BravoM[DartConfig, List[String]] = ???
 
-    def viewDartReports(r: Dfareporting, userid: Int): BravoM[DartConfig, List[AvailableReport]] = ???
+    def getAvailableReports(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, List[AvailableReport]] = ???
 
     def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit] = Dart.dartMonad.point(())
 

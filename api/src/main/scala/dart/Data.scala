@@ -16,8 +16,6 @@ trait DartInternalAPI {
 
   def getDartAuth: BravoM[DartConfig, Dfareporting]
   
-  def viewDartReports(r: Dfareporting, userid: Int): BravoM[DartConfig, List[AvailableReport]]
-
   def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit]
 
   def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[DartConfig, Long]
@@ -28,6 +26,8 @@ trait DartInternalAPI {
 
   def createDartReport(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long]
 
+  def getAvailableReports(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, List[AvailableReport]]
+  
   protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
     new com.google.api.client.util.DateTime(dt.toString(formatter)) 
 
@@ -80,7 +80,6 @@ object Data {
   }
   
   implicit val reportDaySemigroup: Semigroup[ReportDay] = new Semigroup[ReportDay] {
-    
     override def append(a: ReportDay, b: => ReportDay): ReportDay = 
       a.retrievedDate compareTo b.retrievedDate match {
         case 1 => 
