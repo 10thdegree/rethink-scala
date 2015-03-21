@@ -14,12 +14,9 @@ import bravo.api.dart.Data._
 
 object LiveTest {
   //  implicit def defaultC = MarchexCredentials("http://api.voicestar.com/api/xmlrpc/1", "urp@10thdegree.com", "10thdegreee")
-  
-  /*
-   */
 
-    val prodConfig = DartConfig(
-      api = LiveDart, 
+  val prodConfig = DartConfig(
+      api = InternalLiveDart, 
       filePath = "conf/Bravo-0ffe49230621.p12",
       //filePath = "conf/Bravo-44871094176f.p12",
       accountId = "399851814004-9msbusp4vh24crdgrrltservs4u430uj@developer.gserviceaccount.com",

@@ -35,12 +35,13 @@ trait DartInternalAPI {
 
 }
 
-
 object Data {
   import org.joda.time._
   import scalaz._
   import Scalaz._
   import bravo.util.DateUtil._
+
+  val BRAVO_PREFIX = "BRAVO-"
 
   case class DartConfig(
     api: DartInternalAPI,
