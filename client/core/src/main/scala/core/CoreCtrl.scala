@@ -3,6 +3,8 @@ package client.core
 import biz.enef.angulate.{Controller, Scope}
 
 import scala.scalajs.js
+import shared.models._
+import org.scalajs.dom
 
 class CoreCtrl extends Controller {
   protected def handleError(ex: Throwable): Unit = js.Dynamic.global.console.error(s"An error has occurred: $ex")
@@ -66,4 +68,58 @@ object SearchWatch {
 
   def apply(searchAccount: String, currentPage: Int): SearchWatch =
     js.Dynamic.literal(searchTerm = searchAccount, currentPage = currentPage).asInstanceOf[SearchWatch]
+}
+
+trait AccountJS extends js.Object {
+	val id$1: String = js.native
+	val label$1: String = js.native
+}
+
+object AccountJS {
+	def apply(): AccountJS =
+    js.Dynamic.literal(id$1 = "", label$1 = "").asInstanceOf[AccountJS]
+}
+
+trait HideAccountChosen {
+	dom.document.dispatchEvent(CoreEvent.hideChosenAccounts)
+}
+
+trait AccountChange {
+	def $cookieStore: js.Dynamic
+	def $timeout: js.Dynamic
+}
+
+trait SingleAccountChosen extends AccountChange {
+	dom.document.dispatchEvent(CoreEvent.singleChosenAccount)	
+	dom.document.addEventListener("changeChosenAccounts", {(e: dom.Event) =>
+			$timeout(() => {
+				accountChanged(getAccountId())
+			}, 100)
+  })
+	
+	def accountChanged(accountId: Option[String]): Unit
+	
+	def getAccountId(): Option[String] = {
+		val cookieAcccounts: js.UndefOr[js.Array[String]] = $cookieStore.get("accounts").asInstanceOf[js.Array[String]]
+		cookieAcccounts.getOrElse(js.Array[String]()).length match {
+			case 0 => None
+			case _ => Some(cookieAcccounts.get.head)
+		}
+	}
+}
+
+trait MultipleAccountChosen extends AccountChange {
+	dom.document.dispatchEvent(CoreEvent.multipleChosenAccount)	
+	dom.document.addEventListener("changeChosenAccounts", {(e: dom.Event) =>
+			$timeout(() => {
+				accountChanged(getAccountIds())
+			}, 100)
+  })
+	
+	def accountChanged(accountIds: js.Array[String]): Unit
+	
+	def getAccountIds(): js.Array[String] = {
+		val cookieAcccounts: js.UndefOr[js.Array[String]] = $cookieStore.get("accounts").asInstanceOf[js.Array[String]]
+		cookieAcccounts.getOrElse(js.Array[String]())
+	}
 }

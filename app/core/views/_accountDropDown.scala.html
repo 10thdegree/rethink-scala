@@ -1,14 +1,23 @@
-@(singleAccountPicker: Boolean = false)
-<form class="navbar-form navbar-right">
+<form class="navbar-form navbar-right" ng-class="{singleChosen: !ctrl.nav.multiple}" ng-show="ctrl.nav.show">
 	<select 
-		@if(!singleAccountPicker) { multiple }
+		multiple
 		chosen
-		data-placeholder="Choose an Account"
-		no-results-text="'Could not find any accounts'"
-		ng-model="ctrl.selectedAccount"
+		data-placeholder="Choose an Account..."
+		no-results-text="'Loading Accounts'"
+		ng-model="ctrl.multipleSelectedAccount"
 		ng-options="account.label$1 for account in ctrl.accounts track by account.id$1"
-		class="chosen-rtl"
 		style="width: 400px;"
+		ng-if="ctrl.nav.multiple"
+		ng-change="ctrl.accountsUpdated()">
+	</select>
+	<select 
+		chosen
+		data-placeholder="Choose an Account..."
+		no-results-text="'Loading Accounts'"
+		ng-model="ctrl.singleSelectedAccount"
+		ng-options="account.label$1 for account in ctrl.accounts track by account.id$1"
+		style="width: 250px;"
+		ng-if="!ctrl.nav.multiple"
 		ng-change="ctrl.accountsUpdated()">
 	</select>
 </form>
