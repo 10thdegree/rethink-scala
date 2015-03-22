@@ -5,7 +5,7 @@ import biz.enef.angulate._
 import scala.scalajs.js
 import scala.scalajs.js.JSApp
 
-import client.core.{NgEnterDirective, FocusMeDirective}
+import client.core.{NgEnterDirective, FocusMeDirective,SubNavCtrl}
 
 object UserManageApp extends JSApp {
   override def main(): Unit = {
