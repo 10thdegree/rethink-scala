@@ -10,7 +10,7 @@ import sbt._
 common settings for all projects
 
 ****/
-lazy val clients = Seq(loginClient, navClient, userManageClient)
+lazy val clients = Seq(reportClient, loginClient, navClient, userManageClient)
 
 lazy val coredeps = Seq(
   //scalaz
@@ -91,6 +91,8 @@ def clientProject(project: Project, name: String): Project = {
 			)
     ).enablePlugins(ScalaJSPlugin, ScalaJSPlay)
 }
+
+lazy val reportClient = clientProject(project in file("client/report"),"report").dependsOn(sharedJS)
 
 lazy val loginClient = clientProject(project in file("client/login"),"login")
 

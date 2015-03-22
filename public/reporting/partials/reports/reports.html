@@ -1,0 +1,22 @@
+<div>
+    <div class="row panel-body">
+        <div class="col-lg-4">
+            <input class="form-control" ng-model="watch.searchTerm" placeholder="Search..."/>
+        </div>
+    </div>
+    <!-- Table -->
+    <table class="table table-hover">
+        <tr ng-repeat="report in filterList">
+            <td>{{report.accountId$1}}</td>
+            <td style="width: 125px;">{{report.accountId$1}}</td>
+            <td style="width: 125px;">{{report.viewId$1}}</td>
+        </tr>
+        <tr>
+           <td ng-class="{'hidden': visibleListItems != 0 }">No Reports Found.</td>
+        </tr>
+    </table>
+    <pagination ng-class="{ 'hidden': visibleListItems <= numPerPage }" ng-model="watch.currentPage"
+                items-per-page="numPerPage" boundary-links="true"
+                total-items="visibleListItems" class="pagination-sm" previous-text="&lsaquo;"
+                next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
+</div>
