@@ -7,13 +7,11 @@ import Scalaz._
 //import bravo.api.dart.Data._
 import scala.collection.immutable.{TreeSet, SortedSet}
 
-object Data {
-  case class ReportDay(retrievedDate: DateTime = new DateTime(), rowDate: LocalDate, rows: List[Map[String,String]])
-}
 
 object DateUtil {
-  import Data._
 
+  case class ReportDay(retrievedDate: DateTime = new DateTime(), rowDate: LocalDate, rows: List[Map[String,String]])
+  
   implicit val localDateOrd = new scala.math.Ordering[LocalDate] {
     def compare(a: LocalDate, b: LocalDate): Int = 
       a compareTo b
@@ -22,7 +20,7 @@ object DateUtil {
   def mkDateTime(str: String, fmt: String = "yyyy-MM-dd") =
     DateTime.parse(str, DateTimeFormat.forPattern(fmt))
 
-  
+  //Takes a List of Maps that have a "Date" key inside them then groups by the "Date" value 
   def groupDates(li: List[Map[String,String]]): List[ReportDay] = {
     li.map(m => (mkDateTime(m("Date")).toLocalDate, m)).groupBy(_._1).toList.map(t => ReportDay(new DateTime(), t._1, t._2.map(_._2))).sortBy(rd => rd.rowDate)
   }
@@ -56,10 +54,16 @@ object DateUtil {
     val bestCache = groupsAtBoundaries.sortWith((a,b) => a.size == b.size).headOption.toList.flatten
     toSortedSet(bestCache)
   }
-  
+ 
+  def isBetween(t: (DateTime, DateTime), b: (DateTime, DateTime)): Boolean =
+    isBetweenLD( (t._1.toLocalDate(), t._2.toLocalDate()), (b._1.toLocalDate(), b._2.toLocalDate()))
+
+  def isBetweenLD(t: (LocalDate, LocalDate), b: (LocalDate, LocalDate)): Boolean = 
+    ((t._1 compareTo b._1) > -1) && ((t._2 compareTo b._2) < 1) 
+      
   def toSortedSet[A](l: List[A])(implicit O: scala.math.Ordering[A]): SortedSet[A] =
     l.foldLeft( TreeSet[A]() )( (a,b) => a + b )
- 
+
   def findMissingDates(l: List[LocalDate], sd: LocalDate, ed: LocalDate): Option[(LocalDate, LocalDate)] = 
     l match {
       case Nil => (sd, ed).some
@@ -72,7 +76,6 @@ object DateUtil {
         }
     }
 
-  
   def slidingGroup[A](l: List[A], f: (A,A) => Boolean ): List[List[A]] = {
     l match {
       case h :: t =>
@@ -85,6 +88,5 @@ object DateUtil {
       case Nil => List[List[A]]()
     }
   }
-  
 }
 

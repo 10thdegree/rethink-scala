@@ -12,34 +12,38 @@ import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.client._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import bravo.core.Util._
+//import bravo.core.Util._
+import bravo.util.Util._
 
 object Marchex {
   // PUBLIC API
-  def getGroups(accountid: String): BravoM[List[MarchexGroup]] = 
+
+  def getGroups(accountid: String): BravoM[MarchexConfig, List[MarchexGroup]] = 
     (for {
       results <- makeCall("group.list", List[Object](accountid))
+      mapped <- results.map(o => parseGroup(o.asInstanceOf[HashMap[String,Object]])).toList.sequenceU.toBravoM
     } yield { 
-      results.map(o => parseGroup(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
-    }).flatMap(identity)
-  
-  def getAccounts: BravoM[List[MarchexAccount]] = 
-    (for {
-      results <- makeCall("acct.list", List[Object]())
-    } yield 
-      results.map(o => parseAccount(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU //saves us a type lambda with the normal sequence
-    ).flatMap(identity)
+      mapped
+    })
 
+  
+  def getAccounts: BravoM[MarchexConfig, List[MarchexAccount]] = 
+    for {
+      results <- makeCall("acct.list", List[Object]())
+      mapped <- results.map(o => parseAccount(o.asInstanceOf[HashMap[String,Object]])).toList.sequenceU.toBravoM  
+    } yield 
+      mapped
+      
   val frmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z")
 
-  def getCallLogs(acctid: String, start: DateTime, end:DateTime): BravoM[List[CallLog]] = {
-    (for {
-      search <- fctry(c => (Map[String,String]("start" -> start.toString(frmt),"end" -> end.toString(frmt))): java.util.Map[String,String] )
+  def getCallLogs(acctid: String, start: DateTime, end:DateTime): BravoM[MarchexConfig, List[CallLog]] = 
+    for {
+      search <- fctry((c:MarchexConfig) => (Map[String,String]("start" -> start.toString(frmt),"end" -> end.toString(frmt))): java.util.Map[String,String] )
       results                              <- makeCall("call.search", List[Object](acctid, search))
-    } yield {
-      results.map(o => parseCallLog(o.asInstanceOf[HashMap[String,Object]]).toBravoM).toList.sequenceU
-    }).flatMap(identity)
-  }
+      mapped <- results.map(o => parseCallLog(o.asInstanceOf[HashMap[String,Object]])).toList.sequenceU.toBravoM
+    } yield 
+      mapped
+  
 
   //This is for roundtrips back to a format for XML-RPC.  We're using this for mocking/testing
   def callLogToMap(c: CallLog): Map[String,Object] = {
@@ -66,7 +70,7 @@ object Marchex {
 
   //END PUBLIC API
 
-  private def makeCall(methodcall: String, params: List[Object]): BravoM[Array[Object]] = ((c: Config) => {
+  private def makeCall(methodcall: String, params: List[Object]): BravoM[MarchexConfig, Array[Object]] = ((c: MarchexConfig) => {
     val config = new XmlRpcClientConfigImpl()
     config.setServerURL(new URL(c.marchexurl))
     config.setBasicUserName(c.marchexuser)
@@ -123,8 +127,8 @@ object Marchex {
 
   private def getVal[A](k: String)(implicit m: HashMap[String,Object], dc: DataCaster[A]): \/[JazelError,A] = 
     for {
-      o <- \/.fromTryCatchNonFatal(m.get(k)).mapJazelError
-      a <- \/.fromTryCatchNonFatal(dc.cast(o)).mapJazelError
+      o <- btry(m.get(k))
+      a <- btry(dc.cast(o))
     } yield 
       a
 }
