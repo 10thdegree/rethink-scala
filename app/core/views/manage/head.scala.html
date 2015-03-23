@@ -1,3 +1,2 @@
 <link rel="stylesheet" href='@routes.Assets.at("css/manage.css")'>
-<script src='@routes.Assets.at("js/target/userManage.js")'></script>
-<script src='@routes.Assets.at("js/target/userManage-launcher.js")'></script>
+@core.views.html.scalajsClient(basePath = "/assets/js/target", projectName = "userManage")

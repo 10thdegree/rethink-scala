@@ -79,7 +79,8 @@ def clientProject(project: Project, name: String): Project = {
   project
     .settings(commonClientSettings: _*)
     .settings(
-      artifactPath in (Compile, fastOptJS) := file(s"public/core/js/target/$name.js"),
+      artifactPath in (Compile, fullOptJS) := file(s"public/core/js/target/$name-opt.js"),
+      artifactPath in (Compile, fastOptJS) := file(s"public/core/js/target/$name-fastopt.js"),
       artifactPath in (Compile, packageScalaJSLauncher) := file(s"public/core/js/target/$name-launcher.js"),
       unmanagedSourceDirectories in Compile ++= Seq(
 				baseDirectory.value / ".." / ".." / sharedSrcDir / "src" / "main" / "scala",
