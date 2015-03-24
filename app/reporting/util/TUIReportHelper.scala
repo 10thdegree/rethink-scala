@@ -281,12 +281,12 @@ object TUIReportHelper {
     val dateSelector = DateSelector("Date", "yyyy-MM-dd")
 
     val dartDs = dart.DartDS(
-      randUUID,
       "Dart DS for Search Performance",
       "18158200", // dart query-id
       account.id.get,
       List(keySelector),
-      dateSelector
+      dateSelector,
+      randUUID
     )
 
     val fieldBindings = List(

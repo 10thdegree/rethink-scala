@@ -10,7 +10,8 @@ import sbt._
 common settings for all projects
 
 ****/
-lazy val clients = Seq(reportClient, loginClient, navClient, userManageClient)
+//lazy val clients = Seq(reportClient, loginClient, navClient, userManageClient)
+lazy val clients = Seq()
 
 lazy val coredeps = Seq(
   //scalaz

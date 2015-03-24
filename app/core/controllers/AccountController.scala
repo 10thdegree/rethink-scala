@@ -10,9 +10,13 @@ import play.api.mvc.{Action, BodyParsers}
 import securesocial.core.RuntimeEnvironment
 import shared.models.{LastAccount,AccountsResponse}
 import prickle._
+import reporting.models.ds._
+import reporting.models.ds.dart._
 
 class AccountController @Inject()(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
-  implicit val accountFormat = pjson.Json.format[Account]
+  //implicit val dataSourceFormat = pjson.Json.format[DataSource]
+
+  //implicit val accountFormat = pjson.Json.format[Account]
   implicit val labelFormat = pjson.Json.format[Label]
   implicit val userIdFormat = pjson.Json.format[UserIds]
 
@@ -95,21 +99,21 @@ class AccountController @Inject()(override implicit val env: RuntimeEnvironment[
     }
   }
 
-  def addAccount = Action(BodyParsers.parse.json) {
-    request =>
-      request.body.validate[Account].fold(
-        errors => {
-          BadRequest(pjson.Json.obj("status" -> "OK", "message" -> pjson.JsError.toFlatJson(errors)))
-        },
-        account => {
-          import com.rethinkscala.Blocking._
-          coreBroker.accountsTable.insert(account).run match {
-            case Right(x) => Ok(pjson.Json.obj("status" -> "OK", "message" -> "Account created."))
-            case Left(x) => BadRequest(pjson.Json.obj("status" -> "OK", "message" -> x.getMessage))
-          }
-        }
-      )
-  }
+  //def addAccount = Action(BodyParsers.parse.json) {
+    //request =>
+      //request.body.validate[Account].fold(
+        //errors => {
+          //BadRequest(pjson.Json.obj("status" -> "OK", "message" -> pjson.JsError.toFlatJson(errors)))
+        //},
+        //account => {
+          //import com.rethinkscala.Blocking._
+          //coreBroker.accountsTable.insert(account).run match {
+            //case Right(x) => Ok(pjson.Json.obj("status" -> "OK", "message" -> "Account created."))
+            //case Left(x) => BadRequest(pjson.Json.obj("status" -> "OK", "message" -> x.getMessage))
+          //}
+        //}
+      //)
+  //}
 
   def renameAccount(accountId: String) = Action(BodyParsers.parse.json) {
     request =>

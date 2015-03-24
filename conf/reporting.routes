@@ -18,3 +18,7 @@ GET        /reportGrid                      reporting.controllers.TuiReportContr
 
 GET        /reportViews                     reporting.controllers.TuiReportController.reportViews
 
+# DataSources
+POST       /datasource/dart/:accountId      @reporting.controllers.DartDSController.addAccountDataSource(accountId: String)
+#DELETE     /datasource/dart/:accountId         @core.controllers.PermissionsController.deleteAccountPermission(accountId: String)
+

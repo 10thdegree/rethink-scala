@@ -19,7 +19,7 @@ class RethinkUserService extends UserService[User] {
 
     val result = coreBroker.usersTable.filter(Map("main" -> Map("userId" -> userId, "providerId" -> providerId))).run match {
       case Right(x) => x match {
-        case Nil => None
+        //case Nil => None
         case f: Seq[User] => Some(f(0).main)
         case _ => None;
       }
