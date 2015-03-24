@@ -16,6 +16,7 @@ object InternalLiveDart extends DartInternalAPI {
   import bravo.util.Util._
   import com.google.api.services.dfareporting.model._
   import com.google.api.services.dfareporting.model.Report._
+  import DartData._
 
   def getDartAuth: BravoM[DartConfig, Dfareporting] = DartAuth.getCredentialService
 
@@ -44,23 +45,24 @@ object InternalLiveDart extends DartInternalAPI {
 
   override def createDartReport(reportApi: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long] = 
     for {
-      floodlights <- getActivityFields(reportApi, advertiserId)
-      reportId    <- createReport(reportApi, advertiserId, floodlights.map(_._2))
+      floodlights     <- getActivityFields(reportApi, advertiserId)
+      reportTemplate  = getReportTemplate(PaidSearch()).copy(activityIds = floodlights.map(_._2)) //just need the Ids of the floodlights, put into the template 
+      reportId        <- createReportFromTemplate(reportApi, advertiserId, reportTemplate)
     } yield 
       reportId
 
   //we will want to add various report types here
-  def createReport(reportApi: Dfareporting, advertiserId: Long, activityIds: List[Int]): BravoM[DartConfig, Long] = {
+  private def createReportFromTemplate(reportApi: Dfareporting, advertiserId: Long, template: ReportTemplate): BravoM[DartConfig, Long] = {
       val daterange = new DateRange().setRelativeDateRange("MONTH_TO_DATE")
-      val dimensions = new SortedDimension().setName("dfa:campaign")
-      val mappedActivities = activityIds.map(dv => new DimensionValue().setDimensionName("dfa:activity").setId(dv.toString))
+      val dimensions = template.dimensions.map(dm => new SortedDimension().setName(dm))
+      val mappedActivities = template.activityIds.map(dv => new DimensionValue().setDimensionName("dfa:activity").setId(dv.toString))
       val dimensionValue = new DimensionValue().setDimensionName("dfa:advertiser").setId(advertiserId.toString) 
-      val metricsList = List("dfa:paidSearchAveragePosition", "dfa:paidSearchClickRate", "dfa:paidSearchClicks", "dfa:paidSearchImpressions", "dfa:paidSearchCost", "dfa:paidSearchVisits", "dfa:paidSearchActions")
+      val metricsList = template.metrics 
       
       val criteria = new Criteria()
         .setDateRange(daterange)
         .setActivities( new Activities().setMetricNames(List("dfa:paidSearchActions")).setFilters(mappedActivities))
-        .setDimensions(List(dimensions))
+        .setDimensions(dimensions)
         .setMetricNames(metricsList)
 
       //Schedule should be run month to date 

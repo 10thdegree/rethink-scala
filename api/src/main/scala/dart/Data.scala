@@ -35,6 +35,28 @@ trait DartInternalAPI {
 
 }
 
+object DartData {
+  trait ReportType
+  case class PaidSearch() extends ReportType
+  case class Display()  extends ReportType
+
+  case class ReportTemplate(activityIds: List[Int], dimensions: List[String], metrics: List[String])
+
+  def getReportTemplate(reportType: ReportType): ReportTemplate = reportType match {
+    case PaidSearch() => 
+      val dimensions = List("dfa:campaign")
+      val metrics = List("dfa:paidSearchAveragePosition", "dfa:paidSearchClickRate", "dfa:paidSearchClicks", "dfa:paidSearchImpressions", "dfa:paidSearchCost", "dfa:paidSearchVisits", "dfa:paidSearchActions")
+      ReportTemplate(List(), dimensions, metrics)
+    //case Display() =>
+      //bad we shouldn't do this? should we have this be a trait with the parametrs nad type as a parametr?
+    //  ReportTemplate(List(), List(), List()) 
+  }
+  
+ 
+}
+
+
+
 object Data {
   import org.joda.time._
   import scalaz._
