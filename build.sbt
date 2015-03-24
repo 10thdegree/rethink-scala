@@ -2,6 +2,7 @@ import org.scalajs.sbtplugin.ScalaJSPlugin
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import sbt.Project.projectToRef
 import sbt.Keys._
+import sbt._
 
 
 /**** 
@@ -9,7 +10,7 @@ import sbt.Keys._
 common settings for all projects
 
 ****/
-lazy val clients = Seq(loginClient, navClient, userManageClient, reportGridClient)
+lazy val clients = Seq(reportClient, loginClient, navClient, userManageClient)
 
 lazy val coredeps = Seq(
   //scalaz
@@ -21,7 +22,8 @@ lazy val coredeps = Seq(
   "org.specs2" % "specs2_2.11" % "2.4",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "org.joda" % "joda-convert" % "1.5",
-  "com.vmunier" %% "play-scalajs-scripts" % "0.1.0"
+  "com.vmunier" %% "play-scalajs-scripts" % "0.1.0",
+  "com.github.benhutchison" %% "prickle" % "1.1.4"
 )
 
 lazy val commonSettings = Seq(
@@ -37,15 +39,26 @@ lazy val commonSettings = Seq(
 
 lazy val util = project.settings(commonSettings: _*)
 
+val sharedSrcDir = "shared"
+
+lazy val shared = (crossProject.crossType(CrossType.Pure) in file(sharedSrcDir)).
+  settings(scalaVersion := "2.11.4").
+  jsConfigure(_ enablePlugins ScalaJSPlay)
+
+lazy val sharedJVM = shared.jvm
+lazy val sharedJS = shared.js
+
 lazy val bravo = (project in file("."))
   .settings(commonSettings: _*)
   .settings(
     scalaJSProjects := clients,
-    pipelineStages := Seq(scalaJSProd)
+    pipelineStages := Seq(scalaJSProd),
+    unmanagedSourceDirectories in Compile += baseDirectory.value / sharedSrcDir / "src" / "main" / "scala",
+    unmanagedSourceDirectories in Test += baseDirectory.value / sharedSrcDir / "src" / "test" / "scala"
   )
   .enablePlugins(PlayScala)
   .aggregate(clients.map(projectToRef): _*)
-  .dependsOn(util)
+  .dependsOn(util, sharedJVM)
 
 lazy val commonClientSettings = Seq(
   scalaVersion := "2.11.4",
@@ -57,7 +70,8 @@ lazy val commonClientSettings = Seq(
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
   ),
   libraryDependencies ++= Seq(
-    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT"
+    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT",
+    "com.github.benhutchison" %%% "prickle" % "1.1.4"
   )
 )
 
@@ -65,18 +79,27 @@ def clientProject(project: Project, name: String): Project = {
   project
     .settings(commonClientSettings: _*)
     .settings(
-      artifactPath in (Compile, fastOptJS) := file(s"public/core/js/target/$name.js"),
-      artifactPath in (Compile, packageScalaJSLauncher) := file(s"public/core/js/target/$name-launcher.js")
+      artifactPath in (Compile, fullOptJS) := file(s"public/core/js/target/$name-opt.js"),
+      artifactPath in (Compile, fastOptJS) := file(s"public/core/js/target/$name-fastopt.js"),
+      artifactPath in (Compile, packageScalaJSLauncher) := file(s"public/core/js/target/$name-launcher.js"),
+      unmanagedSourceDirectories in Compile ++= Seq(
+				baseDirectory.value / ".." / ".." / sharedSrcDir / "src" / "main" / "scala",
+				baseDirectory.value / ".." / "core" / "src" / "main" / "scala"
+			),
+      unmanagedSourceDirectories in Test ++= Seq(
+				baseDirectory.value / ".." / ".." / sharedSrcDir / "src" / "test" / "scala",
+				baseDirectory.value / ".." / "core" / "src" / "test" / "scala"
+			)
     ).enablePlugins(ScalaJSPlugin, ScalaJSPlay)
 }
 
-lazy val loginClient = clientProject(project in file(s"client/login"),"login")
+lazy val reportClient = clientProject(project in file("client/report"),"report").dependsOn(sharedJS)
 
-lazy val navClient = clientProject(project in file(s"client/nav"),"nav")
+lazy val loginClient = clientProject(project in file("client/login"),"login")
 
-lazy val userManageClient = clientProject(project in file(s"client/userManage"),"userManage")
+lazy val navClient = clientProject(project in file("client/nav"),"nav").dependsOn(sharedJS)
 
-lazy val reportGridClient = clientProject(project in file(s"client/reportGrid"),"reportGrid")
+lazy val userManageClient = clientProject(project in file("client/userManage"),"userManage")
 
 onLoad in Global := (Command.process("project bravo", _: State)) compose (onLoad in Global).value
 
@@ -94,8 +117,9 @@ lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
 lazy val angularDeps = Seq(// Angular-js
   "org.webjars" % "angularjs" % "1.3.10",
   "org.webjars" % "angular-ui" % "0.4.0-3"  exclude("org.webjars", "angularjs"),
-  "org.webjars" % "angular-ui-bootstrap" % "0.12.0"  exclude("org.webjars", "angularjs"),
+  "org.webjars" % "angular-ui-bootstrap" % "0.12.1"  exclude("org.webjars", "angularjs"),
   "org.webjars" % "angular-ui-router" % "0.2.13" exclude("org.webjars", "angularjs"),
+	"org.webjars" % "angular-chosen" % "1.0.6" exclude("org.webjars", "angularjs"),
   "org.webjars" % "smart-table" % "1.4.8"
 )
 
@@ -114,7 +138,7 @@ lazy val otherDeps = Seq(
   //
   //
   // Bootstrap
-  "org.webjars" % "bootstrap" % "3.1.1-2",
+  "org.webjars" % "bootstrap" % "3.3.2",
   "org.webjars" % "bootstrap-datepicker" % "1.3.1",
   "org.webjars" % "momentjs" % "2.9.0",
   //

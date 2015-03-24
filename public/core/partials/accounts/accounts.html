@@ -3,7 +3,7 @@
         <div>
             <div class="row panel-body">
                 <div class="col-lg-4">
-                    <input class="form-control" ng-model="form.searchAccount" placeholder="Search..."/>
+                    <input class="form-control" ng-model="watch.searchTerm" placeholder="Search..."/>
                 </div>
                 <!--<span class="badge">{{visibleAccounts}}</span>-->
                 <button style="float:right;" class="btn btn-default" ng-click="addAccount()">Add Account</button>
@@ -16,7 +16,7 @@
                     <!--<th style="width: 175px;">Actions</th>-->
                     <!--<th style="width: 10px;">ID</th>-->
                 <!--</tr>-->
-                <tr ng-repeat="account in filterAccounts">
+                <tr ng-repeat="account in filterList">
                     <td><span ng-click="renameAccount(account)" class="glyphicon glyphicon-pencil glyphicon-click"/> {{account.label}}</td>
                     <td style="width: 125px;"> <a ng-click="usersAccount(account)">Users</a></td>
                     <td style="width: 125px;"> <a ng-click="permissionsAccount(account)">Permissions</a></td>
@@ -31,10 +31,13 @@
                     </td>
                 </tr>
                 <tr>
-                   <td ng-class="{'hidden': visibleAccounts != 0 }">No Accounts Found.</td>
+                   <td ng-class="{'hidden': visibleListItems != 0 }">No Accounts Found.</td>
                 </tr>
             </table>
-            <pagination ng-class="{ 'hidden': visibleAccounts <= 10 }" items-per-page="numPerPage" boundary-links="true" total-items="visibleAccounts" page="currentPage" class="pagination-sm" previous-text="&lsaquo;" next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
+            <pagination ng-class="{ 'hidden': visibleListItems <= numPerPage }" ng-model="watch.currentPage"
+                        items-per-page="numPerPage" boundary-links="true"
+                        total-items="visibleListItems" class="pagination-sm" previous-text="&lsaquo;"
+                        next-text="&rsaquo;" first-text="&laquo;" last-text="&raquo;" />
         </div>
     </tab>
 </tabset>

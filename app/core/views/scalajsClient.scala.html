@@ -1,0 +1,8 @@
+@(basePath: String, projectName: String)
+@import play.api.Play
+@if(Play.isProd(Play.current)) {
+<script src="@{s"$basePath/${projectName.toLowerCase}-opt.js"}"></script>
+} else {
+<script src="@{s"$basePath/${projectName.toLowerCase}-fastopt.js"}"></script>
+}
+<script src="@{s"$basePath/${projectName.toLowerCase}-launcher.js"}"></script>

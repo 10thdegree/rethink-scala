@@ -23,4 +23,8 @@ object Application extends Controller {
     Logger.error("BLah")
     Ok("noargs")
   }
+
+  def reports = Action {
+    Ok(core.views.html.main(reporting.views.html.reports.head(), reporting.views.html.reports.main(), "Reporting",true))
+  }
 }

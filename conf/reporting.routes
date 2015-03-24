@@ -3,7 +3,8 @@
 # ~~~~
 
 # Home page
-GET        /                                reporting.controllers.Application.index
+# GET        /                                reporting.controllers.Application.index
+GET        /                                reporting.controllers.Application.reports
 
 GET        /assets/*file                    reporting.controllers.Assets.at(path="/public/reporting", file)
 

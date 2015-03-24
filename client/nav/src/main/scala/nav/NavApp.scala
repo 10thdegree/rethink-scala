@@ -1,4 +1,4 @@
-package nav
+package client.nav
 
 import biz.enef.angulate._
 import org.scalajs.dom
@@ -8,7 +8,7 @@ import scala.scalajs.js.JSApp
 
 object NavApp extends JSApp {
   override def main(): Unit = {
-    val module = angular.createModule("navBar", Seq("ui.bootstrap"))
+    val module = angular.createModule("navBar", Seq("ui.bootstrap","ngCookies","localytics.directives"))
 
     module.controllerOf[NavCtrl]("NavCtrl")
 

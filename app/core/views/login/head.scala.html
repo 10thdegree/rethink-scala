@@ -1,6 +1,2 @@
 <link rel="stylesheet" href='@routes.Assets.at("css/login.css")'>
-@*<script src='@routes.Assets.at("js/login/services.js")'></script>*@
-@*<script src='@routes.Assets.at("js/login/controllers.js")'></script>*@
-@*<script src='@routes.Assets.at("js/login/app.js")'></script>*@
-<script src='@routes.Assets.at("js/target/login.js")'></script>
-<script src='@routes.Assets.at("js/target/login-launcher.js")'></script>
+@core.views.html.scalajsClient(basePath = "/assets/js/target", projectName = "login")

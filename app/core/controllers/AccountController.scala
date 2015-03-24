@@ -8,11 +8,16 @@ import core.models._
 import play.api.libs.{json => pjson}
 import play.api.mvc.{Action, BodyParsers}
 import securesocial.core.RuntimeEnvironment
+import shared.models.{LastAccount,AccountsResponse}
+import prickle._
 
 class AccountController @Inject()(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
   implicit val accountFormat = pjson.Json.format[Account]
   implicit val labelFormat = pjson.Json.format[Label]
   implicit val userIdFormat = pjson.Json.format[UserIds]
+
+  implicit val lastAccountPickler: Pickler[LastAccount] = Pickler.materializePickler[LastAccount]
+  implicit val accountsResponsePickler: Pickler[AccountsResponse] = Pickler.materializePickler[AccountsResponse]
 
   case class Label(label: String)
 
@@ -23,7 +28,7 @@ class AccountController @Inject()(override implicit val env: RuntimeEnvironment[
 
   def getLastSelectedAccount = UserAwareAction { implicit request =>
     request.user match {
-      case Some(user) => Ok(pjson.Json.obj("status" -> "OK", "lastSelectedAccount" -> user.lastSelectedAccount))
+      case Some(user) => Ok(Pickle.intoString(LastAccount("Ok", user.lastSelectedAccount.get.toString)))
       case _ => Ok(pjson.Json.obj("status" -> "OK", "lastSelectedAccount" -> ""))
     }
   }
@@ -49,11 +54,11 @@ class AccountController @Inject()(override implicit val env: RuntimeEnvironment[
     }
     import com.rethinkscala.Blocking._
     if (userPermissions.isEmpty) {
-      Ok(pjson.Json.obj("status" -> "OK", "accounts" -> ""))
+      Ok(Pickle.intoString(AccountsResponse("Ok", Nil)))
     } else {
       coreBroker.accountsTable.getAll(userPermissions: _*).run match {
         case Right(tx) => {
-          Ok(pjson.Json.obj("status" -> "OK", "accounts" -> pjson.Json.parse(Reflector.toJson(tx))))
+          Ok(Pickle.intoString(AccountsResponse("Ok", tx.map((x: Account) => shared.models.Account(x.id.get.toString, x.label)))))
         }
         case Left(er) => BadRequest(pjson.Json.toJson(Map("error" -> er.getMessage)))
       }
