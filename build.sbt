@@ -23,7 +23,6 @@ lazy val coredeps = Seq(
   "org.specs2" % "specs2_2.11" % "2.4",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "org.joda" % "joda-convert" % "1.5",
-  "com.vmunier" %% "play-scalajs-scripts" % "0.1.0",
   "com.github.benhutchison" %% "prickle" % "1.1.4"
 )
 
