@@ -18,7 +18,10 @@ GET        /reportGrid                      reporting.controllers.TuiReportContr
 
 GET        /reportViews                     reporting.controllers.TuiReportController.reportViews
 
-# DataSources
-POST       /datasource/dart/:accountId      @reporting.controllers.DartDSController.addAccountDataSource(accountId: String)
-#DELETE     /datasource/dart/:accountId         @core.controllers.PermissionsController.deleteAccountPermission(accountId: String)
+# DS Account Cfg
+POST       /datasource/dart/:accountId/cfg    @reporting.controllers.DartDSAccountCfgController.addDSAccountCfg(accountId: String)
 
+# DataSources
+POST       /datasource/dart/:accountId        @reporting.controllers.DartDSController.addAccountDataSource(accountId: String)
+
+GET        /ds/:dataProvider/advertisers      @reporting.controllers.DataProviderController.advertisers(dataProvider)

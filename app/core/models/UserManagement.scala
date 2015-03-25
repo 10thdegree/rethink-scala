@@ -6,7 +6,7 @@ import com.rethinkscala.Document
 import org.joda.time.DateTime
 import securesocial.core.BasicProfile
 import securesocial.core.providers.MailToken
-import reporting.models.ds._
+import reporting.models.ds.DSAccountCfg
 
 case class Permission(label: String, readonly: Boolean = false, id: Option[UUID] = None) extends Document
 
@@ -29,7 +29,7 @@ object User {
 }
 case class Account(val label: String,
                    permissions: List[UUID],
-                   datasources: List[DataSource] = Nil,
+                   dsCfg: List[DSAccountCfg] = Nil,
                    id: Option[UUID] = None) extends Document
 
 case class AccountPermissions(accountId: UUID,

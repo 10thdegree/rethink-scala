@@ -10,13 +10,9 @@ import play.api.mvc.{Action, BodyParsers}
 import securesocial.core.RuntimeEnvironment
 import shared.models.{LastAccount,AccountsResponse}
 import prickle._
-import reporting.models.ds._
-import reporting.models.ds.dart._
+import reporting.models.ds.DSAccountCfg
 
 class AccountController @Inject()(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
-  //implicit val dataSourceFormat = pjson.Json.format[DataSource]
-
-  //implicit val accountFormat = pjson.Json.format[Account]
   implicit val labelFormat = pjson.Json.format[Label]
   implicit val userIdFormat = pjson.Json.format[UserIds]
 

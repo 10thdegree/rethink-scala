@@ -2,6 +2,7 @@ package reporting.models
 
 import java.text.DateFormat
 import java.util.UUID
+import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
 
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatterBuilder, DateTimeFormatter}
@@ -9,6 +10,12 @@ import reporting.engine.JodaTime.implicits._
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scalaz.Semigroup
+
+import prickle._
+import scala.util.{Success, Failure, Try}
+import collection.mutable
+import scala.collection.GenIterableLike
+import scala.util.matching.Regex
 
 package object ds {
 
@@ -30,6 +37,36 @@ package object ds {
                           dateFormat: String /* e.g. mm/dd/YYYY */) {
   }
 
+  case class SimpleKeySelector(targetAttribute: String,
+                               transformations: Map[String,String],
+                               otherwise: String) extends KeySelector {
+    import bravo.util.matching.RegexOps.implicits._
+
+    import scalaz.Scalaz._
+    import scalaz._
+
+    implicit class CollectionOps[+A, B <: Iterable[A]](col: GenIterableLike[A, B]) {
+      def findFirst[B](f: A => Option[B]): Option[B] = {
+        col.repr.view.map(f).collectFirst({
+          case Some(x) => x
+        })
+      }
+    }
+
+    def select(attrs: Map[String, String]): Option[String] = {
+      val resultList = transformations.map{case(k,v) => (k,v)}(collection.breakOut): List[(String,String)]
+      val patterns = resultList.map(p => p._1.r -> p._2)
+
+      val campaign = attrs.getOrElse(targetAttribute, "")
+
+      patterns
+        .findFirst({case (regex,replacement) =>
+          regex.maybeReplaceFirstIn(campaign, replacement)
+        })
+        .orElse(otherwise.some)
+    }
+  }
+
   sealed case class DataSourceType(label: String)
 
   object DataSourceTypes {
@@ -38,6 +75,19 @@ package object ds {
     var Unknown = DataSourceType("N/A")
   }
 
+  @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+  trait DSAccountCfg {
+
+    def dsId: Option[UUID]
+
+    def label: String
+
+    def dsAccountId: String
+
+    def dsType: DataSourceType
+  }
+
+  @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
   trait DataSource {
 
     def dsId: Option[UUID]
@@ -59,6 +109,14 @@ package object ds {
   }
 
   object DataSource {
+
+    implicit object UUIDUnpickler extends Unpickler[UUID] {
+      def unpickle[P](pickle: P, state: mutable.Map[String, Any])(implicit config: PConfig[P]) = config.readString(pickle).flatMap(s => Try(UUID.fromString(s)))
+    }
+
+    implicit object UUIDPickler extends Pickler[UUID] {
+      def pickle[P](x: UUID, state: PickleState)(implicit config: PConfig[P]): P = config.makeString(x.toString)
+    }
 
     implicit def AttributesSemigroup: Semigroup[Attributes] = new Semigroup[Attributes] {
       def append(a1: Attributes, a2: => Attributes): Attributes = {

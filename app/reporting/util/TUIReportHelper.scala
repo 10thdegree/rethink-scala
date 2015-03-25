@@ -238,13 +238,8 @@ object TUIReportHelper {
 
     val views = List(viewWithoutFees, viewWithFees, viewBoth)
 
-    // XXX(dk): this can't be serialised as is!!
-    val keySelector = new ds.KeySelector {
-
-      import bravo.util.matching.RegexOps.implicits._
-
-      def select(attrs: Map[String, String]): Option[String] = {
-        val patterns = List[(String, String)](
+    val keySelector = new ds.SimpleKeySelector("Paid Search Campaign",
+      Map[String, String](
           "^(Brand).*$" -> "$1",
           "^(Partners)hips.*$" -> "$1",
           "^(Accredited)$" -> "$1",
@@ -265,18 +260,9 @@ object TUIReportHelper {
           "^(PhD).*$" -> "$1",
           "^(Undergraduate).*$" -> "$1",
           "^(Veterans).*$" -> "$1",
-          "^(Online).*$" -> "$1")
-          .map(p => p._1.r -> p._2)
-
-        val campaign = attrs.getOrElse("Paid Search Campaign", "")
-
-        patterns
-          .findFirst({case (regex,replacement) =>
-            regex.maybeReplaceFirstIn(campaign, replacement)
-          })
-          .orElse("Other".some)
-      }
-    }
+          "^(Online).*$" -> "$1"),
+      "Other"
+    )
 
     val dateSelector = DateSelector("Date", "yyyy-MM-dd")
 
