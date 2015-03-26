@@ -11,13 +11,13 @@ import scalaz.Scalaz._
 import scalaz._
 
 
-abstract class IdentityDataProvider {
+trait IdentityDataProvider {
 
   val id: String
 
   override def toString = id
 
-  def getAdvertisers: Future[(Data.DartConfig, \/[JazelError,List[(String, Int)]])]
+  def getAdvertisers: BravoM[GlobalConfig,List[(String, Int)]]
 }
 
 object IdentityDataProvider {

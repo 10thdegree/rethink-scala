@@ -44,6 +44,12 @@ object Util {
     def toBravoM[A]: BravoM[A,B] = EitherT[({ type l[a] = SFuture[A,a]})#l, JazelError, B](sFutureMonad[A].point(e))
   }
 
+  case class BMHolder[A,B](bm: BravoM[A, B]) {
+    def zoom[C](lens: Lens[C,A]): BravoM[C,B] = EitherT[({ type l[a] = SFuture[C,a]})#l, JazelError, B](bm.run.zoom(lens)) //   .liftM[BravoHoist]
+  } 
+ 
+  implicit def toBMHolder[A,B](bm: BravoM[A,B]): BMHolder[A,B] = BMHolder(bm) 
+
   case class FuncHolder[A,B](f: A => B) {
     def toBravoM: BravoM[A,B] = fctry(f, None)
   }

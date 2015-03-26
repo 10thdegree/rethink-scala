@@ -9,6 +9,7 @@ import reporting.core._
 import bravo.util.Util._
 import scala.concurrent.{ ExecutionContext, Future }
 import bravo.api.dart._
+import bravo.api.dart.Data._
 import scalaz.Scalaz._
 import scalaz._
 
@@ -18,8 +19,14 @@ class DartDataProvider()(implicit val executionContext: ExecutionContext)
 
   override val id = DartDataProvider.Dart
 
-  def getAdvertisers: Future[(Data.DartConfig, \/[JazelError,List[(String, Int)]])] = {
-    Dart.getAdvertisers.run(LiveTest.prodConfig)
+  //each provider will have an internal lens to help <~> between the bigger configs and the specific data requirements. 
+  //We can have one global config or N number, nad decide which one to pull by a DB
+  //or account config. 
+  val glens: Lens[GlobalConfig, DartConfig] = Lens.lensu( (a,b) => a.copy(api = b.api, filePath = b.filePath, accountId = b.accountId, userAccount = b.userAccount, clientId = b.clientId, reportCache = b.reportCache),
+    b => DartConfig(api = b.api, filePath = b.filePath, accountId = b.accountId, userAccount = b.userAccount, clientId = b.clientId, reportCache = b.reportCache))
+
+  def getAdvertisers: BravoM[GlobalConfig, List[(String, Int)]] = {
+    Dart.getAdvertisers.zoom(glens) //.run(LiveTest.prodConfigbb)
   }
 }
 

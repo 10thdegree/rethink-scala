@@ -23,14 +23,22 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
   implicit def executionContext: ExecutionContext = rep.executionContext
 
   def advertisers(dataProvider: String) = handleGetAdvertisers(dataProvider)
+  
+  //maybe goes in the base data provider?
+  def globalConfig: GlobalConfig = ???
+  //so we can use the request to load up the data for which configs to use from the DB, but they will always end up in the GlobalConfig
 
-
+  //we may want to leftmap the error to an HTML error message and log?
+  //STYLE NOTE: if a method is longer than one line, let's ascribe a return type 
   private def handleGetAdvertisers(dataProvider: String) = Action.async { implicit request =>
-    rep.dataProviders.get(dataProvider).map {
-      _.getAdvertisers.map {
-        advertisers => Ok(pjson.Json.obj("status" -> "Ok", "message" -> advertisers._2.toString))
-      }
-    } getOrElse {
+    rep.dataProviders.get(dataProvider).map(o => {
+      val res = o.getAdvertisers.map( {
+        advertisers => Ok(pjson.Json.obj("status" -> "Ok", "message" -> advertisers.toString))
+      })
+      .leftMap(je => Ok(pjson.Json.obj("status" -> "OK", "message" -> je.toString))) //QUESTION do we want an error here or a successful response wtih an error msg to the JSON for friendly display?
+      .run.run(globalConfig).map(_._2.fold(l => l, r => r))
+      res
+    }).getOrElse {
       Future.successful(NotFound)
     }
   }
