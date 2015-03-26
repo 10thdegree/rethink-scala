@@ -22,14 +22,17 @@ class DartDataProvider()(implicit val executionContext: ExecutionContext)
   //each provider will have an internal lens to help <~> between the bigger configs and the specific data requirements. 
   //We can have one global config or N number, nad decide which one to pull by a DB
   //or account config. 
-  val glens: Lens[GlobalConfig, DartConfig] = Lens.lensu( (a,b) => a.copy(api = b.api, filePath = b.filePath, accountId = b.accountId, userAccount = b.userAccount, clientId = b.clientId, reportCache = b.reportCache),
-    b => DartConfig(api = b.api, filePath = b.filePath, accountId = b.accountId, userAccount = b.userAccount, clientId = b.clientId, reportCache = b.reportCache))
-
-  def getAdvertisers: BravoM[GlobalConfig, List[(String, Int)]] = {
-    Dart.getAdvertisers.zoom(glens) //.run(LiveTest.prodConfigbb)
+    def getAdvertisers: BravoM[GlobalConfig, List[(String, Int)]] = {
+    Dart.getAdvertisers.zoom(DartDataProvider.glens) //.run(LiveTest.prodConfigbb)
   }
 }
 
 object DartDataProvider {
   val Dart = "dart"
+
+  val glens: Lens[GlobalConfig, DartConfig] = Lens.lensu( (a,b) => a.copy(api = b.api, filePath = b.filePath, accountId = b.accountId, userAccount = b.userAccount, clientId = b.clientId, reportCache = b.reportCache),
+    b => DartConfig(api = b.api, filePath = b.filePath, accountId = b.accountId, userAccount = b.userAccount, clientId = b.clientId, reportCache = b.reportCache))
+
+
+
 }

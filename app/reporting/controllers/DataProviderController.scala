@@ -24,8 +24,8 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
 
   def advertisers(dataProvider: String) = handleGetAdvertisers(dataProvider)
   
-  //maybe goes in the base data provider?
-  def globalConfig: GlobalConfig = ???
+ 
+
   //so we can use the request to load up the data for which configs to use from the DB, but they will always end up in the GlobalConfig
 
   //we may want to leftmap the error to an HTML error message and log?
@@ -36,7 +36,9 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
         advertisers => Ok(pjson.Json.obj("status" -> "Ok", "message" -> advertisers.toString))
       })
       .leftMap(je => Ok(pjson.Json.obj("status" -> "OK", "message" -> je.toString))) //QUESTION do we want an error here or a successful response wtih an error msg to the JSON for friendly display?
-      .run.run(globalConfig).map(_._2.fold(l => l, r => r))
+      .run
+      .run(ReportingRuntime.globalConfig)
+      .map(_._2.fold(l => l, r => r)) //folding both sides of our \/ into one mvc REsult
       res
     }).getOrElse {
       Future.successful(NotFound)
