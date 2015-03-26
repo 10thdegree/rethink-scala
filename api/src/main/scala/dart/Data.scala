@@ -16,7 +16,7 @@ trait DartInternalAPI {
 
   def getDartAuth: BravoM[DartConfig, Dfareporting]
   
-  def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit]
+  //def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit]
 
   def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[DartConfig, Long]
 
@@ -30,7 +30,12 @@ trait DartInternalAPI {
   
   def getFilesForReport(r: Dfareporting, reportId: Long): BravoM[DartConfig, List[AvailableFile]]
   
+  def deleteReport(r: Dfareporting, reportId: Long): BravoM[DartConfig, Unit] 
+
+  def cloneReport(r: Dfareporting, reportId: Long, advertiserId: Option[Long], startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Long] // new reportId
+
   protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
+
     new com.google.api.client.util.DateTime(dt.toString(formatter)) 
 
 }

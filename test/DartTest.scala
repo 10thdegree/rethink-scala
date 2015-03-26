@@ -90,7 +90,7 @@ object DartAPITest extends Properties("Dart API test") {
   val config = DartConfig(internal("asdf"), "", "", "", 4)
 
   //mocks a download call and returns a string as a report
-  def internal(s: String):DartInternalAPI = new DartInternalAPI {
+  def internal(s: String): DartInternalAPI = new DartInternalAPI {
    
     def getDartAuth: BravoM[DartConfig, Dfareporting] = Dart.dartMonad.point(null)
     
@@ -98,7 +98,11 @@ object DartAPITest extends Properties("Dart API test") {
 
     def getAvailableReports(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, List[AvailableReport]] = ???
 
-    def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit] = Dart.dartMonad.point(())
+    //def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit] = Dart.dartMonad.point(())
+
+    def cloneReport(r: Dfareporting, rid: Long, advertiserId: Option[Long], s: DateTime, e: DateTime): BravoM[DartConfig, Long] = Dart.dartMonad.point(1L)
+
+    def deleteReport(r: Dfareporting, rid: Long): BravoM[DartConfig, Unit] = Dart.dartMonad.point(())
 
     def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[DartConfig, Long] = Dart.dartMonad.point(1L)
 
@@ -109,6 +113,7 @@ object DartAPITest extends Properties("Dart API test") {
     def createDartReport(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long] = Dart.dartMonad.point(1L)
   
     def getFilesForReport(r: Dfareporting, reportId: Long): BravoM[DartConfig, List[AvailableFile]] = Dart.dartMonad.point(List[AvailableFile]())
+  
   }  
 
 

@@ -81,11 +81,13 @@ object Dart {
   private def checkFulfilledReports(startDate: DateTime, endDate: DateTime, files: List[AvailableFile]): Option[Long] = 
     files.find(f => isBetween((startDate, endDate), (f.startDate, f.endDate))).map(f => f.id) 
 
+  //we don't want to change the reports date info, less risky to clone with hte new date, then delete
   private def getReportUncached(dfa: Dfareporting, reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, String] = ((c: DartConfig) => 
     for {
-      _   <- c.api.updateDartReport(dfa, c.clientId, reportId, startDate, endDate)
-      id  <- c.api.runDartReport(dfa, c.clientId, reportId)
-      rs  <- fulfillReport(dfa, reportId, id, 1) //TODO: take Delay Multiplier from config
+      newrid   <- c.api.cloneReport(dfa, reportId, None, startDate, endDate)
+      fileid  <- c.api.runDartReport(dfa, c.clientId, reportId)
+      rs  <- fulfillReport(dfa, reportId, fileid, 1) //TODO: take Delay Multiplier from config
+      _   <- c.api.deleteReport(dfa, newrid)
     } yield {
         rs
     }       

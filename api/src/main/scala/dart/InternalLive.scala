@@ -111,7 +111,24 @@ object InternalLiveDart extends DartInternalAPI {
     for {
       r <- fctry((c:DartConfig) => reportApi.reports().get(c.clientId, rid).execute())
     } yield r
-
+  
+  override def cloneReport(reportApi: Dfareporting, rid: Long, advertiserId: Option[Long], startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Long]= 
+    for {
+      report    <- fctry((c: DartConfig) => reportApi.reports().get(c.clientId, rid).execute())
+      //set criteria
+                //report.getCriteria().filter(_.getName() != "advertiser:'d
+      criteria  =  report.getCriteria().setDateRange(new DateRange().setStartDate(toGoogleDate(startDate)).setEndDate(toGoogleDate(endDate)))
+      newr         =   report.setCriteria(criteria)
+      newr      <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, report).execute())
+    } yield
+      newr.getId
+  
+  override def deleteReport(reportApi: Dfareporting, rid: Long): BravoM[DartConfig, Unit] =
+    for {
+      _   <- fctry((c: DartConfig) => reportApi.reports().delete(c.clientId, rid).execute())
+    } yield ()
+  
+  /*
   override def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Unit]= 
     for {
       report    <- fctry((c: DartConfig) => reportApi.reports().get(userid, rid).execute())
@@ -122,7 +139,7 @@ object InternalLiveDart extends DartInternalAPI {
       _         <- ftry(reportApi.reports().update(userid, rid, report).execute())
     } yield
       ()
-  
+    */
   override def getFilesForReport(reportApi: Dfareporting, reportid: Long): BravoM[DartConfig, List[AvailableFile]] = 
     for {
       files   <- fctry((c:DartConfig) => reportApi.reports().files().list(c.clientId, reportid).execute())
