@@ -2,7 +2,7 @@ import bravo.api
 
 import com.google.api.services.dfareporting.Dfareporting
 import bravo.api.dart.Data._
-import bravo.core.Util._
+import bravo.util.Util._
 import scalaz._
 import Scalaz._
 import bravo.api.dart._
@@ -14,7 +14,8 @@ import Gen._
 import Arbitrary.arbitrary 
 import org.joda.time.DateTime
 import bravo.util._
-import bravo.util.Data._
+import bravo.util.DateUtil._
+
 
 object DartCSVParsingTest extends Properties("Dart Parsing Test") {
   import bravo.test.ReportDataGen._

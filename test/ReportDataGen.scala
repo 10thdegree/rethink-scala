@@ -2,7 +2,6 @@ package bravo.test
 
 import com.google.api.services.dfareporting.Dfareporting
 import bravo.api.dart.Data._
-import bravo.core.Util._
 import scalaz._
 import bravo.api.dart._
 import org.scalacheck.Properties
@@ -15,8 +14,8 @@ import org.joda.time._
 import java.util.Date
 import scalaz.scalacheck.ScalazProperties._  
 import org.joda.time.format._
-import bravo.util.Data._
 import bravo.util.DateUtil._
+import bravo.util.Util._
 
 object ReportDataGen {
   
