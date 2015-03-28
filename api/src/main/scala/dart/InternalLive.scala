@@ -86,6 +86,13 @@ object InternalLiveDart extends DartInternalAPI {
 
    //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getDartReport(dfa, rid)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
    //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getActivityFields(dfa, advertId)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
+  private def getBasicSchedule = 
+    new Schedule()
+        .setRepeats("DAILY")
+        .setEvery(1)
+        .setExpirationDate(toGoogleDate(new DateTime().plusYears(2))) //???
+        .setStartDate(toGoogleDate(new DateTime().plusDays(-1)))
+        .setActive(true)
 
    def getActivityFields(reportApi: Dfareporting, advertId: Long): BravoM[DartConfig, List[(String, Int)]] = 
     for {
@@ -118,8 +125,10 @@ object InternalLiveDart extends DartInternalAPI {
       //set criteria
                 //report.getCriteria().filter(_.getName() != "advertiser:'d
       criteria  =  report.getCriteria().setDateRange(new DateRange().setStartDate(toGoogleDate(startDate)).setEndDate(toGoogleDate(endDate)))
-      newr         =   report.setCriteria(criteria)
-      newr      <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, report).execute())
+      schedule  = getBasicSchedule
+      r = new Report().setCriteria(criteria).setName("TEMP" + report.getName()).setType(report.getType)
+      //newr         =   report.setCriteria(criteria).setId(null)//new Schedule().setActive(false).setRepeats("WEEKLY")) //.setActive(false)) //.setSchedule(report.getSchedule.setActive(false))
+      newr      <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, r).execute())
     } yield
       newr.getId
   
@@ -127,6 +136,12 @@ object InternalLiveDart extends DartInternalAPI {
     for {
       _   <- fctry((c: DartConfig) => reportApi.reports().delete(c.clientId, rid).execute())
     } yield ()
+ 
+  import scala.concurrent.Await
+  import scala.concurrent.duration._ 
+  import scala.concurrent.ExecutionContext.Implicits.global
+  def unsafeBlock[A](bm: BravoM[DartConfig,A]): (DartConfig, \/[JazelError,A]) = 
+    Await.result(bm.run(LiveTest.prodConfig), scala.concurrent.duration.Duration(30, SECONDS))
   
   /*
   override def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Unit]= 

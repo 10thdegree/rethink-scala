@@ -31,7 +31,7 @@ lazy val commonSettings = Seq(
   initialCommands in console := "import scalaz._;import Scalaz._;import org.joda.time._;import scala.concurrent.Future; import scala.reflect.runtime.universe.reify; import scala.concurrent.duration._; import scala.concurrent.{Future,Await}; import scala.concurrent.ExecutionContext.Implicits.global"
 )
 
-lazy val util = project.settings(commonSettings: _*)
+lazy val util = project.settings(commonSettings: _*).settings(libraryDependencies ++= googleAuthDeps)
 
 lazy val bravo = (project in file(".")).settings(commonSettings: _*).enablePlugins(PlayScala).dependsOn(util).dependsOn(api) 
 
@@ -39,8 +39,12 @@ lazy val api = (project in file("api")).settings(commonSettings: _*).settings(li
 
 resolvers ++= Seq("RethinkScala Repository" at "http://kclay.github.io/releases")
 
+lazy val googleAuthDeps = Seq("com.google.oauth-client" % "google-oauth-client-jetty" % "1.19.0","com.google.api-client" % "google-api-client-java6" % "1.19.0")
+
 lazy val apiDeps = Seq("org.apache.xmlrpc" % "xmlrpc-client" % "3.1.3",
                 "org.apache.xmlrpc" % "xmlrpc-server" % "3.1.3",
+                "com.google.api-ads" % "ads-lib" % "1.38.0",
+                "com.google.api-ads" % "adwords-axis" % "1.38.0",
                 "com.google.apis" % "google-api-services-dfareporting" % "v2.0-rev4-1.19.1",
                 "com.google.api-client" % "google-api-client-java6" % "1.19.0",
                 "com.google.api-client" % "google-api-client-extensions" % "1.6.0-beta",
