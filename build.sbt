@@ -70,7 +70,9 @@ lazy val commonClientSettings = Seq(
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
   ),
   libraryDependencies ++= Seq(
-    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT",
+    "biz.enef" %%% "scalajs-angulate" % "0.2.1-SNAPSHOT",
+    "be.doeraene" %%% "scalajs-jquery" % "0.8.0",
+    "io.github.widok" %%% "scala-js-momentjs" % "0.1.0-SNAPSHOT",
     "com.github.benhutchison" %%% "prickle" % "1.1.4"
   )
 )
@@ -94,6 +96,8 @@ def clientProject(project: Project, name: String): Project = {
 }
 
 lazy val reportClient = clientProject(project in file("client/report"),"report").dependsOn(sharedJS)
+
+lazy val reportGridClient = clientProject(project in file("client/reportGrid"),"reportGrid").dependsOn(sharedJS)
 
 lazy val loginClient = clientProject(project in file("client/login"),"login")
 

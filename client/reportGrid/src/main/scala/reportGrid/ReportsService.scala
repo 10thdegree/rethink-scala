@@ -1,7 +1,7 @@
 package reportGrid
 
 import biz.enef.angulate.Service
-import biz.enef.angulate.core.{HttpPromise, HttpService}
+import biz.enef.angulate.core.{HttpConfig, HttpPromise, HttpService}
 import biz.enef.angulate.Scope
 
 import scala.scalajs.js
@@ -17,18 +17,21 @@ trait Column extends js.Object {
 }
 
 trait CellValue extends js.Object {
-  def display: String
-  def `val`: String
+  var disp: String
+  val `val`: String
 }
 
 trait Row extends js.Object {
-  def values: js.Array[CellValue]
+  val key: String
+  val values: js.Dictionary[CellValue]
 }
 
 trait Chart extends js.Object {
   def `type`: String
   def label: String
   def domainLabel: String
+  val domainField: String
+  val rangeField: String
 }
 
 trait ReportView extends js.Object {
@@ -39,10 +42,10 @@ trait ReportView extends js.Object {
 
 class ReportsService($rootScope: Scope, $http: HttpService) extends Service {
 
-  def getReport(viewId: Int, start: String, end: String, callback: ReportView => ()) = {
+  def getReport(viewId: String, start: String, end: String, callback: ReportView => ()) = {
     $rootScope.$broadcast("report.fetch.start")
 
-    /*
+    /* XXX: This is the websocket version.
     import org.scalajs.dom.{MessageEvent, Event}
     import org.scalajs.dom.raw.WebSocket
     import scala.scalajs.js.JSON
@@ -61,8 +64,8 @@ class ReportsService($rootScope: Scope, $http: HttpService) extends Service {
     }
     */
 
-    $http.get[ReportView]("/reporting/reportDataRequest")
-      .onSuccess(data => {
+    $http.get[ReportView]("/reporting/reportDataRequest", HttpConfig("viewId" -> viewId, "startDate" -> start, "endDate" -> end))
+      .onSuccess((data: ReportView) => {
         $rootScope.$broadcast("report.fetch.end")
         console.log("report.fetch: data received")
         callback(data)

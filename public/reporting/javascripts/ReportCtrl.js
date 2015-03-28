@@ -101,7 +101,7 @@ app.controller('ReportCtrl', ['$timeout', 'ReportsService', 'ReportViews', '$sco
                     var f = footers[ci];
                     footers[ci].sum += v;
                     if (f.min == undefined || v < f.min) f.min = v;
-                    if (f.max == undefined || v > f.min) f.max = v;
+                    if (f.max == undefined || v > f.max) f.max = v;
                 }
             });
         });
