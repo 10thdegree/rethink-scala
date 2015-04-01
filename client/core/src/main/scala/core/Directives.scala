@@ -23,7 +23,7 @@ class NgEnterDirective extends Directive {
 
 class FocusMeDirective($timeout: Timeout) extends Directive {
   def postLink(scope: Scope, element: JQLite, attrs: Attributes, controller: js.Dynamic): Unit = {
-    val elem = element.head.asInstanceOf[js.Dynamic]
+    val elem = element.asInstanceOf[js.Dynamic]
 
     scope.$watch(attrs("focusMe"),
       (newVal: UndefOr[js.Any]) => if(newVal.isDefined) $timeout( () => elem.focus() ) )
