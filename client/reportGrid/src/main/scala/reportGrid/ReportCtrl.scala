@@ -100,11 +100,12 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
       case "fractional" => $filter("number")(value, 2)
       case "whole" => $filter("number")(value, 0)
       case _ => value
-    }).toString()
+    }) + ""
   }
 
   def reportLoadedCallback(report: ReportView) {
     $scope.columns = report.fields
+    $scope.columns.unshift(Column("", "Key", "Key", "Key", "", ""))
 
     val colsById = js.Dictionary.empty[Column]
     $scope.columns.foreach(c => {
@@ -116,7 +117,7 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
       r.values.keys.foreach(k => {
         r.values(k).display = formatValue(colsById(k).format, r.values(k).`val`)
       })
-      r.values("key") = js.Dynamic.literal("key" -> r.key, "val" -> r.key).asInstanceOf[CellValue]
+      r.values("Key") = js.Dynamic.literal("val" -> r.key, "display" -> r.key).asInstanceOf[CellValue]
       r.values
     })
     $scope.rows = flattened
@@ -136,7 +137,7 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
       i <- 1 until $scope.columns.length
       c = $scope.columns(i)
     } {
-      val v = r(c.name).`val`.toFloat
+      val v = ("" + r(c.name).`val`).toFloat
       val f = $scope.footers(i)
       $scope.footers(i).sum += v
       if (!f.min.isDefined || v < f.min.get) f.min = v

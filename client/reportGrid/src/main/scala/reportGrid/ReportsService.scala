@@ -16,9 +16,22 @@ trait Column extends js.Object {
   def footerType: String
 }
 
+object Column {
+  def apply(uuid: String, name: String, display: String, sort: String, format: String, footerType: String) = {
+    js.Dynamic.literal(
+      uuid = uuid,
+      name = name,
+      display = display,
+      sort = sort,
+      format = format,
+      footerType = footerType
+    ).asInstanceOf[Column]
+  }
+}
+
 trait CellValue extends js.Object {
   var display: String
-  val `val`: String
+  val `val`: js.Any
 }
 
 trait Row extends js.Object {
