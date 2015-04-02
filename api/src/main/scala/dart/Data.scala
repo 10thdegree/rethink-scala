@@ -24,7 +24,7 @@ trait DartInternalAPI {
 
   def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[(String, Int)]]
 
-  def createDartReport(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long]
+  def createDartReport(r: Dfareporting, advertiserId: Long, template: ReportTemplate): BravoM[DartConfig, Long]
 
   def getAvailableReports(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, List[AvailableReport]]
   
@@ -40,33 +40,39 @@ trait DartInternalAPI {
 
 }
 
-object DartData {
-  trait ReportType
-  case class PaidSearch() extends ReportType
-  case class Display()  extends ReportType
 
-  case class ReportTemplate(activityIds: List[Int], dimensions: List[String], metrics: List[String])
+object Data {
+  /* Dart Report Related */
+
+  import org.joda.time._
+  import scalaz._
+  import Scalaz._
+  import bravo.util.DateUtil._
+  
+  trait ReportType {
+    val prefix: String
+  }
+  
+  case class PaidSearch() extends ReportType {
+    val prefix = "Search"
+  }
+  
+  case class Display()  extends ReportType {
+    val prefix = "Display"
+  }
+
+  case class ReportTemplate(prefix: String, activityIds: List[Int], dimensions: List[String], metrics: List[String])
 
   def getReportTemplate(reportType: ReportType): ReportTemplate = reportType match {
-    case PaidSearch() => 
+    case p @ PaidSearch() => 
       val dimensions = List("dfa:campaign")
       val metrics = List("dfa:paidSearchAveragePosition", "dfa:paidSearchClickRate", "dfa:paidSearchClicks", "dfa:paidSearchImpressions", "dfa:paidSearchCost", "dfa:paidSearchVisits", "dfa:paidSearchActions")
-      ReportTemplate(List(), dimensions, metrics)
+      ReportTemplate(p.prefix, List(), dimensions, metrics)
     //case Display() =>
       //bad we shouldn't do this? should we have this be a trait with the parametrs nad type as a parametr?
     //  ReportTemplate(List(), List(), List()) 
   }
   
- 
-}
-
-
-
-object Data {
-  import org.joda.time._
-  import scalaz._
-  import Scalaz._
-  import bravo.util.DateUtil._
 
   val BRAVO_PREFIX = "BRAVO-"
 

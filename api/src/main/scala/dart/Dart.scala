@@ -22,16 +22,28 @@ object Dart {
   import bravo.util._
   import bravo.util.DateUtil._
   import com.google.api.services.dfareporting.model._
-    
+  
   implicit def dartMonad: Monad[({type l[a] = BravoM[DartConfig,a]})#l] = EitherT.eitherTMonad[({ type l[a] = SFuture[DartConfig,a]})#l, JazelError]
-
+ 
+  /*
   def createReport(advertiserId: Long): BravoM[DartConfig, Long] = ((c:DartConfig) => { 
     for {
       dfa <- c.api.getDartAuth
       reportId <- c.api.createDartReport(dfa, advertiserId)
     } yield reportId
   }).toBravoM.flatMap(x => x)
-    
+  */
+
+  def getOrCreateReport(advertiserId: Long, rtype: ReportType): BravoM[DartConfig, Long] = ((c: DartConfig) => {
+    for {
+      dfa         <- c.api.getDartAuth
+      reports     <- getReports(advertiserId)
+      createdRo   =  reports.find(ar => ar.name.startsWith(BRAVO_PREFIX + rtype.prefix)).map(r => dartMonad.point(r.reportid))
+      rid         <- createdRo.getOrElse(c.api.createDartReport(dfa, advertiserId, getReportTemplate(rtype)))  
+    } yield rid 
+  }).toBravoM.flatMap(x => x)
+
+
   def getAdvertisers: BravoM[DartConfig, List[(String,Int)]] = ((c:DartConfig) => {
     for {
       dfa <- c.api.getDartAuth
@@ -46,6 +58,7 @@ object Dart {
     } yield reports.filter(r => r.name.contains(BRAVO_PREFIX) && r.name.split("_")(1) == advertiserId.toString)
   }).toBravoM.flatMap(x => x)
 
+  //todo: CHange to FetchDartData or some such
   def getReport(reportId: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, DownloadedReport] = ((c: DartConfig) => {
     val currentReportDays  = c.reportCache.get(reportId).getOrElse(List[ReportDay]())
     val reportIdCache     = DateUtil.toSortedSet(currentReportDays)
