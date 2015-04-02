@@ -17,7 +17,7 @@ trait Column extends js.Object {
 }
 
 trait CellValue extends js.Object {
-  var disp: String
+  var display: String
   val `val`: String
 }
 
@@ -35,7 +35,7 @@ trait Chart extends js.Object {
 }
 
 trait ReportView extends js.Object {
-  def columns: js.Array[Column]
+  def fields: js.Array[Column]
   def rows: js.Array[Row]
   def charts: js.Array[Chart]
 }

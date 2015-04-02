@@ -104,7 +104,7 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
   }
 
   def reportLoadedCallback(report: ReportView) {
-    $scope.columns = report.columns
+    $scope.columns = report.fields
 
     val colsById = js.Dictionary.empty[Column]
     $scope.columns.foreach(c => {
@@ -114,7 +114,7 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
 
     val flattened = report.rows.map(r => {
       r.values.keys.foreach(k => {
-        r.values(k).disp = formatValue(colsById(k).format, r.values(k).`val`)
+        r.values(k).display = formatValue(colsById(k).format, r.values(k).`val`)
       })
       r.values("key") = js.Dynamic.literal("key" -> r.key, "val" -> r.key).asInstanceOf[CellValue]
       r.values

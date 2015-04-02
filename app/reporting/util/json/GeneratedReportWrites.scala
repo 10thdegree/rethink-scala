@@ -12,15 +12,15 @@ object GeneratedReportWrites {
 
   implicit val generatedReportFieldValueWrites: Writes[GeneratedReport.FieldValue] = (
     (JsPath \ "val").write[BigDecimal] and
-      (JsPath \ "disp").write[String]
+      (JsPath \ "display").write[String]
     )((v: GeneratedReport.FieldValue) => (v.value, v.display))
 
   implicit val chartWrites: Writes[Chart] = Variants.writes[Chart]("type")
 
   implicit val fieldWrites: Writes[reporting.models.Field] = (
     (JsPath \ "uuid").write[String] and
-    (JsPath \ "varName").write[String] and
-      (JsPath \ "displayName").write[String] and
+    (JsPath \ "name").write[String] and
+      (JsPath \ "display").write[String] and
       (JsPath \ "format").write[String] and
       (JsPath \ "footerType").write[String]
     )((f: reporting.models.Field) => (
