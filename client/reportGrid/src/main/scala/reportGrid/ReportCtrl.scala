@@ -17,6 +17,11 @@ object ReportCtrl {
     var end: js.Date = js.native
   }
 
+  object DateRange {
+    def apply(start: js.Date, end: js.Date): DateRange =
+      js.Dynamic.literal(start = start, end = end).asInstanceOf[DateRange]
+  }
+
   trait ReportCtrlScope extends Scope {
     var isLoading: Boolean = js.native
     var reportTitle: String = js.native
@@ -27,11 +32,11 @@ object ReportCtrl {
     var charts: js.Array[ChartInstance] = js.native
     var views: js.Array[js.Dynamic] = js.native
     var selectedView: String = js.native
-    var reloadForView: () => () = js.native
+    var reloadForView: js.Function = js.native
   }
 }
 
-class Footer(var sum: Int,
+class Footer(var sum: Float,
              var min: UndefOr[Float],
              var max: UndefOr[Float]) extends js.Object {
   var value: String = js.native
@@ -51,47 +56,47 @@ object ChartInstance {
   }
 }
 
-class ReportCtrl(scope: ReportCtrl.ReportCtrlScope,
-                 views: ReportViewsService,
+class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
+                 reportViewsService: ReportViewsService,
                  $filter: Filter,
-                 reports: ReportsService,
+                 reportsService: ReportsService,
                  $timeout: Timeout,
-                 $window: js.Dynamic) extends Controller {
+                 $window: js.Dynamic) extends ScopeController {
 
   import org.widok.moment.Moment
   import org.widok.moment.Units
+  $scope.isLoading = true
+  $scope.range = ReportCtrl.DateRange(
+    Moment().subtract(1, Units.Day).toDate(),
+    Moment().subtract(1, Units.Day).toDate()
+  )
+  $scope.views = js.Array()
+  $scope.columns = js.Array()
+  $scope.rows = js.Array()
+  $scope.footers = js.Array()
+  $scope.charts = js.Array()
 
-  scope.isLoading = true
-  scope.range = new ReportCtrl.DateRange()
-  scope.range.start = Moment().subtract(1, Units.Day).toDate()
-  scope.range.start = Moment().subtract(1, Units.Day).toDate()
-  scope.views = js.Array()
-  scope.columns = js.Array()
-  scope.rows = js.Array()
-  scope.footers = js.Array()
-  scope.charts = js.Array()
 
-
-  views.getViews(vs => {
-    scope.views = vs
-    scope.selectedView = vs(0).uuid.toString
-    scope.$apply()
+  reportViewsService.getViews((vs: js.Array[js.Dynamic]) => {
+    $scope.views = vs
+    $scope.selectedView = vs(0).uuid.toString
+    $scope.$apply()
   })
 
-  scope.$on("report.fetch.start", () => {
+  $scope.$on("report.fetch.start", () => {
     console.log("Report will load...")
-    scope.isLoading = true
+    $scope.isLoading = true
   })
 
-  scope.$on("report.fetch.end", () => {
+  $scope.$on("report.fetch.end", () => {
     console.log("Report done loading!")
-    scope.isLoading = false
+    $scope.isLoading = false
   })
 
   def formatValue(format: String, value: js.Any): String = {
     (format match {
       case "currency" => $filter("currency")(value)
-      case "percentage" => $filter("number")(value * 100, 2) + "%"
+      case "percentage" => $filter("number")(value.asInstanceOf[Double] * 100, 2) + "%"
       case "fractional" => $filter("number")(value, 2)
       case "whole" => $filter("number")(value, 0)
       case _ => value
@@ -99,10 +104,10 @@ class ReportCtrl(scope: ReportCtrl.ReportCtrlScope,
   }
 
   def reportLoadedCallback(report: ReportView) {
-    scope.columns = report.columns
+    $scope.columns = report.columns
 
     val colsById = js.Dictionary.empty[Column]
-    scope.columns.foreach(c => {
+    $scope.columns.foreach(c => {
       colsById(c.uuid) = c
       colsById(c.name) = c
     })
@@ -114,35 +119,35 @@ class ReportCtrl(scope: ReportCtrl.ReportCtrlScope,
       r.values("key") = js.Dynamic.literal("key" -> r.key, "val" -> r.key).asInstanceOf[CellValue]
       r.values
     })
-    scope.rows = flattened
+    $scope.rows = flattened
 
     import js.JSConverters._
-    scope.charts = for {
+    $scope.charts = for {
       i <- (0 until report.charts.length).toJSArray
       c = report.charts(i)
     } yield ChartInstance(c, i)(colsById)
 
     // Initialise footers
-    scope.footers = scope.columns.map(e => new Footer(0, js.UndefOr[Float], js.UndefOr[Float]))
+    $scope.footers = $scope.columns.map(e => new Footer(0, js.undefined, js.undefined))
 
     // Compute footer aggregate functions
     for {
-      r <- scope.rows
-      i <- 1 until scope.columns.length
-      c = scope.columns(i)
+      r <- $scope.rows
+      i <- 1 until $scope.columns.length
+      c = $scope.columns(i)
     } {
       val v = r(c.name).`val`.toFloat
-      val f = scope.footers(i)
-      scope.footers(i).sum += v
+      val f = $scope.footers(i)
+      $scope.footers(i).sum += v
       if (!f.min.isDefined || v < f.min.get) f.min = v
       if (!f.max.isDefined || v > f.max.get) f.max = v
     }
 
     // Format footer display values
     for {
-      ci <- 1 until scope.columns.length
-      c = scope.columns(ci)
-      f = scope.footers(ci)
+      ci <- 1 until $scope.columns.length
+      c = $scope.columns(ci)
+      f = $scope.footers(ci)
     } f.value = formatValue(c.format, c.footerType match {
       case "avg" => f.sum / flattened.length
       case "min" => f.min
@@ -151,25 +156,25 @@ class ReportCtrl(scope: ReportCtrl.ReportCtrlScope,
       case _ => ""
     })
 
-    scope.reloadForView = () => {
-      scope.rows = js.Array()
-      scope.columns = js.Array()
-      loadReport(scope.selectedView)
+    $scope.reloadForView = () => {
+      $scope.rows = js.Array()
+      $scope.columns = js.Array()
+      loadReport($scope.selectedView)
     }
 
-    scope.$apply()
+    $scope.$apply()
 
     console.log("Finished loading table and charts.")
   }
 
   def loadReport(viewId: String): Unit = {
-    scope.isLoading = true
-    scope.reportTitle = "Report for " + $filter("date")(scope.range.start, "MMM d, yyyy") + " to " + $filter("date")(scope.range.end, "MMM d, yyyy")
+    $scope.isLoading = true
+    $scope.reportTitle = "Report for " + $filter("date")($scope.range.start, "MMM d, yyyy") + " to " + $filter("date")($scope.range.end, "MMM d, yyyy")
     $timeout(() => {
-      val start = $filter("date")(scope.range.start, "yyyy-MM-dd").toString()
-      val end = $filter("date")(scope.range.end, "yyyy-MM-dd").toString()
+      val start = $filter("date")($scope.range.start, "yyyy-MM-dd").toString()
+      val end = $filter("date")($scope.range.end, "yyyy-MM-dd").toString()
       console.log("start/end: " + start + "/" + end)
-      reports.getReport(viewId, start, end, reportLoadedCallback)
+      reportsService.getReport(viewId, start, end, reportLoadedCallback _)
     }, 1)
   }
 
@@ -190,8 +195,8 @@ object ScalaJsOps {
   }
 }
 
-class ReportViewsService($rootScope: Scope, $http: HttpService) extends Service {
-  def getViews(callback: js.Array[js.Dynamic] => ()): Unit = {
+class ReportViewsService($http: HttpService) extends Service {
+  def getViews(callback: js.Function1[js.Array[js.Dynamic],_]): Unit = {
     console.log("Fetching views for report...")
     $http.get[js.Array[js.Dynamic]]("/reporting/reportViews")
       .success((data: js.Array[js.Dynamic]) => {
@@ -271,7 +276,7 @@ object DataRangePicker {
   }
 }
 
-class ModelController[T <: js.Any] extends Controller {
+class ModelController[T <: js.Any] extends js.Object {
   def $modelValue: T = js.native
   def $render() = js.native
   def $setViewValue(newVal: T) = js.native
@@ -289,7 +294,7 @@ class DateRangePickerConfig(val ranges: js.Dynamic,
 
 trait JQueryDateRangePickerMaker extends org.scalajs.jquery.JQuery {
   import org.widok.moment._
-  def daterangepicker(config: DateRangePickerConfig, callback: (Date, Date) => ()): this.type = js.native
+  def daterangepicker(config: DateRangePickerConfig, callback: js.Function2[Date,Date,_]): this.type = js.native
 }
 
 object JQueryDateRangePickerMaker {
@@ -297,30 +302,30 @@ object JQueryDateRangePickerMaker {
     jq.asInstanceOf[JQueryDateRangePickerMaker]
 }
 
-class DateRangePickerDirective($window: Window, $filter: Filter, $timeout: Timeout) extends Directive {
+trait DRScope extends Scope {
+  var display: String = js.native
+}
 
-  trait DRScope extends Scope {
-    var display: String = js.native
-  }
+class DateRangePickerDirective($window: Window, $filter: Filter, $timeout: Timeout) extends Directive {
 
   import ScalaJsOps._
   import org.widok.moment._
   override type ScopeType = DRScope
-  override type ControllerType = ModelController[js.Dynamic]
+  override type ControllerType = ModelController[ReportCtrl.DateRange]
   override val template = """|<div id="{{id}}" class="btn btn-default">
                              | <span><span class="class="glyphicon glyphicon-calendar" span="margin-right: 10px"></span>
                              |   {{display}}
                              | </span>
                              |</div>""".stripMargin
   override val restrict = "E"
-  override val require = "ngModel"
+  override def require = "ngModel"
   override def postLink(scope: ScopeType,
                         element: biz.enef.angulate.core.JQLite,
                         attrs: biz.enef.angulate.core.Attributes,
                         controller: ControllerType) {
 
     def display(): Unit = {
-      val range = controller.$modelValue//
+      val range = controller.$modelValue
       val start = $filter("date")(range.start, "MMM d, yyyy")
       val end = $filter("date")(range.end, "MMM d, yyyy")
       scope.display = start + " - " + end
@@ -352,7 +357,7 @@ class DateRangePickerDirective($window: Window, $filter: Filter, $timeout: Timeo
         "Last 90 Days" -> js.Array(Moment().subtract(90, "days"), Moment())),
       Moment(),
       Moment(),
-      Moment().subtract(1, Units.Day)), handleSelection)
+      Moment().subtract(1, Units.Day)), handleSelection _)
 
     display()
 

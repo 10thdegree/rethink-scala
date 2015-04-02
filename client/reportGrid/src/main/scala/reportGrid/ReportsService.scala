@@ -42,7 +42,7 @@ trait ReportView extends js.Object {
 
 class ReportsService($rootScope: Scope, $http: HttpService) extends Service {
 
-  def getReport(viewId: String, start: String, end: String, callback: ReportView => ()) = {
+  def getReport(viewId: String, start: String, end: String, callback: js.Function1[ReportView,_]) = {
     $rootScope.$broadcast("report.fetch.start")
 
     /* XXX: This is the websocket version.

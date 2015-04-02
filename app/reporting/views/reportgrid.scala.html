@@ -36,9 +36,10 @@
     </head>
     <body>
         <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/lrDragNDrop.js")"></script>
-        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportGridApp.js")"></script>
-        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportsService.js")"></script>
-        <script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportCtrl.js")"></script>
+        <!--<script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportGridApp.js")"></script>-->
+        <!--<script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportsService.js")"></script>-->
+        <!--<script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportCtrl.js")"></script>-->
+        @core.views.html.scalajsClient(basePath = "/assets/js/target", projectName = "reportGrid")
         <div ng-controller="ReportCtrl as report" style="padding-left: 10px; padding-right: 10px" id="reportCtrl" ng-init="initRange.start='@startDate'; initRange.end='@endDate'">
             <div id="reportLoading" style="padding-top: 20px" ng-show="report.isLoading" class="container">
                 <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading {{report.reportTitle}}...

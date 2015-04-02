@@ -10,7 +10,7 @@ import sbt._
 common settings for all projects
 
 ****/
-lazy val clients = Seq(reportClient, loginClient, navClient, userManageClient)
+lazy val clients = Seq(reportClient, loginClient, navClient, userManageClient,reportGridClient)
 
 lazy val coredeps = Seq(
   //scalaz
@@ -22,7 +22,6 @@ lazy val coredeps = Seq(
   "org.specs2" % "specs2_2.11" % "2.4",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
   "org.joda" % "joda-convert" % "1.5",
-  "com.vmunier" %% "play-scalajs-scripts" % "0.1.0",
   "com.github.benhutchison" %% "prickle" % "1.1.4"
 )
 
@@ -71,7 +70,7 @@ lazy val commonClientSettings = Seq(
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
   ),
   libraryDependencies ++= Seq(
-    "biz.enef" %%% "scalajs-angulate" % "0.2.1-SNAPSHOT",
+    "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT",
     "be.doeraene" %%% "scalajs-jquery" % "0.8.0",
     "io.github.widok" %%% "scala-js-momentjs" % "0.1.0-SNAPSHOT",
     "com.github.benhutchison" %%% "prickle" % "1.1.4"

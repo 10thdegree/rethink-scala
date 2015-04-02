@@ -10,6 +10,7 @@ object ReportGridApp extends JSApp {
 
     app.controllerOf[ReportCtrl]("ReportCtrl")
 
+    app.serviceOf[ReportViewsService]
     app.serviceOf[ReportsService]
   }
 }
