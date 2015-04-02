@@ -6,7 +6,7 @@ import scala.scalajs.js.JSApp
 
 object ReportGridApp extends JSApp {
   override def main(): Unit = {
-    val app = angular.createModule("app", Seq("ngTouch", "smart-table", "lrDragNDrop"))
+    val app = angular.createModule("reportGridApp", Seq("ngTouch", "smart-table", "lrDragNDrop"))
 
     app.controllerOf[ReportCtrl]("ReportCtrl")
 

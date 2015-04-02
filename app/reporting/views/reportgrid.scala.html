@@ -1,6 +1,6 @@
 @(startDate: String, endDate: String)
 <!doctype html>
-<html ng-app="app">
+<html>
     <head>
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery.min.js"))"></script>
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("angular.min.js"))"></script>
@@ -40,56 +40,58 @@
         <!--<script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportsService.js")"></script>-->
         <!--<script type="text/javascript" src="@reporting.controllers.routes.Assets.at("javascripts/ReportCtrl.js")"></script>-->
         @core.views.html.scalajsClient(basePath = "/assets/js/target", projectName = "reportGrid")
-        <div ng-controller="ReportCtrl as report" style="padding-left: 10px; padding-right: 10px" id="reportCtrl" ng-init="initRange.start='@startDate'; initRange.end='@endDate'">
-            <div id="reportLoading" style="padding-top: 20px" ng-show="report.isLoading" class="container">
-                <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading {{report.reportTitle}}...
-            </div>
-            <div id="report" ng-show="!report.isLoading">
-                <div style="padding: 10px; border: 1px solid #ddd; margin-top: 10px">
-                    <div>
-                        <bvo-date-range-picker id="reportrange2" ng-model="report.range" ng-change="report.reloadForView()"/>
-                    </div>
-                    <select ng-model="report.selectedView"
-                            ng-show="report.views.length > 0"
-                            ng-options="value.uuid as value.label for value in report.views"
-                            ng-change="report.reloadForView()">
-                    </select>
-                </div>
-                <div>
-                    <div style="width: 48%; display: inline-block" ng-repeat="chart in report.charts">
-                        <div ng-if="chart.type == 'Pie'">
-                          <bvo-pie-chart id="{{chart.id}}" row-data="report.rows"
-                            target-field="{{chart.targetFieldName}}" title="{{chart.label}}" />
-                        </div>
-                        <div ng-if="chart.type == 'Bar'">
-                          <bvo-bar-chart id="{{chart.id}}" row-data="report.rows"
-                            target-field="{{chart.targetFieldName}}" title="{{chart.label}}"/>
-                        </div>
-                    </div>
-                </div>
-                <table st-table="rowCollection" st-safe-src="report.rows" class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th ng-repeat="col in report.columns" lr-drag-src="headers" lr-drop-target="headers" st-sort="{{col.name}}.val">{{col.display}}</th>
-                        </tr>
-                        <tr>
-                            <th ng-repeat="col in report.columns" ng-visible="col.name == 'Key'">
-                                <input st-search="'{{col.search}}'" placeholder="{{col.display}}" class="input-sm form-control" type="search"/>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr ng-repeat="row in rowCollection">
-                            <td ng-repeat="col in report.columns">{{row[col.name].display}}</td>
-                        </tr>
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td ng-repeat="f in report.footers" style="font-weight: bold">{{f.value}}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+        <div ng-app="reportGridApp">
+          <div ng-controller="ReportCtrl" style="padding-left: 10px; padding-right: 10px" id="reportCtrl" ng-init="initRange.start='@startDate'; initRange.end='@endDate'">
+              <div id="reportLoading" style="padding-top: 20px" ng-show="isLoading" class="container">
+                  <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading {{reportTitle}}...
+              </div>
+              <div id="report" ng-show="!isLoading">
+                  <div style="padding: 10px; border: 1px solid #ddd; margin-top: 10px">
+                      <div>
+                          <bvo-date-range-picker id="reportrange2" ng-model="range" ng-change="reloadForView()"/>
+                      </div>
+                      <select ng-model="selectedView"
+                              ng-show="views.length > 0"
+                              ng-options="value.uuid as value.label for value in views"
+                              ng-change="reloadForView()">
+                      </select>
+                  </div>
+                  <div>
+                      <div style="width: 48%; display: inline-block" ng-repeat="chart in charts">
+                          <div ng-if="chart.type == 'Pie'">
+                            <bvo-pie-chart id="{{chart.id}}" row-data="rows"
+                              target-field="{{chart.targetFieldName}}" title="{{chart.label}}" />
+                          </div>
+                          <div ng-if="chart.type == 'Bar'">
+                            <bvo-bar-chart id="{{chart.id}}" row-data="rows"
+                              target-field="{{chart.targetFieldName}}" title="{{chart.label}}"/>
+                          </div>
+                      </div>
+                  </div>
+                  <table st-table="rowCollection" st-safe-src="rows" class="table table-striped">
+                      <thead>
+                          <tr>
+                              <th ng-repeat="col in columns" lr-drag-src="headers" lr-drop-target="headers" st-sort="{{col.name}}.val">{{col.display}}</th>
+                          </tr>
+                          <tr>
+                              <th ng-repeat="col in columns" ng-visible="col.name == 'Key'">
+                                  <input st-search="'{{col.search}}'" placeholder="{{col.display}}" class="input-sm form-control" type="search"/>
+                              </th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          <tr ng-repeat="row in rowCollection">
+                              <td ng-repeat="col in columns">{{row[col.name].display}}</td>
+                          </tr>
+                      </tbody>
+                      <tfoot>
+                          <tr>
+                              <td ng-repeat="f in footers" style="font-weight: bold">{{f.value}}</td>
+                          </tr>
+                      </tfoot>
+                  </table>
+              </div>
+          </div>
         </div>
         <script type="text/javascript">
             $('#report .input-daterange').datepicker({
