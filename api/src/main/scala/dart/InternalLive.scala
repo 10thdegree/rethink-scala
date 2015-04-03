@@ -46,7 +46,6 @@ object InternalLiveDart extends DartInternalAPI {
   override def createDartReport(reportApi: Dfareporting, advertiserId: Long, template: ReportTemplate): BravoM[DartConfig, Long] = 
     for {
       floodlights     <- getActivityFields(reportApi, advertiserId)
-      _                = println("floodlisghts size = " + floodlights.size)
       reportId        <- icreateDartReport(reportApi, advertiserId, template, floodlights)
     } yield 
       reportId
@@ -62,9 +61,6 @@ object InternalLiveDart extends DartInternalAPI {
     
     val activities = new Activities().setMetricNames(List("dfa:paidSearchActions")).setFilters(mappedActivities)
 
-    println(" Ok filtesr = " + activities.getFilters() )
-
-    println("mapped activiteis = " + mappedActivities)
     val criteria = new Criteria()
       .setDateRange(daterange)
       .setActivities(activities)
