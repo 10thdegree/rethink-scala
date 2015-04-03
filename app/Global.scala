@@ -8,10 +8,7 @@ import play.api.GlobalSettings
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticatorBuilder, HttpHeaderAuthenticatorBuilder}
 import securesocial.core.services.AuthenticatorService
 import securesocial.core.{BasicProfile, RuntimeEnvironment}
-import reporting.models.ds.DataSource._
-import reporting.models.ds.dart._
 import reporting.core.ReportingRuntime
-import prickle._
 
 /**
  * Set up the Guice injector and provide the mechanism for return objects from the dependency graph.
@@ -24,8 +21,6 @@ object Global extends GlobalSettings {
       bind[RuntimeEnvironment[User]].toInstance(MyRuntimeEnvironment)
       bind[RuntimeEnvironment[BasicProfile]].toInstance(MyRuntimeEnvironment.asInstanceOf[RuntimeEnvironment[BasicProfile]])
       bind[ReportingRuntime].toInstance(MyReportingRuntime)
-
-      bind[UnpickledCurry[DartDS]].toInstance(Unpickle[DartDS])
 
       try {
         /*import scala.reflect.runtime.universe
