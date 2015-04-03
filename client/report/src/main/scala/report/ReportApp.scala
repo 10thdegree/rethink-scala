@@ -11,11 +11,14 @@ object ReportApp extends JSApp {
 		val module = angular.createModule("reportApp", Seq("ui.bootstrap","ngCookies", "ui.router"))
 
     module.controllerOf[ReportCtrl]("ReportCtrl")
+    module.controllerOf[DataSourceCtrl]("DataSourceCtrl")
+    module.controllerOf[DataSourceConfigureModalCtrl]("DataSourceConfigureModalCtrl")
 
     module.directiveOf[NgEnterDirective]
     module.directiveOf[FocusMeDirective]
 
     module.serviceOf[ReportService]
+    module.serviceOf[DataSourceService]
 
     module.controllerOf[SubNavCtrl]("SubNavCtrl")
 
@@ -32,6 +35,17 @@ object ReportApp extends JSApp {
 			    "url" -> "/reports/:accounts",
 	        "templateUrl" -> "/reporting/assets/partials/reports/reports.html",
 	        "controller" -> "ReportCtrl"
+			))
+      $stateProvider
+        .state("dataSources", js.Dictionary(
+        "url" -> "/datasources",
+        "templateUrl" -> "/reporting/assets/partials/reports/datasources.html",
+        "controller" -> "DataSourceCtrl"
+      ))
+			.state("dataSourceAccount", js.Dictionary(
+			    "url" -> "/datasources/:account",
+	        "templateUrl" -> "/reporting/assets/partials/reports/datasources.html",
+	        "controller" -> "DataSourceCtrl"
 			))
     }
 

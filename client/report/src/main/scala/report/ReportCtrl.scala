@@ -57,7 +57,9 @@ with MultipleAccountChosen {
   }
 
 	def accountChanged(accountIds: js.Array[String]): Unit = {
-		$state.go("accounts", js.Dictionary("accounts" -> accountIds.join("&")))
+    if ($state.includes("reports").asInstanceOf[Boolean] || $state.includes("accounts").asInstanceOf[Boolean]) {
+		  $state.go("accounts", js.Dictionary("accounts" -> accountIds.join("&")))
+    }
 	}
 	
 	def accountUpdated(accountIds: js.Array[String]): Unit = {
