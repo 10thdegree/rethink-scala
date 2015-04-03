@@ -82,7 +82,7 @@ package object ds {
 
     def label: String
 
-    def dsAccountId: String
+    def dsAccountId: Int
 
     def dsType: DataSourceType
   }

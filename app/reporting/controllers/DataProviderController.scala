@@ -11,6 +11,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 import play.api.libs.{json => pjson}
 import com.google.inject.Inject
 import prickle._
+import java.util.UUID
+import shared.models.AdvertiserInfo
 
 import scalaz._
 import Scalaz._
@@ -22,6 +24,10 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
   import core.util.ResponseUtil._
   implicit val rep: ReportingRuntime
   implicit def executionContext: ExecutionContext = rep.executionContext
+
+  def dataSources() = Action.async { implicit request =>
+      Future.successful(Ok(Pickle.intoString(rep.dataProviders.values.map(_.info))))
+  }
 
   def advertisers(dataProvider: String) = handleGetAdvertisers(dataProvider)
 
@@ -35,7 +41,7 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
   private def handleGetAdvertisers(dataProvider: String) = Action.async { implicit request =>
     rep.dataProviders.get(dataProvider).map(o => {
       val res = o.getAdvertisers.map( {
-        advertisers => Ok(Pickle.intoString(advertisers))
+        advertisers => Ok(Pickle.intoString(advertisers.map(info => new AdvertiserInfo(info._1,info._2))))
       })
       .leftMap(je => Ok(pjson.Json.obj("status" -> "OK", "message" -> je.toString))) //QUESTION do we want an error here or a successful response wtih an error msg to the JSON for friendly display?
       .run
@@ -51,7 +57,7 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
     implicit request =>
       rep.dataProviders.get(dataProvider).map {
         _.addAccountCfg(accountId, request.body).map {
-          config => Ok(pjson.Json.obj("status" -> "Ok", "message" -> config.toString))
+          config => Ok(config.toString)
         }
       } getOrElse {
         Future.successful(NotFound)
@@ -62,11 +68,24 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
     implicit request =>
       rep.dataProviders.get(dataProvider).map {
         _.getAccountCfg(accountId).map {
-          config => Ok(pjson.Json.obj("status" -> "Ok", "message" -> config.toString))
+          config => config match {
+            case -\/(_) => NotFound
+            case \/-(x) => Ok(x)
+          }
         }
       } getOrElse {
         Future.successful(NotFound)
       }
     }
 
+  // SAMPLE (OHDE) so I can see pickled object response
+  import reporting.models.ds.dart._
+  import core.util.ResponseUtil._
+
+  implicit val dartCfgPickle: Pickler[DartAccountCfg] = Pickler.materializePickler[DartAccountCfg]
+
+  def sampleDSAccountCfg() = Action {
+    implicit request =>
+      Ok(Pickle.intoString(new DartAccountCfg("Trident",123213,Some(UUID.randomUUID()))))
+  }
 }

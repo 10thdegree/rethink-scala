@@ -23,8 +23,9 @@ GET        /reportViews                     reporting.controllers.TuiReportContr
 
 # DataSources
 #POST       /datasource/dart/:accountId        @reporting.controllers.DartDSController.addAccountDataSource(accountId: String)
-
+GET        /ds                                @reporting.controllers.DataProviderController.dataSources
 GET        /ds/:dataProvider/advertisers      @reporting.controllers.DataProviderController.advertisers(dataProvider)
 GET        /ds/:dataProvider/:accountId/cfg   @reporting.controllers.DataProviderController.getDSAccountCfg(dataProvider, accountId: String)
 POST       /ds/:dataProvider/:accountId/cfg   @reporting.controllers.DataProviderController.addDSAccountCfg(dataProvider, accountId: String)
 
+GET        /dart/sample/cfg                   @reporting.controllers.DataProviderController.sampleDSAccountCfg

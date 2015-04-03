@@ -10,7 +10,7 @@ package object dart {
   case class GlobalCfg(developerKey: String, secretKey: String)
 
   case class DartAccountCfg(label: String,
-                            dsAccountId: String,
+                            dsAccountId: Int,
                             dsId: Option[UUID] = None) extends DSAccountCfg {
     def dsType = DataSourceTypes.Dart
   }

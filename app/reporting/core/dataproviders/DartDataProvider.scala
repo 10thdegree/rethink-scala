@@ -15,12 +15,16 @@ import scalaz._
 import reporting.models.ds.DataSource._
 import reporting.models.ds.dart._
 import prickle._
+import shared.models.ProviderInfo
 
 
 class DartDataProvider()(implicit override val executionContext: ExecutionContext)
     extends IdentityDataProvider with Controller {
 
   override val id = DartDataProvider.Dart
+
+  val imageName = "darticon.png"
+  override val info = new ProviderInfo(id, "Dart", s"$imagePath$imageName")
 
   override val accountCfgUnpickler = Unpickle[DartAccountCfg]
 
@@ -30,6 +34,21 @@ class DartDataProvider()(implicit override val executionContext: ExecutionContex
   def getAdvertisers: BravoM[GlobalConfig, List[(String, Int)]] = {
     Dart.getAdvertisers.zoom(DartDataProvider.glens) //.run(LiveTest.prodConfigbb)
   }
+
+  import core.util.ResponseUtil._
+
+  override def getAccountCfg(accountId: String): Future[\/[String,String]] = Future {
+    import com.rethinkscala.Blocking._
+    coreBroker.accountsTable.get(accountId).run match {
+      case Right(x) => {
+        val dartConfigs = x.dsCfg collect {case cfg: DartAccountCfg => cfg}
+        \/-(Pickle.intoString(dartConfigs))
+      }
+      case Left(x) =>
+        -\/(x.getMessage)
+    }
+  }
+
   //def getAdvertisers: Future[(Data.DartConfig, \/[JazelError,List[(String, Int)]])] = {
     //Dart.getAdvertisers.run(LiveTest.prodConfig)
 }

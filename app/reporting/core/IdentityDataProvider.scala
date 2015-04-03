@@ -14,7 +14,7 @@ import scala.util.{Try, Success, Failure}
 import scalaz._
 import scalaz.Scalaz._
 import reporting.models.ds.dart.DartAccountCfg
-
+import shared.models.ProviderInfo
 //abstract class IdentityDataProvider(implicit val executionContext: ExecutionContext) {
 
 trait IdentityDataProvider {
@@ -24,6 +24,9 @@ trait IdentityDataProvider {
   lazy val coreBroker: CoreBroker = new CoreBroker
 
   val id: String
+
+  val info: ProviderInfo
+  val imagePath = "/reporting/assets/images/ds/"
 
   implicit val accountCfgUnpickler: UnpickledCurry[_ <: DSAccountCfg]
 
@@ -57,19 +60,15 @@ trait IdentityDataProvider {
     }
   }
 
-  def getAccountCfg(accountId: String): Future[\/[String,List[DSAccountCfg]]] = Future {
-    import com.rethinkscala.Blocking._
-    coreBroker.accountsTable.get(accountId).run match {
-      case Right(x) => {
-        \/-(x.dsCfg)
-      }
-      case Left(x) =>
-        -\/(x.getMessage)
-    }
-  }
+  def getAccountCfg(accountId: String): Future[\/[String,String]]
+  //def getAccountCfg(accountId: String): Future[\/[String,String]] = Future {
+    //import com.rethinkscala.Blocking._
+    //coreBroker.accountsTable.get(accountId).run match {
+      //case Right(x) => {
+        //\/-(x.dsCfg)
+      //}
+      //case Left(x) =>
+        //-\/(x.getMessage)
+    //}
+  //}
 }
-
-object IdentityDataProvider {
-  private val logger = play.api.Logger("reporting.core.IdentityDataProvider")
-}
-
