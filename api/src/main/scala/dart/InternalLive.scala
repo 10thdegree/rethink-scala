@@ -46,6 +46,7 @@ object InternalLiveDart extends DartInternalAPI {
   override def createDartReport(reportApi: Dfareporting, advertiserId: Long, template: ReportTemplate): BravoM[DartConfig, Long] = 
     for {
       floodlights     <- getActivityFields(reportApi, advertiserId)
+      _                = println("floodlisghts size = " + floodlights.size)
       reportId        <- icreateDartReport(reportApi, advertiserId, template, floodlights)
     } yield 
       reportId
@@ -55,13 +56,18 @@ object InternalLiveDart extends DartInternalAPI {
   private def icreateDartReport(reportApi: Dfareporting, advertiserId: Long, template: ReportTemplate, activityIds: List[(String,Int)]): BravoM[DartConfig, Long] = {
     val daterange = new DateRange().setRelativeDateRange("MONTH_TO_DATE")
     val dimensions = template.dimensions.map(dm => new SortedDimension().setName(dm))
-    val mappedActivities = activityIds.map(dv => new DimensionValue().setDimensionName("dfa:activity").setId(dv.toString))
+    val mappedActivities = activityIds.map(dv => new DimensionValue().setDimensionName("dfa:activity").setId(dv._2.toString))
     val dimensionValue = new DimensionValue().setDimensionName("dfa:advertiser").setId(advertiserId.toString) 
     val metricsList = template.metrics 
     
+    val activities = new Activities().setMetricNames(List("dfa:paidSearchActions")).setFilters(mappedActivities)
+
+    println(" Ok filtesr = " + activities.getFilters() )
+
+    println("mapped activiteis = " + mappedActivities)
     val criteria = new Criteria()
       .setDateRange(daterange)
-      .setActivities( new Activities().setMetricNames(List("dfa:paidSearchActions")).setFilters(mappedActivities))
+      .setActivities(activities)
       .setDimensions(dimensions)
       .setMetricNames(metricsList)
       .setDimensionFilters(List(dimensionValue))
@@ -85,7 +91,7 @@ object InternalLiveDart extends DartInternalAPI {
     } yield result.getId()
   }
 
-   //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getDartReport(dfa, rid)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
+   //Await.result(DartAuth.getCredentialService.flatMap(dfa => InternalLiveDart.getDartReport(dfa, rid)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
    //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getActivityFields(dfa, advertId)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
   private def getBasicSchedule = 
     new Schedule()
