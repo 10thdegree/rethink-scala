@@ -65,7 +65,7 @@ object Data {
 
   def getReportTemplate(reportType: ReportType): ReportTemplate = reportType match {
     case p @ PaidSearch() => 
-      val dimensions = List("dfa:campaign")
+      val dimensions = List("dfa:campaign", "dfa:paidSearchCampaign","dfa:date", "dfa:paidSearchEngineAccount" )
       val metrics = List("dfa:paidSearchAveragePosition", "dfa:paidSearchClickRate", "dfa:paidSearchClicks", "dfa:paidSearchImpressions", "dfa:paidSearchCost", "dfa:paidSearchVisits", "dfa:paidSearchActions")
       ReportTemplate(p.prefix, List(), dimensions, metrics)
     //case Display() =>
