@@ -39,7 +39,14 @@ object ReportCtrl {
 class Footer(var sum: Float,
              var min: UndefOr[Float],
              var max: UndefOr[Float]) extends js.Object {
+  def this() {
+    this(0, js.undefined, js.undefined)
+  }
   var value: String = js.native
+}
+
+object Footer {
+  def apply(sum: Float) = js.Dynamic.literal(sum = 0, min = js.undefined, max = js.undefined).asInstanceOf[Footer]
 }
 
 class ChartInstance(val chart: Chart,
@@ -50,9 +57,11 @@ class ChartInstance(val chart: Chart,
 }
 
 object ChartInstance {
-  def apply(chart: Chart, idx: Int)(colsById: js.Dictionary[Column]): ChartInstance = chart.`type` match {
-    case "Bar" => new ChartInstance(chart, "chart-" + idx, "Bar", colsById(chart.domainField).name, chart.label)
-    case "Pie" => new ChartInstance(chart, "chart-" + idx, "Pie", colsById(chart.rangeField).name, chart.label)
+  def apply(chart: Chart, idx: Int, colsById: js.Dictionary[Column]): ChartInstance = chart.`type` match {
+    //case "Bar" => new ChartInstance(chart, "chart-" + idx, "Bar", colsById(chart.domainField + "").name, chart.label)
+    //case "Pie" => new ChartInstance(chart, "chart-" + idx, "Pie", colsById(chart.rangeField + "").name, chart.label)
+    case "Bar" => js.Dynamic.literal(chart = chart, id = "chart-" + idx, `type` = "Bar", targetFieldName = colsById(chart.domainField + "").name, label = chart.label).asInstanceOf[ChartInstance]
+    case "Pie" => js.Dynamic.literal(chart = chart, id = "chart-" + idx, `type` = "Pie", targetFieldName = colsById(chart.rangeField + "").name, label = chart.label).asInstanceOf[ChartInstance]
   }
 }
 
@@ -126,10 +135,15 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
     $scope.charts = for {
       i <- (0 until report.charts.length).toJSArray
       c = report.charts(i)
-    } yield ChartInstance(c, i)(colsById)
+    } yield {
+        console.log(c.`type`)
+        if (c.domainField != js.undefined) console.log(colsById(c.domainField + "") + " domain")
+        if (c.rangeField != js.undefined) console.log(colsById(c.rangeField + "") + " range")
+        ChartInstance(c, i, colsById)
+      }
 
     // Initialise footers
-    $scope.footers = $scope.columns.map(e => new Footer(0, js.undefined, js.undefined))
+    $scope.footers = $scope.columns.map(e => Footer(0))
 
     // Compute footer aggregate functions
     for {
@@ -187,15 +201,6 @@ object C3 extends js.Object {
   def generate(opts: js.Object): js.Any = js.native
 }
 
-object ScalaJsOps {
-  implicit class AttributeExtensions(attr: Attributes) {
-    def getOrElse(key: String, ifMissing: => UndefOr[String]) = {
-      if (attr.hasOwnProperty(key)) attr(key)
-      else ifMissing
-    }
-  }
-}
-
 class ReportViewsService($http: HttpService) extends Service {
   def getViews(callback: js.Function1[js.Array[js.Dynamic],_]): Unit = {
     console.log("Fetching views for report...")
@@ -209,7 +214,6 @@ class ReportViewsService($http: HttpService) extends Service {
 }
 
 class PieChartDirective($window: Window) extends Directive {
-  import ScalaJsOps._
   override type ScopeType = Scope
   override type ControllerType = js.Any
   override val template = """<div id="{{id}}" style="{{style}}"></div>"""
@@ -219,10 +223,13 @@ class PieChartDirective($window: Window) extends Directive {
                         attrs: biz.enef.angulate.core.Attributes,
                         controller: ControllerType) {
 
-    var rowData = js.Array[js.Dynamic]()
-    val targetFieldName = attrs.getOrElse("targetField", "impressions")
+    var rowData = js.Array[js.Dictionary[CellValue]]()
+    val targetFieldName = attrs("targetField").getOrElse("impressions")
     def updateChart(): Unit = {
-      val piechartData = rowData.map(e => js.Array(e("Key")("display"), e(targetFieldName)("val").toInt))
+      val piechartData = rowData.map(e => js.Array(
+          e("Key").display,
+          ("" + e(targetFieldName).`val`).toInt))
+      console.log("2")
       val piechart = C3.generate(js.Dynamic.literal(
         bindto = "#" + attrs("id"),
         data = js.Dynamic.literal(columns = piechartData, `type` = "donut"),
@@ -231,16 +238,18 @@ class PieChartDirective($window: Window) extends Directive {
         transition = js.Dynamic.literal(duration = 1500),
         legend = js.Dynamic.literal(position = "inset")
       ))
+      console.log("3")
     }
-    scope.$watch(attrs("rawData"), (v:js.Array[js.Dynamic]) => {
-      rowData = v
-      updateChart()
+    scope.$watch(attrs("rowData"), (v:js.Array[js.Dictionary[CellValue]]) => {
+      if (v != js.undefined) {
+        rowData = v
+        updateChart()
+      }
     })
   }
 }
 
 class BarChartDirective($window: Window) extends Directive {
-  import ScalaJsOps._
   override type ScopeType = Scope
   override type ControllerType = js.Any
   override val template = """<div id="{{id}}" style="{{style}}"></div>"""
@@ -250,11 +259,13 @@ class BarChartDirective($window: Window) extends Directive {
                         attrs: biz.enef.angulate.core.Attributes,
                         controller: ControllerType) {
 
-    var rowData = js.Array[js.Dynamic]()
-    val targetFieldName = attrs.getOrElse("targetField", "cpc")
+    var rowData = js.Array[js.Dictionary[CellValue]]()
+    val targetFieldName = attrs("targetField").getOrElse("cpc")
     def updateChart(): Unit = {
-      val barchartData = rowData.map(e => js.Array(e("Key")("display"), e(targetFieldName)("val").toFloat))
-      val piechart = C3.generate(js.Dynamic.literal(
+      val barchartData = rowData.map(e => js.Array(
+        e("Key").display,
+        ("" + e(targetFieldName).`val`).toFloat))
+      val barchart = C3.generate(js.Dynamic.literal(
         bindto = "#" + attrs("id"),
         data = js.Dynamic.literal(columns = barchartData, `type` = "bar"),
         size = js.Dynamic.literal(width = $window.innerWidth * 0.48), // TODO: Make better
@@ -262,9 +273,11 @@ class BarChartDirective($window: Window) extends Directive {
         axis = js.Dynamic.literal(y = js.Dynamic.literal(label = attrs("title")))
       ))
     }
-    scope.$watch(attrs("rawData"), (v:js.Array[js.Dynamic]) => {
-      rowData = v
-      updateChart()
+    scope.$watch(attrs("rowData"), (v:js.Array[js.Dictionary[CellValue]]) => {
+      if (v != js.undefined) {
+        rowData = v
+        updateChart()
+      }
     })
   }
 }
@@ -309,7 +322,6 @@ trait DRScope extends Scope {
 
 class DateRangePickerDirective($window: Window, $filter: Filter, $timeout: Timeout) extends Directive {
 
-  import ScalaJsOps._
   import org.widok.moment._
   override type ScopeType = DRScope
   override type ControllerType = ModelController[ReportCtrl.DateRange]

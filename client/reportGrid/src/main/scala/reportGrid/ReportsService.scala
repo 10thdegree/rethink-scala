@@ -43,8 +43,8 @@ trait Chart extends js.Object {
   def `type`: String
   def label: String
   def domainLabel: String
-  val domainField: String
-  val rangeField: String
+  val domainField: js.Any
+  val rangeField: js.Any
 }
 
 trait ReportView extends js.Object {

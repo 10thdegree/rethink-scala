@@ -12,5 +12,8 @@ object ReportGridApp extends JSApp {
 
     app.serviceOf[ReportViewsService]
     app.serviceOf[ReportsService]
+    app.directiveOf[BarChartDirective]("bvoBarChart")
+    app.directiveOf[PieChartDirective]("bvoPieChart")
+    app.directiveOf[DateRangePickerDirective]("bvoDateRangePicker")
   }
 }
