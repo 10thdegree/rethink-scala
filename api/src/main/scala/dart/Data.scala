@@ -16,7 +16,7 @@ trait DartInternalAPI {
 
   def getDartAuth: BravoM[DartConfig, Dfareporting]
   
-  def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit]
+  //def updateDartReport(r: Dfareporting, userid: Int, rid: Long, s: DateTime, e: DateTime): BravoM[DartConfig, Unit]
 
   def runDartReport(r: Dfareporting, userid: Int, rid: Long): BravoM[DartConfig, Long]
 
@@ -24,22 +24,55 @@ trait DartInternalAPI {
 
   def getDimensions(r: Dfareporting, n: String, s: DateTime, e: DateTime, aid: Option[Long]): BravoM[DartConfig, List[(String, Int)]]
 
-  def createDartReport(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long]
+  def createDartReport(r: Dfareporting, advertiserId: Long, template: ReportTemplate): BravoM[DartConfig, Long]
 
   def getAvailableReports(r: Dfareporting, advertiserId: Long): BravoM[DartConfig, List[AvailableReport]]
   
   def getFilesForReport(r: Dfareporting, reportId: Long): BravoM[DartConfig, List[AvailableFile]]
   
+  def deleteReport(r: Dfareporting, reportId: Long): BravoM[DartConfig, Unit] 
+
+  def cloneReport(r: Dfareporting, reportId: Long, advertiserId: Option[Long], startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Long] // new reportId
+
   protected def toGoogleDate(dt: DateTime): com.google.api.client.util.DateTime =  
+
     new com.google.api.client.util.DateTime(dt.toString(formatter)) 
 
 }
 
+
 object Data {
+  /* Dart Report Related */
+
   import org.joda.time._
   import scalaz._
   import Scalaz._
   import bravo.util.DateUtil._
+  
+  trait ReportType {
+    val prefix: String
+  }
+  
+  case class PaidSearch() extends ReportType {
+    val prefix = "Search"
+  }
+  
+  case class Display()  extends ReportType {
+    val prefix = "Display"
+  }
+
+  case class ReportTemplate(prefix: String, activityIds: List[Int], dimensions: List[String], metrics: List[String])
+
+  def getReportTemplate(reportType: ReportType): ReportTemplate = reportType match {
+    case p @ PaidSearch() => 
+      val dimensions = List("dfa:campaign", "dfa:paidSearchCampaign","dfa:date", "dfa:paidSearchEngineAccount" )
+      val metrics = List("dfa:paidSearchAveragePosition", "dfa:paidSearchClickRate", "dfa:paidSearchClicks", "dfa:paidSearchImpressions", "dfa:paidSearchCost", "dfa:paidSearchVisits", "dfa:paidSearchActions")
+      ReportTemplate(p.prefix, List(), dimensions, metrics)
+    //case Display() =>
+      //bad we shouldn't do this? should we have this be a trait with the parametrs nad type as a parametr?
+    //  ReportTemplate(List(), List(), List()) 
+  }
+  
 
   val BRAVO_PREFIX = "BRAVO-"
 

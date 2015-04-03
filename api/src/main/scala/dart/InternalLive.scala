@@ -42,48 +42,60 @@ object InternalLiveDart extends DartInternalAPI {
       items.toList.map(dv => (dv.getValue(), dv.getId().toInt))  
   }
 
-  override def createDartReport(reportApi: Dfareporting, advertiserId: Long): BravoM[DartConfig, Long] = 
+  
+  override def createDartReport(reportApi: Dfareporting, advertiserId: Long, template: ReportTemplate): BravoM[DartConfig, Long] = 
     for {
-      floodlights <- getActivityFields(reportApi, advertiserId)
-      reportId    <- createReport(reportApi, advertiserId, floodlights.map(_._2))
+      floodlights     <- getActivityFields(reportApi, advertiserId)
+      reportId        <- icreateDartReport(reportApi, advertiserId, template, floodlights)
     } yield 
       reportId
-
+  
+    
   //we will want to add various report types here
-  def createReport(reportApi: Dfareporting, advertiserId: Long, activityIds: List[Int]): BravoM[DartConfig, Long] = {
-      val daterange = new DateRange().setRelativeDateRange("MONTH_TO_DATE")
-      val dimensions = new SortedDimension().setName("dfa:campaign")
-      val mappedActivities = activityIds.map(dv => new DimensionValue().setDimensionName("dfa:activity").setId(dv.toString))
-      val dimensionValue = new DimensionValue().setDimensionName("dfa:advertiser").setId(advertiserId.toString) 
-      val metricsList = List("dfa:paidSearchAveragePosition", "dfa:paidSearchClickRate", "dfa:paidSearchClicks", "dfa:paidSearchImpressions", "dfa:paidSearchCost", "dfa:paidSearchVisits", "dfa:paidSearchActions")
-      
-      val criteria = new Criteria()
-        .setDateRange(daterange)
-        .setActivities( new Activities().setMetricNames(List("dfa:paidSearchActions")).setFilters(mappedActivities))
-        .setDimensions(List(dimensions))
-        .setMetricNames(metricsList)
+  private def icreateDartReport(reportApi: Dfareporting, advertiserId: Long, template: ReportTemplate, activityIds: List[(String,Int)]): BravoM[DartConfig, Long] = {
+    val daterange = new DateRange().setRelativeDateRange("MONTH_TO_DATE")
+    val dimensions = template.dimensions.map(dm => new SortedDimension().setName(dm))
+    val mappedActivities = activityIds.map(dv => new DimensionValue().setDimensionName("dfa:activity").setId(dv._2.toString))
+    val dimensionValue = new DimensionValue().setDimensionName("dfa:advertiser").setId(advertiserId.toString) 
+    val metricsList = template.metrics 
+    
+    val activities = new Activities().setMetricNames(List("dfa:paidSearchActions")).setFilters(mappedActivities)
 
-      //Schedule should be run month to date 
-      val schedule = new Schedule()
+    val criteria = new Criteria()
+      .setDateRange(daterange)
+      .setActivities(activities)
+      .setDimensions(dimensions)
+      .setMetricNames(metricsList)
+      .setDimensionFilters(List(dimensionValue))
+
+    //Schedule should be run month to date 
+    val schedule = new Schedule()
+      .setRepeats("DAILY")
+      .setEvery(1)
+      .setExpirationDate(toGoogleDate(new DateTime().plusYears(2))) //???
+      .setStartDate(toGoogleDate(new DateTime().plusDays(-1)))
+      .setActive(true)
+    
+    val report = new Report()
+      .setCriteria(criteria)
+      .setName(BRAVO_PREFIX + template.prefix+"_"+advertiserId.toString)
+      .setType("STANDARD")
+      .setSchedule(schedule)
+
+    for {
+      result <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, report).execute())
+    } yield result.getId()
+  }
+
+   //Await.result(DartAuth.getCredentialService.flatMap(dfa => InternalLiveDart.getDartReport(dfa, rid)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
+   //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getActivityFields(dfa, advertId)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
+  private def getBasicSchedule = 
+    new Schedule()
         .setRepeats("DAILY")
         .setEvery(1)
         .setExpirationDate(toGoogleDate(new DateTime().plusYears(2))) //???
         .setStartDate(toGoogleDate(new DateTime().plusDays(-1)))
         .setActive(true)
-      
-      val report = new Report()
-        .setCriteria(criteria)
-        .setName(BRAVO_PREFIX + "Search_"+advertiserId.toString)
-        .setType("STANDARD")
-        .setSchedule(schedule)
-
-      for {
-        result <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, report).execute())
-      } yield result.getId()
-    }
-
-   //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getDartReport(dfa, rid)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
-   //Await.result(DartAuth.getCredentialService.flatMap(dfa => LiveDart.getActivityFields(dfa, advertId)).run(LiveTest.prodConfig), Duration(30, SECONDS))._2.toOption.get
 
    def getActivityFields(reportApi: Dfareporting, advertId: Long): BravoM[DartConfig, List[(String, Int)]] = 
     for {
@@ -109,7 +121,32 @@ object InternalLiveDart extends DartInternalAPI {
     for {
       r <- fctry((c:DartConfig) => reportApi.reports().get(c.clientId, rid).execute())
     } yield r
-
+  
+  override def cloneReport(reportApi: Dfareporting, rid: Long, advertiserId: Option[Long], startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Long]= 
+    for {
+      report    <- fctry((c: DartConfig) => reportApi.reports().get(c.clientId, rid).execute())
+      //set criteria
+                //report.getCriteria().filter(_.getName() != "advertiser:'d
+      criteria  =  report.getCriteria().setDateRange(new DateRange().setStartDate(toGoogleDate(startDate)).setEndDate(toGoogleDate(endDate)))
+      schedule  = getBasicSchedule
+      r = new Report().setCriteria(criteria).setName("TEMP" + report.getName()).setType(report.getType)
+      //newr         =   report.setCriteria(criteria).setId(null)//new Schedule().setActive(false).setRepeats("WEEKLY")) //.setActive(false)) //.setSchedule(report.getSchedule.setActive(false))
+      newr      <- fctry((c:DartConfig) => reportApi.reports().insert(c.clientId, r).execute())
+    } yield
+      newr.getId
+  
+  override def deleteReport(reportApi: Dfareporting, rid: Long): BravoM[DartConfig, Unit] =
+    for {
+      _   <- fctry((c: DartConfig) => reportApi.reports().delete(c.clientId, rid).execute())
+    } yield ()
+ 
+  import scala.concurrent.Await
+  import scala.concurrent.duration._ 
+  import scala.concurrent.ExecutionContext.Implicits.global
+  def unsafeBlock[A](bm: BravoM[DartConfig,A]): (DartConfig, \/[JazelError,A]) = 
+    Await.result(bm.run(LiveTest.prodConfig), scala.concurrent.duration.Duration(30, SECONDS))
+  
+  /*
   override def updateDartReport(reportApi: Dfareporting, userid: Int, rid: Long, startDate: DateTime, endDate: DateTime): BravoM[DartConfig, Unit]= 
     for {
       report    <- fctry((c: DartConfig) => reportApi.reports().get(userid, rid).execute())
@@ -120,7 +157,7 @@ object InternalLiveDart extends DartInternalAPI {
       _         <- ftry(reportApi.reports().update(userid, rid, report).execute())
     } yield
       ()
-  
+    */
   override def getFilesForReport(reportApi: Dfareporting, reportid: Long): BravoM[DartConfig, List[AvailableFile]] = 
     for {
       files   <- fctry((c:DartConfig) => reportApi.reports().files().list(c.clientId, reportid).execute())
