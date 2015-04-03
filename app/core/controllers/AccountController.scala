@@ -8,13 +8,14 @@ import core.models._
 import play.api.libs.{json => pjson}
 import play.api.mvc.{Action, BodyParsers}
 import securesocial.core.RuntimeEnvironment
-import shared.models.{LastAccount,AccountsResponse}
+import shared.models.{LastAccount,AccountsResponse, AccountAdd}
 import prickle._
 import reporting.models.ds.DSAccountCfg
 
 class AccountController @Inject()(override implicit val env: RuntimeEnvironment[User]) extends securesocial.core.SecureSocial[User] {
   implicit val labelFormat = pjson.Json.format[Label]
   implicit val userIdFormat = pjson.Json.format[UserIds]
+  implicit val accountAddFormat = pjson.Json.format[AccountAdd]
 
   implicit val lastAccountPickler: Pickler[LastAccount] = Pickler.materializePickler[LastAccount]
   implicit val accountsResponsePickler: Pickler[AccountsResponse] = Pickler.materializePickler[AccountsResponse]
@@ -95,21 +96,22 @@ class AccountController @Inject()(override implicit val env: RuntimeEnvironment[
     }
   }
 
-  //def addAccount = Action(BodyParsers.parse.json) {
-    //request =>
-      //request.body.validate[Account].fold(
-        //errors => {
-          //BadRequest(pjson.Json.obj("status" -> "OK", "message" -> pjson.JsError.toFlatJson(errors)))
-        //},
-        //account => {
-          //import com.rethinkscala.Blocking._
-          //coreBroker.accountsTable.insert(account).run match {
-            //case Right(x) => Ok(pjson.Json.obj("status" -> "OK", "message" -> "Account created."))
-            //case Left(x) => BadRequest(pjson.Json.obj("status" -> "OK", "message" -> x.getMessage))
-          //}
-        //}
-      //)
-  //}
+  def addAccount = Action(BodyParsers.parse.json) {
+    request =>
+      request.body.validate[AccountAdd].fold(
+        errors => {
+          BadRequest(pjson.Json.obj("status" -> "OK", "message" -> pjson.JsError.toFlatJson(errors)))
+        },
+        account => {
+          val fullAccount = new Account(account.label, account.permissions)
+          import com.rethinkscala.Blocking._
+          coreBroker.accountsTable.insert(fullAccount).run match {
+            case Right(x) => Ok(pjson.Json.obj("status" -> "OK", "message" -> "Account created."))
+            case Left(x) => BadRequest(pjson.Json.obj("status" -> "OK", "message" -> x.getMessage))
+          }
+        }
+      )
+  }
 
   def renameAccount(accountId: String) = Action(BodyParsers.parse.json) {
     request =>

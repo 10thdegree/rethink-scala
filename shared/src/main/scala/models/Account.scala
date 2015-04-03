@@ -17,3 +17,7 @@ case class AccountsResponse(status: String, accounts: Seq[Account]) extends Resp
 case class Credential(username: String, password: String)
 
 case class Authenticated(redirect: String)
+
+import java.util.UUID
+
+case class AccountAdd(label: String, permissions: List[UUID])
