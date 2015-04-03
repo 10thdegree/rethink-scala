@@ -3,6 +3,7 @@ package reportGrid
 import biz.enef.angulate.core.{Timeout, HttpService, Attributes}
 import biz.enef.angulate._
 import org.scalajs.dom.raw.Window
+import org.widok.moment.Moment
 
 import scala.scalajs.js
 import scala.scalajs.js.UndefOr
@@ -75,10 +76,13 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
   import org.widok.moment.Moment
   import org.widok.moment.Units
   $scope.isLoading = true
-  $scope.range = ReportCtrl.DateRange(
-    Moment().subtract(1, Units.Day).toDate(),
-    Moment().subtract(1, Units.Day).toDate()
-  )
+  var startDate = Moment().startOf("month").toDate()
+  var endDate = Moment().subtract(1, Units.Day).toDate()
+  if (endDate.getTime() < startDate.getTime()) {
+    startDate = Moment().subtract(1, Units.Day).startOf("month").toDate()
+    endDate = Moment().subtract(1, Units.Day).endOf("month").toDate()
+  }
+  $scope.range = ReportCtrl.DateRange(startDate, endDate)
   $scope.views = js.Array()
   $scope.columns = js.Array()
   $scope.rows = js.Array()
@@ -229,7 +233,6 @@ class PieChartDirective($window: Window) extends Directive {
       val piechartData = rowData.map(e => js.Array(
           e("Key").display,
           ("" + e(targetFieldName).`val`).toInt))
-      console.log("2")
       val piechart = C3.generate(js.Dynamic.literal(
         bindto = "#" + attrs("id"),
         data = js.Dynamic.literal(columns = piechartData, `type` = "donut"),
@@ -238,7 +241,6 @@ class PieChartDirective($window: Window) extends Directive {
         transition = js.Dynamic.literal(duration = 1500),
         legend = js.Dynamic.literal(position = "inset")
       ))
-      console.log("3")
     }
     scope.$watch(attrs("rowData"), (v:js.Array[js.Dictionary[CellValue]]) => {
       if (v != js.undefined) {
@@ -338,10 +340,12 @@ class DateRangePickerDirective($window: Window, $filter: Filter, $timeout: Timeo
                         controller: ControllerType) {
 
     def display(): Unit = {
+      console.log("postLink: 3")
       val range = controller.$modelValue
       val start = $filter("date")(range.start, "MMM d, yyyy")
       val end = $filter("date")(range.end, "MMM d, yyyy")
       scope.display = start + " - " + end
+      console.log("postLink: 4")
     }
 
     def handleSelection(start: Date, end: Date): Unit = {
@@ -356,8 +360,8 @@ class DateRangePickerDirective($window: Window, $filter: Filter, $timeout: Timeo
     }
 
     import JQueryDateRangePickerMaker._
-    jQuery("#" + attrs("id")).daterangepicker(new DateRangePickerConfig(
-      js.Dynamic.literal(
+    jQuery("#" + attrs("id")).daterangepicker(js.Dynamic.literal(
+      ranges = js.Dynamic.literal(
         "MTD" -> js.Array(Moment().startOf("month"), Moment()),
         "This Week" -> js.Array(Moment().startOf("week"), Moment()),
         "Last Week" -> js.Array(Moment().startOf("week").subtract(6, "days"), Moment().startOf("week").subtract(1, "days")),
@@ -365,20 +369,20 @@ class DateRangePickerDirective($window: Window, $filter: Filter, $timeout: Timeo
         //"Today" -> js.Array(Moment(), Moment()),
         "Yesterday" -> js.Array(Moment().subtract(1, "days"), Moment()),
         "Last 7 Days" -> js.Array(Moment().subtract(6, "days"), Moment()),
-        "Last 30 Days" -> js.Array(Moment().subtract(30, "days"), Moment()),
-        "Last 60 Days" -> js.Array(Moment().subtract(60, "days"), Moment()),
-        "Last 90 Days" -> js.Array(Moment().subtract(90, "days"), Moment())),
-      Moment(),
-      Moment(),
-      Moment().subtract(1, Units.Day)), handleSelection _)
+        "Last 30 Days" -> js.Array(Moment().subtract(30, "days"), Moment())),
+        //"Last 60 Days" -> js.Array(Moment().subtract(60, "days"), Moment()),
+        //"Last 90 Days" -> js.Array(Moment().subtract(90, "days"), Moment())),
+      startDate = Moment(),
+      endDate = Moment(),
+      maxDate = Moment().subtract(1, Units.Day)).asInstanceOf[DateRangePickerConfig], handleSelection _)
 
     display()
 
     scope.$watch("model", () => {
       console.log("model updated!")
-      val drp = jQuery("#" + attrs("id")).data("datarangepicker").asInstanceOf[DataRangePicker.DateRangePicker]
-      drp.setStartDate(Moment())
-      drp.setEndDate(Moment())
+      val drp = jQuery("#" + attrs("id")).data("daterangepicker").asInstanceOf[DataRangePicker.DateRangePicker]
+      drp.setStartDate(Moment(controller.$modelValue.start.getTime()))
+      drp.setEndDate(Moment(controller.$modelValue.end.getTime()))
       display()
     })
   }
