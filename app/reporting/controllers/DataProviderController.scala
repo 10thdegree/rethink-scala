@@ -23,7 +23,6 @@ class DataProviderController @Inject() (override implicit val env: RuntimeEnviro
 trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
   import core.util.ResponseUtil._
   implicit val rep: ReportingRuntime
-  implicit def executionContext: ExecutionContext = rep.executionContext
 
   def dataSources() = Action.async { implicit request =>
       Future.successful(Ok(Pickle.intoString(rep.dataProviders.values.map(_.info))))
