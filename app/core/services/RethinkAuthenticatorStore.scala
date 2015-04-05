@@ -6,13 +6,13 @@ import core.models.{Authenticators, User}
 import org.joda.time.DateTime
 import securesocial.core.authenticator.{AuthenticatorStore, CookieAuthenticator}
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.reflect.ClassTag
 import scalaz.Scalaz._
 
 object RethinkAuthenticatorStore {
 
-  class Default extends AuthenticatorStore[CookieAuthenticator[User]] {
+  class Default (implicit override val executionContext: ExecutionContext) extends AuthenticatorStore[CookieAuthenticator[User]] {
 
     implicit val c = Connection.connection
     lazy val coreBroker: CoreBroker = new CoreBroker

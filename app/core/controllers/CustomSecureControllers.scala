@@ -43,7 +43,7 @@ class CustomRoutesService @Inject() extends RoutesService.Default {
   override def loginPageUrl(implicit req: RequestHeader): String =
     core.controllers.routes.CustomLoginPage.login().absoluteURL(IdentityProvider.sslEnabled)
 
-  override def signUpUrl(implicit req: RequestHeader): String =
+  override def startSignUpUrl(implicit req: RequestHeader): String =
     core.controllers.routes.CustomRegistration.startSignUp().absoluteURL(IdentityProvider.sslEnabled)
 
   override def signUpUrl(token: String)(implicit req: RequestHeader): String =
@@ -52,7 +52,7 @@ class CustomRoutesService @Inject() extends RoutesService.Default {
   override def handleSignUpUrl(mailToken: String)(implicit req: RequestHeader): String =
     core.controllers.routes.CustomRegistration.handleSignUp(mailToken).absoluteURL(IdentityProvider.sslEnabled)
 
-  override def resetPasswordUrl(implicit request: RequestHeader): String =
+  override def startResetPasswordUrl(implicit request: RequestHeader): String =
     core.controllers.routes.PasswordReset.startResetPassword().absoluteURL(IdentityProvider.sslEnabled)
 
   override def resetPasswordUrl(mailToken: String)(implicit req: RequestHeader): String =
@@ -61,7 +61,7 @@ class CustomRoutesService @Inject() extends RoutesService.Default {
   override def handleStartResetPasswordUrl(implicit req: RequestHeader): String =
     core.controllers.routes.PasswordReset.handleStartResetPassword().absoluteURL(IdentityProvider.sslEnabled)
 
-  override def handleStartResetPasswordUrl(mailToken: String)(implicit req: RequestHeader): String =
+  override def handleResetPasswordUrl(mailToken: String)(implicit req: RequestHeader): String =
     core.controllers.routes.PasswordReset.handleResetPassword(mailToken).absoluteURL(IdentityProvider.sslEnabled)
 
   override def authenticationUrl(provider: String, redirectTo: Option[String] = None)(implicit req: RequestHeader): String =

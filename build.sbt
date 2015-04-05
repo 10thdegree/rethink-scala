@@ -16,7 +16,9 @@ lazy val coredeps = Seq(
   "org.scalaz" %% "scalaz-effect" % "7.1.0",
   "org.specs2" % "specs2_2.11" % "2.4",
   "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
-  "org.joda" % "joda-convert" % "1.5"
+  "org.joda" % "joda-convert" % "1.5",
+  "com.rethinkscala" %% "core" % "0.4.7-JAZEL-SNAPSHOT",
+  "ws.securesocial" %% "securesocial" % "3.0-M3"
 )
 
 
@@ -25,6 +27,7 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.4",
   scalacOptions ++= Seq("-unchecked", "-deprecation", "feature"),
   resolvers ++= Seq(
+    "Jazel Snapshots" at "https://nex.jazel.net/content/repositories/snapshots/",
     "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
     "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"),
   libraryDependencies ++= coredeps,
@@ -97,40 +100,7 @@ lazy val otherDeps = Seq(
   //
   )
 
-lazy val securesocialDeps = Seq(
-  cache,
-  ws,
-  filters,
-  "com.typesafe.play.plugins" %% "play-plugins-util" % "2.3.0",
-  "com.typesafe.play.plugins" %% "play-plugins-mailer" % "2.3.0",
-  "org.mindrot" % "jbcrypt" % "0.3m",
-  "org.specs2" %% "specs2" % "2.3.12" % "test",
-  "org.mockito" % "mockito-all" % "1.9.5" % "test"
-)
-
-val jacksonVersion = "2.4.1"
-val jacksonScalaVersion = "2.4.1"
-def jackson = Seq(
-  "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
-  "com.fasterxml.jackson.core" % "jackson-annotations" % jacksonVersion,
-  "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
-  "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % jacksonVersion,
-  "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonScalaVersion
-)
-
-lazy val rethinklDeps = Seq(
-  "org.scalatest" %% "scalatest" % "2.1.3" % "test",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
-  "org.slf4j" % "slf4j-log4j12" % "1.7.6",
-  "io.netty" % "netty" % "3.9.3.Final",
-  "com.google.protobuf" % "protobuf-java" % "2.5.0",
-  "joda-time" % "joda-time" % "2.3",
-  "org.joda" % "joda-convert" % "1.5",
-  "org.scala-lang" % "scala-reflect" % scalaVersion.toString,
-  "org.scala-lang.modules" %% "scala-xml" % "1.0.1"  % "test"
-)
-
-libraryDependencies ++= (apiDeps ++ otherDeps ++ angularDeps ++ securesocialDeps ++ rethinklDeps ++ jackson)
+libraryDependencies ++= (apiDeps ++ otherDeps ++ angularDeps)
 
 
 
