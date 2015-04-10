@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="http://css-spinners.com/css/spinner/throbber.css" type="text/css">
 <div>
     <div class="row panel-body">
         <div class="col-lg-4">
@@ -6,10 +7,9 @@
     </div>
     <!-- Table -->
     <table class="table table-hover">
-        <tr ng-repeat="report in filterList">
-            <td>{{report.accountId$1}}</td>
-            <td style="width: 125px;">{{report.accountId$1}}</td>
-            <td style="width: 125px;">{{report.viewId$1}}</td>
+        <tr ng-repeat="report in filterList" ng-click="searchReport(report.dsAccountId$1)">
+          <td>{{report.label$1}}     <div ng-class="{throbber: report.dsAccountId$1 == activeAccount}"></div></td>
+            <td style="width: 125px;"><span class="label label-primary">Search: {{report.dsAccountId$1}}</span></td>
         </tr>
         <tr>
            <td ng-class="{'hidden': visibleListItems != 0 }">No Reports Found.</td>

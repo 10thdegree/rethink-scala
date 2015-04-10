@@ -10,8 +10,10 @@ import client.core.PicklerHttpService._
 
 class ReportService($http: PicklerHttpService) extends Service {
 
+  def searchReport(advertiserId: Int) : HttpPromise[String] = $http.get("/reporting/ds/dart/report/search/"+advertiserId.toString)
+
   implicit val reportPickle = Unpickle[Report]
-	
+
   def getReports(accounts: js.Array[String]) : js.Array[Report] = {
 		//quick generated report items
 		val reports = js.Array(

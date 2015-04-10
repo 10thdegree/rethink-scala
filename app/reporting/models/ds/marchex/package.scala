@@ -9,13 +9,13 @@ package object marchex {
 
   case class AccountCfg(accountId: UUID, marchexAccountId: String)
 
-  case class MarchexDS(dsId: Option[UUID],
-                       label: String,
+  case class MarchexDS(label: String,
                        number: String,
                        marchexGroupId: String,
                        accountId: UUID,
                        keySelectors: List[KeySelector],
-                       dateSelector: DateSelector) extends DataSource {
+                       dateSelector: DateSelector,
+                       dsId: Option[UUID] = None) extends DataSource {
     def dsType = DataSourceTypes.Marchex
   }
 }

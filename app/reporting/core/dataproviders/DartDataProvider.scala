@@ -35,6 +35,14 @@ class DartDataProvider()(implicit override val executionContext: ExecutionContex
     Dart.getAdvertisers.zoom(DartDataProvider.glens) //.run(LiveTest.prodConfigbb)
   }
 
+  def getDisplayReport(advertiserId: Long): BravoM[GlobalConfig, Long] = {
+    Dart.getOrCreateReport(advertiserId, Display()).zoom(DartDataProvider.glens) //.run(LiveTest.prodConfigbb)
+  }
+
+  def getSearchReport(advertiserId: Long): BravoM[GlobalConfig, Long] = {
+    Dart.getOrCreateReport(advertiserId, PaidSearch()).zoom(DartDataProvider.glens) //.run(LiveTest.prodConfigbb)
+  }
+
   import core.util.ResponseUtil._
 
   override def getAccountCfg(accountId: String): Future[\/[String,String]] = Future {

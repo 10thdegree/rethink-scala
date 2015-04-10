@@ -1,6 +1,6 @@
 package reportGrid
 
-import biz.enef.angulate.core.{Timeout, HttpService, Attributes}
+import biz.enef.angulate.core.{Timeout, HttpService, Attributes, Location}
 import biz.enef.angulate._
 import org.scalajs.dom.raw.Window
 import org.widok.moment.Moment
@@ -71,13 +71,14 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
                  $filter: Filter,
                  reportsService: ReportsService,
                  $timeout: Timeout,
-                 $window: js.Dynamic) extends ScopeController {
+                 $window: js.Dynamic,
+                 $location: js.Dynamic) extends ScopeController {
 
   import org.widok.moment.Moment
   import org.widok.moment.Units
   $scope.isLoading = true
-  var startDate = Moment().startOf("month").toDate()
-  var endDate = Moment().subtract(1, Units.Day).toDate()
+  var startDate = new js.Date($location.search().startDate.asInstanceOf[String])
+  var endDate = new js.Date($location.search().endDate.asInstanceOf[String])
   if (endDate.getTime() < startDate.getTime()) {
     startDate = Moment().subtract(1, Units.Day).startOf("month").toDate()
     endDate = Moment().subtract(1, Units.Day).endOf("month").toDate()
@@ -192,8 +193,9 @@ class ReportCtrl($scope: ReportCtrl.ReportCtrlScope,
     $timeout(() => {
       val start = $filter("date")($scope.range.start, "yyyy-MM-dd").toString()
       val end = $filter("date")($scope.range.end, "yyyy-MM-dd").toString()
-      console.log("start/end: " + start + "/" + end)
-      reportsService.getReport(viewId, start, end, reportLoadedCallback _)
+      val dartDsId = $location.search().rid.asInstanceOf[String]
+      console.log("dartDsId: " + dartDsId + " start/end: " + start + "/" + end)
+      reportsService.getReport(dartDsId, viewId, start, end, reportLoadedCallback _)
     }, 1)
   }
 

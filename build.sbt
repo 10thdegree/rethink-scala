@@ -29,6 +29,7 @@ lazy val coredeps = Seq(
 )
 
 lazy val commonSettings = Seq(
+  sources in doc in Compile := List(),
   version := "1.0-SNAPSHOT",
   scalaVersion := "2.11.4",
   scalacOptions ++= Seq("-unchecked", "-deprecation", "feature"),
@@ -69,15 +70,17 @@ lazy val commonClientSettings = Seq(
   persistLauncher := true,
   persistLauncher in Test := false,
   unmanagedSourceDirectories in Compile := Seq((scalaSource in Compile).value),
+  sources in doc in Compile := List(),
   resolvers ++= Seq(
     "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/",
-    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+    "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+    "Jazel Snapshots" at "https://nex.jazel.net/content/repositories/snapshots/"
   ),
   libraryDependencies ++= Seq(
     "be.doeraene" %%% "scalajs-jquery" % "0.8.0" % "provided",
     "biz.enef" %%% "scalajs-angulate" % "0.2-SNAPSHOT",
     "be.doeraene" %%% "scalajs-jquery" % "0.8.0",
-    "io.github.widok" %%% "scala-js-momentjs" % "0.1.0-SNAPSHOT",
+    "io.github.widok" %%% "scala-js-momentjs" % "0.1.0-JAZEL-SNAPSHOT",
     "com.github.benhutchison" %%% "prickle" % "1.1.4"
   )
 )
@@ -100,13 +103,13 @@ def clientProject(project: Project, name: String): Project = {
     ).enablePlugins(ScalaJSPlugin, ScalaJSPlay)
 }
 
-lazy val reportClient = clientProject(project in file("client/report"),"report").dependsOn(sharedJS)
+lazy val reportClient = clientProject(project in file("client/report"),"report")
 
-lazy val reportGridClient = clientProject(project in file("client/reportGrid"),"reportGrid").dependsOn(sharedJS)
+lazy val reportGridClient = clientProject(project in file("client/reportGrid"),"reportGrid")
 
 lazy val loginClient = clientProject(project in file("client/login"),"login")
 
-lazy val navClient = clientProject(project in file("client/nav"),"nav").dependsOn(sharedJS)
+lazy val navClient = clientProject(project in file("client/nav"),"nav")
 
 lazy val userManageClient = clientProject(project in file("client/userManage"),"userManage")
 

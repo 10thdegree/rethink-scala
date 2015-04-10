@@ -55,7 +55,7 @@ trait ReportView extends js.Object {
 
 class ReportsService($rootScope: Scope, $http: HttpService) extends Service {
 
-  def getReport(viewId: String, start: String, end: String, callback: js.Function1[ReportView,_]) = {
+  def getReport(dartDsId: String, viewId: String, start: String, end: String, callback: js.Function1[ReportView,_]) = {
     $rootScope.$broadcast("report.fetch.start")
 
     /* XXX: This is the websocket version.
@@ -77,7 +77,7 @@ class ReportsService($rootScope: Scope, $http: HttpService) extends Service {
     }
     */
 
-    $http.get[ReportView]("/reporting/reportDataRequest", HttpConfig("viewId" -> viewId, "startDate" -> start, "endDate" -> end))
+    $http.get[ReportView](s"/reporting/reportDataRequest/$dartDsId", HttpConfig("viewId" -> viewId, "startDate" -> start, "endDate" -> end))
       .onSuccess((data: ReportView) => {
         $rootScope.$broadcast("report.fetch.end")
         console.log("report.fetch: data received")

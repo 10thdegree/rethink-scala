@@ -7,6 +7,8 @@ import com.rethinkscala._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.Play.current
+import reporting.models.DataSourceDoc
+
 
 class CoreBroker(implicit connection: BlockingConnection) {
 
@@ -23,6 +25,8 @@ class CoreBroker(implicit connection: BlockingConnection) {
   def tokensTable: Table[MailTokens] = db.table[MailTokens]("tokens")
 
   def authenticatorsTable: Table[Authenticators] = db.table[Authenticators]("authenticators")
+
+  def datasourcesTable: Table[DataSourceDoc] = db.table[DataSourceDoc]("datasources")
 
   def users: Either[RethinkError, Seq[User]] = usersTable.getAll().run
 
@@ -59,6 +63,7 @@ object Setup {
         coreBroker.accountsTable.create.run
         coreBroker.permissionsTable.create.run
         coreBroker.tokensTable.create.run
+        coreBroker.datasourcesTable.create.run
         coreBroker.authenticatorsTable.create.run
         coreBroker.authenticatorsTable.indexCreate("authId").run
         getCorePermissions(BasicPermissions).map(x => {

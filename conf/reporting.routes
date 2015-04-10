@@ -18,14 +18,21 @@ GET        /reportGrid                      reporting.controllers.TuiReportContr
 
 GET        /reportViews                     reporting.controllers.TuiReportController.reportViews
 
+GET        /reportDataRequest/:queryId         @reporting.controllers.ReportController.reportDataRequest(viewId: String, startDate: String, endDate: String, queryId: String)
+GET        /reportViews/:dartDsId               @reporting.controllers.ReportController.reportViews(dartDsId: String)
 # DS Account Cfg
 #POST       /datasource/dart/:accountId/cfg    @reporting.controllers.DartDSAccountCfgController.addDSAccountCfg(accountId: String)
 
 # DataSources
-#POST       /datasource/dart/:accountId        @reporting.controllers.DartDSController.addAccountDataSource(accountId: String)
+POST       /ds/dart                           @reporting.controllers.DartDSController.addAccountDataSource
+GET        /ds/dart/:accountId/datasource     @reporting.controllers.DartDSController.getAccountDataSource(accountId: String)
+
 GET        /ds                                @reporting.controllers.DataProviderController.dataSources
 GET        /ds/:dataProvider/advertisers      @reporting.controllers.DataProviderController.advertisers(dataProvider)
 GET        /ds/:dataProvider/:accountId/cfg   @reporting.controllers.DataProviderController.getDSAccountCfg(dataProvider, accountId: String)
 POST       /ds/:dataProvider/:accountId/cfg   @reporting.controllers.DataProviderController.addDSAccountCfg(dataProvider, accountId: String)
+GET        /ds/:dataProvider/report/display/:advertiserId  @reporting.controllers.DataProviderController.displayReport(dataProvider, advertiserId: Long)
+GET        /ds/:dataProvider/report/search/:advertiserId   @reporting.controllers.DataProviderController.searchReport(dataProvider, advertiserId: Long)
 
 GET        /dart/sample/cfg                   @reporting.controllers.DataProviderController.sampleDSAccountCfg
+GET         /ds/dart/sample                   @reporting.controllers.DartDSController.sample

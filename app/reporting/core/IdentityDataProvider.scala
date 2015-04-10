@@ -34,6 +34,8 @@ trait IdentityDataProvider {
 
   def getAdvertisers: BravoM[GlobalConfig,List[(String, Int)]]
   //def getAdvertisers: Future[(Data.DartConfig, \/[JazelError,List[(String, Int)]])]
+  def getSearchReport(advertiserId: Long): BravoM[GlobalConfig,Long]
+  def getDisplayReport(advertiserId: Long): BravoM[GlobalConfig,Long]
 
   def addAccountCfg(accountId: String, jsValue: pjson.JsValue): Future[\/[String,List[DSAccountCfg]]] = Future {
     accountCfgUnpickler.fromString(pjson.Json.stringify(jsValue)) match {

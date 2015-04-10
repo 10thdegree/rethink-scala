@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.rethinkscala.Document
 import core.models.Permission
+import reporting.models.ds.dart.DartDS
 
 case class Account(id: Option[UUID], name: String)
 
@@ -95,4 +96,4 @@ case class Report(accountId: UUID,
                   fieldBindings: List[FieldBinding])
   extends Joins3[Account, Template, View] with Document
 
-//case class ReportDisplay(report: Report, rows: DataSource.Row)
+case class DataSourceDoc(datasource: DartDS = null, id: Option[UUID] = None) extends Document

@@ -30,6 +30,10 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
 
   def advertisers(dataProvider: String) = handleGetAdvertisers(dataProvider)
 
+  def displayReport(dataProvider: String, advertiserId: Long) = handleDisplayReports(dataProvider,advertiserId)
+
+  def searchReport(dataProvider: String, advertiserId: Long) = handleSearchReports(dataProvider,advertiserId)
+
   def addDSAccountCfg(dataProvider: String, accountId: String) = handleAddDSAccountCfg(dataProvider, accountId)
 
   def getDSAccountCfg(dataProvider: String, accountId: String) = handleGetDSAccountCfg(dataProvider, accountId)
@@ -41,6 +45,36 @@ trait BaseDataProviderController extends securesocial.core.SecureSocial[User] {
     rep.dataProviders.get(dataProvider).map(o => {
       val res = o.getAdvertisers.map( {
         advertisers => Ok(Pickle.intoString(advertisers.map(info => new AdvertiserInfo(info._1,info._2))))
+      })
+      .leftMap(je => Ok(pjson.Json.obj("status" -> "OK", "message" -> je.toString))) //QUESTION do we want an error here or a successful response wtih an error msg to the JSON for friendly display?
+      .run
+      .run(ReportingRuntime.globalConfig)
+      .map(_._2.fold(l => l, r => r)) //folding both sides of our \/ into one mvc REsult
+      res
+    }).getOrElse {
+      Future.successful(NotFound)
+    }
+  }
+
+  private def handleDisplayReports(dataProvider: String, advertiserId: Long) = Action.async { implicit request =>
+    rep.dataProviders.get(dataProvider).map(o => {
+      val res = o.getDisplayReport(advertiserId).map( {
+        queryId => Ok(queryId.toInt.toString)
+      })
+      .leftMap(je => Ok(pjson.Json.obj("status" -> "OK", "message" -> je.toString))) //QUESTION do we want an error here or a successful response wtih an error msg to the JSON for friendly display?
+      .run
+      .run(ReportingRuntime.globalConfig)
+      .map(_._2.fold(l => l, r => r)) //folding both sides of our \/ into one mvc REsult
+      res
+    }).getOrElse {
+      Future.successful(NotFound)
+    }
+  }
+
+  private def handleSearchReports(dataProvider: String, advertiserId: Long) = Action.async { implicit request =>
+    rep.dataProviders.get(dataProvider).map(o => {
+      val res = o.getSearchReport(advertiserId).map( {
+        queryId => Ok(queryId.toInt.toString)
       })
       .leftMap(je => Ok(pjson.Json.obj("status" -> "OK", "message" -> je.toString))) //QUESTION do we want an error here or a successful response wtih an error msg to the JSON for friendly display?
       .run
